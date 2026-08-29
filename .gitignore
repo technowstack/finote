@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Legacy database samples — never commit real user data
+dev_assets/legacy/*.db
+dev_assets/legacy/*.sqlite
+dev_assets/legacy/*.sqlite3

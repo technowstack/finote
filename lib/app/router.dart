@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/backup/presentation/backup_page.dart';
 import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
+import '../features/legacy_import/presentation/legacy_import_page.dart';
 import '../features/reports/presentation/reports_page.dart';
 import '../features/transactions/presentation/transaction_form_page.dart';
 import '../features/transactions/presentation/transactions_page.dart';
@@ -17,6 +18,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CategoryPage(),
       ),
       GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
+      GoRoute(
+        path: '/legacy-import',
+        builder: (context, state) => const LegacyImportPage(),
+      ),
       GoRoute(
         path: '/reports',
         builder: (context, state) => const ReportsPage(),

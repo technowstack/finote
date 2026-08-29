@@ -491,18 +491,17 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
 
   /// STEP 1 + 2: pilih file → validasi
   Future<void> _selectAndValidate() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       dialogTitle: 'Pilih file backup',
       type: FileType.custom,
       allowedExtensions: ['zip'],
-      withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (file == null) return;
 
     setState(() => _step = _RestoreStep.validating);
 
     try {
-      final zipBytes = await result.files.first.readAsBytes();
+      final zipBytes = await file.readAsBytes();
       final preview = await ref
           .read(backupServiceProvider)
           .parseRestoreFile(zipBytes);
