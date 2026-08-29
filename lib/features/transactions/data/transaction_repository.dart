@@ -63,6 +63,8 @@ class TransactionRepository {
             categories.name.like(pattern, escapeChar: r'\'),
       );
     }
+    final limit = filter.limit;
+    if (limit != null) query.limit(limit);
 
     return query.watch().map(
       (rows) => rows
@@ -210,12 +212,14 @@ class TransactionHistoryQuery {
     this.startDate,
     this.endDate,
     this.search = '',
-  });
+    this.limit,
+  }) : assert(limit == null || limit > 0);
 
   final TransactionType? type;
   final DateTime? startDate;
   final DateTime? endDate;
   final String search;
+  final int? limit;
 
   @override
   bool operator ==(Object other) =>
@@ -223,10 +227,11 @@ class TransactionHistoryQuery {
       other.type == type &&
       other.startDate == startDate &&
       other.endDate == endDate &&
-      other.search == search;
+      other.search == search &&
+      other.limit == limit;
 
   @override
-  int get hashCode => Object.hash(type, startDate, endDate, search);
+  int get hashCode => Object.hash(type, startDate, endDate, search, limit);
 }
 
 String _escapedLikePattern(String value) {

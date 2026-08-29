@@ -1,32 +1,29 @@
-import 'package:flutter/material.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/dashboard/presentation/dashboard_page.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:finote/app/app.dart';
-import 'package:finote/core/theme/theme_mode_provider.dart';
 
 void main() {
-  testWidgets('app starts with system theme and configured router', (
+  testWidgets('dashboard shows zero summary and transaction empty state', (
     tester,
   ) async {
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
-
-    expect(container.read(themeModeProvider), ThemeMode.system);
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(database)],
-        child: const FinoteApp(),
+        child: const MaterialApp(home: DashboardPage()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Catatan Keuangan'), findsOneWidget);
     expect(find.text('Saldo'), findsOneWidget);
+    expect(find.text('Pemasukan bulan ini'), findsOneWidget);
+    expect(find.text('Pengeluaran bulan ini'), findsOneWidget);
+    expect(find.text('0 transaksi'), findsOneWidget);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
