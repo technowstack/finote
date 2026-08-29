@@ -9,6 +9,8 @@ class LegacyDetectionResult {
     required this.tablesMissing,
     required this.transactionCount,
     required this.categoryCount,
+    required this.totalIncome,
+    required this.totalExpense,
     this.oldestTransactionAt,
     this.newestTransactionAt,
   });
@@ -32,6 +34,12 @@ class LegacyDetectionResult {
   /// Jumlah nilai `subType` yang unik di tabel `Transaction` —
   /// merepresentasikan jumlah kategori yang digunakan.
   final int categoryCount;
+
+  /// Total nominal transaksi dengan tipe legacy `1` (pemasukan).
+  final int totalIncome;
+
+  /// Total nominal transaksi dengan tipe legacy `0` (pengeluaran).
+  final int totalExpense;
 
   /// Tanggal transaksi paling lama (kolom `date` dalam Unix ms).
   ///

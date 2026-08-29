@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/services/app_logger.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../data/legacy_detector.dart';
 import '../domain/legacy_detection_error.dart';
 import '../domain/legacy_detection_result.dart';
@@ -137,7 +138,7 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Database Kompatibel',
+                'Preview data legacy',
                 style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(color: cs.primary),
               ),
@@ -155,17 +156,26 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
           label: 'Jumlah kategori',
           value: result.categoryCount.toString(),
         ),
-        if (result.oldestTransactionAt != null &&
-            result.newestTransactionAt != null) ...[
-          _InfoRow(
-            label: 'Transaksi pertama',
-            value: _dateFormat.format(result.oldestTransactionAt!.toLocal()),
-          ),
-          _InfoRow(
-            label: 'Transaksi terakhir',
-            value: _dateFormat.format(result.newestTransactionAt!.toLocal()),
-          ),
-        ],
+        _InfoRow(
+          label: 'Transaksi pertama',
+          value: result.oldestTransactionAt == null
+              ? '-'
+              : _dateFormat.format(result.oldestTransactionAt!.toLocal()),
+        ),
+        _InfoRow(
+          label: 'Transaksi terakhir',
+          value: result.newestTransactionAt == null
+              ? '-'
+              : _dateFormat.format(result.newestTransactionAt!.toLocal()),
+        ),
+        _InfoRow(
+          label: 'Total pemasukan',
+          value: formatIdr(result.totalIncome),
+        ),
+        _InfoRow(
+          label: 'Total pengeluaran',
+          value: formatIdr(result.totalExpense),
+        ),
         _InfoRow(
           label: 'Tabel ditemukan',
           value: result.tablesRecognised.join(', '),

@@ -58,6 +58,8 @@ class LegacyDetector {
         tablesMissing: tablesMissing,
         transactionCount: meta.count,
         categoryCount: meta.categoryCount,
+        totalIncome: meta.totalIncome,
+        totalExpense: meta.totalExpense,
         oldestTransactionAt: meta.oldest,
         newestTransactionAt: meta.newest,
       );
@@ -110,51 +112,42 @@ class LegacyDetector {
   _TransactionMeta _readTransactionMeta(Database db) {
     const tableName = 'Transaction';
 
-    // Jumlah baris dan jumlah subType unik
-    final countRow = db
+    final row = db
         .select(
           'SELECT '
           '  COUNT(*) AS txCount, '
-          '  COUNT(DISTINCT ${LegacySchema.colSubType}) AS catCount '
-          'FROM "$tableName"',
-        )
-        .first;
-
-    final txCount = (countRow['txCount'] as int?) ?? 0;
-    final catCount = (countRow['catCount'] as int?) ?? 0;
-
-    if (txCount == 0) {
-      return _TransactionMeta(
-        count: 0,
-        categoryCount: 0,
-        oldest: null,
-        newest: null,
-      );
-    }
-
-    // Rentang tanggal (Unix ms → DateTime)
-    final dateRow = db
-        .select(
-          'SELECT '
+          '  COUNT(DISTINCT ${LegacySchema.colSubType}) AS catCount, '
           '  MIN(${LegacySchema.colDate}) AS minDate, '
-          '  MAX(${LegacySchema.colDate}) AS maxDate '
+          '  MAX(${LegacySchema.colDate}) AS maxDate, '
+          '  COALESCE(SUM(CASE WHEN ${LegacySchema.colType} = 1 '
+          '    THEN ${LegacySchema.colAmount} ELSE 0 END), 0) AS totalIncome, '
+          '  COALESCE(SUM(CASE WHEN ${LegacySchema.colType} = 0 '
+          '    THEN ${LegacySchema.colAmount} ELSE 0 END), 0) AS totalExpense '
           'FROM "$tableName"',
         )
         .first;
-
-    final minMs = dateRow['minDate'];
-    final maxMs = dateRow['maxDate'];
 
     return _TransactionMeta(
-      count: txCount,
-      categoryCount: catCount,
-      oldest: minMs is int
-          ? DateTime.fromMillisecondsSinceEpoch(minMs, isUtc: true)
-          : null,
-      newest: maxMs is int
-          ? DateTime.fromMillisecondsSinceEpoch(maxMs, isUtc: true)
-          : null,
+      count: row['txCount'] as int? ?? 0,
+      categoryCount: row['catCount'] as int? ?? 0,
+      totalIncome: (row['totalIncome'] as num?)?.toInt() ?? 0,
+      totalExpense: (row['totalExpense'] as num?)?.toInt() ?? 0,
+      oldest: _readLegacyDate(row['minDate']),
+      newest: _readLegacyDate(row['maxDate']),
     );
+  }
+
+  DateTime? _readLegacyDate(Object? value) {
+    final milliseconds = switch (value) {
+      int value => value,
+      double value => value.toInt(),
+      String value => int.tryParse(value),
+      _ => null,
+    };
+    if (milliseconds != null) {
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
+    }
+    return value is String ? DateTime.tryParse(value)?.toUtc() : null;
   }
 }
 
@@ -163,12 +156,16 @@ class _TransactionMeta {
   const _TransactionMeta({
     required this.count,
     required this.categoryCount,
+    required this.totalIncome,
+    required this.totalExpense,
     required this.oldest,
     required this.newest,
   });
 
   final int count;
   final int categoryCount;
+  final int totalIncome;
+  final int totalExpense;
   final DateTime? oldest;
   final DateTime? newest;
 }

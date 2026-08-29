@@ -176,6 +176,8 @@ void main() {
     expect(result.isCompatible, isTrue);
     expect(result.transactionCount, 0);
     expect(result.categoryCount, 0);
+    expect(result.totalIncome, 0);
+    expect(result.totalExpense, 0);
     expect(result.oldestTransactionAt, isNull);
     expect(result.newestTransactionAt, isNull);
     expect(result.tablesRecognised, containsAll(LegacySchema.requiredTables));
@@ -224,6 +226,8 @@ void main() {
       expect(result.transactionCount, 3);
       // 2 subType unik: 1 dan 2
       expect(result.categoryCount, 2);
+      expect(result.totalIncome, 500000);
+      expect(result.totalExpense, 35000);
       expect(
         result.oldestTransactionAt,
         DateTime.fromMillisecondsSinceEpoch(dateOldest, isUtc: true),
