@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/backup/presentation/backup_page.dart';
 import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/reports/presentation/reports_page.dart';
@@ -15,6 +16,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/categories',
         builder: (context, state) => const CategoryPage(),
       ),
+      GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
       GoRoute(
         path: '/reports',
         builder: (context, state) => const ReportsPage(),

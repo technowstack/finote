@@ -25,14 +25,32 @@ class DashboardPage extends ConsumerWidget {
             icon: const Icon(Icons.assessment_outlined),
           ),
           IconButton(
-            tooltip: 'Kategori',
-            onPressed: () => context.push('/categories'),
-            icon: const Icon(Icons.category_outlined),
-          ),
-          IconButton(
             tooltip: 'Semua transaksi',
             onPressed: () => context.push('/transactions'),
             icon: const Icon(Icons.receipt_long_outlined),
+          ),
+          PopupMenuButton<_DashboardMenu>(
+            tooltip: 'Menu lainnya',
+            onSelected: (item) => switch (item) {
+              _DashboardMenu.categories => context.push('/categories'),
+              _DashboardMenu.backup => context.push('/backup'),
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: _DashboardMenu.categories,
+                child: ListTile(
+                  leading: Icon(Icons.category_outlined),
+                  title: Text('Kategori'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _DashboardMenu.backup,
+                child: ListTile(
+                  leading: Icon(Icons.backup_outlined),
+                  title: Text('Backup lokal'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -97,6 +115,8 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 }
+
+enum _DashboardMenu { categories, backup }
 
 class _Summary extends StatelessWidget {
   const _Summary({required this.summary});
