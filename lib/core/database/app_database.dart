@@ -1,6 +1,8 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import '../../features/transactions/domain/transaction_source.dart';
 import '../../features/transactions/domain/transaction_type.dart';
@@ -33,6 +35,15 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  /// Mengembalikan path absolut file SQLite yang digunakan oleh database ini.
+  ///
+  /// Digunakan oleh [BackupService] untuk mengetahui lokasi file yang akan
+  /// di-overwrite saat proses restore.
+  static Future<String> resolveDatabasePath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return p.join(dir.path, 'finote.sqlite');
+  }
 }
 
 final databaseProvider = Provider<AppDatabase>((ref) {
