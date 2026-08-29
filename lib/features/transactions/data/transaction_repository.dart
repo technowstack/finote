@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/database/converters.dart';
 import '../domain/transaction_source.dart';
 import '../domain/transaction_type.dart';
 
@@ -11,20 +12,57 @@ class TransactionRepository {
   final AppDatabase _database;
 
   Stream<List<TransactionListItem>> watchAll() {
+    return watchHistory(const TransactionHistoryQuery());
+  }
+
+  Stream<List<TransactionListItem>> watchHistory(
+    TransactionHistoryQuery filter,
+  ) {
+    final transactions = _database.transactions;
+    final categories = _database.categories;
     final query =
-        _database.select(_database.transactions).join([
+        _database.select(transactions).join([
             innerJoin(
-              _database.categories,
-              _database.categories.id.equalsExp(
-                _database.transactions.categoryId,
-              ),
+              categories,
+              categories.id.equalsExp(transactions.categoryId),
             ),
           ])
-          ..where(_database.transactions.deletedAt.isNull())
+          ..where(transactions.deletedAt.isNull())
           ..orderBy([
-            OrderingTerm.desc(_database.transactions.transactionDate),
-            OrderingTerm.desc(_database.transactions.createdAt),
+            OrderingTerm.desc(transactions.transactionDate),
+            OrderingTerm.desc(transactions.createdAt),
           ]);
+
+    final type = filter.type;
+    if (type != null) query.where(transactions.type.equals(type.name));
+
+    const dateConverter = DateOnlyConverter();
+    final startDate = filter.startDate;
+    if (startDate != null) {
+      query.where(
+        transactions.transactionDate.isBiggerOrEqualValue(
+          dateConverter.toSql(startDate),
+        ),
+      );
+    }
+    final endDate = filter.endDate;
+    if (endDate != null) {
+      query.where(
+        transactions.transactionDate.isSmallerOrEqualValue(
+          dateConverter.toSql(endDate),
+        ),
+      );
+    }
+
+    final search = filter.search.trim();
+    if (search.isNotEmpty) {
+      final pattern = _escapedLikePattern(search);
+      query.where(
+        transactions.title.like(pattern, escapeChar: r'\') |
+            transactions.note.like(pattern, escapeChar: r'\') |
+            categories.name.like(pattern, escapeChar: r'\'),
+      );
+    }
 
     return query.watch().map(
       (rows) => rows
@@ -151,6 +189,12 @@ final transactionsProvider = StreamProvider<List<TransactionListItem>>(
   (ref) => ref.watch(transactionRepositoryProvider).watchAll(),
 );
 
+final transactionHistoryProvider = StreamProvider.autoDispose
+    .family<List<TransactionListItem>, TransactionHistoryQuery>(
+      (ref, filter) =>
+          ref.watch(transactionRepositoryProvider).watchHistory(filter),
+    );
+
 final transactionByIdProvider = FutureProvider.family<TransactionRecord?, int>(
   (ref, id) => ref.watch(transactionRepositoryProvider).findActiveById(id),
 );
@@ -159,3 +203,36 @@ typedef TransactionListItem = ({
   TransactionRecord transaction,
   CategoryRecord category,
 });
+
+class TransactionHistoryQuery {
+  const TransactionHistoryQuery({
+    this.type,
+    this.startDate,
+    this.endDate,
+    this.search = '',
+  });
+
+  final TransactionType? type;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String search;
+
+  @override
+  bool operator ==(Object other) =>
+      other is TransactionHistoryQuery &&
+      other.type == type &&
+      other.startDate == startDate &&
+      other.endDate == endDate &&
+      other.search == search;
+
+  @override
+  int get hashCode => Object.hash(type, startDate, endDate, search);
+}
+
+String _escapedLikePattern(String value) {
+  final escaped = value
+      .replaceAll(r'\', r'\\')
+      .replaceAll('%', r'\%')
+      .replaceAll('_', r'\_');
+  return '%$escaped%';
+}

@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/core/utils/date_formatter.dart';
 import 'package:finote/features/transactions/presentation/transaction_form_page.dart';
 import 'package:finote/features/transactions/presentation/transactions_page.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('-Rp25.000'), findsOneWidget);
+    expect(find.text(formatDate(DateTime.now())), findsOneWidget);
+    expect(find.text('Semua'), findsOneWidget);
+    expect(find.text('Bulan Ini'), findsOneWidget);
+    expect(find.byType(SearchBar), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
