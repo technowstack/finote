@@ -21,10 +21,19 @@ class LegacyImporter {
     final data = _readLegacy(filePath);
 
     return _database.transaction(() async {
+      final imported =
+          await (_database.select(_database.transactions)..where(
+                (row) => row.legacySource.equals(LegacySchema.legacySource),
+              ))
+              .get();
+      final importedIds = imported.map((row) => row.legacyId).nonNulls.toSet();
+      final newTransactions = data.transactions
+          .where((transaction) => !importedIds.contains(transaction.id))
+          .toList();
       final categoryIds = <(int, TransactionType), int>{};
       var categoriesCreated = 0;
 
-      for (final transaction in data.transactions) {
+      for (final transaction in newTransactions) {
         final key = (transaction.subType, transaction.type);
         if (categoryIds.containsKey(key)) continue;
 
@@ -62,21 +71,23 @@ class LegacyImporter {
 
       for (var index = 0; index < data.transactions.length; index++) {
         final transaction = data.transactions[index];
-        await _database
-            .into(_database.transactions)
-            .insert(
-              TransactionsCompanion.insert(
-                type: transaction.type,
-                categoryId:
-                    categoryIds[(transaction.subType, transaction.type)]!,
-                amount: transaction.amount,
-                title: Value(transaction.title.trim()),
-                transactionDate: transaction.date.toLocal(),
-                source: TransactionSource.legacyImport,
-                legacySource: const Value(LegacySchema.legacySource),
-                legacyId: Value(transaction.id),
-              ),
-            );
+        if (!importedIds.contains(transaction.id)) {
+          await _database
+              .into(_database.transactions)
+              .insert(
+                TransactionsCompanion.insert(
+                  type: transaction.type,
+                  categoryId:
+                      categoryIds[(transaction.subType, transaction.type)]!,
+                  amount: transaction.amount,
+                  title: Value(transaction.title.trim()),
+                  transactionDate: transaction.date.toLocal(),
+                  source: TransactionSource.legacyImport,
+                  legacySource: const Value(LegacySchema.legacySource),
+                  legacyId: Value(transaction.id),
+                ),
+              );
+        }
 
         final completed = index + 1;
         if (completed == data.transactions.length || completed % 100 == 0) {
@@ -86,12 +97,14 @@ class LegacyImporter {
       }
 
       return LegacyImportSummary(
-        transactionsImported: data.transactions.length,
+        newCount: newTransactions.length,
+        duplicateCount: data.transactions.length - newTransactions.length,
+        failedCount: 0,
         categoriesCreated: categoriesCreated,
-        totalIncome: data.transactions
+        totalIncome: newTransactions
             .where((item) => item.type == TransactionType.income)
             .fold(0, (total, item) => total + item.amount),
-        totalExpense: data.transactions
+        totalExpense: newTransactions
             .where((item) => item.type == TransactionType.expense)
             .fold(0, (total, item) => total + item.amount),
       );

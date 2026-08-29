@@ -55,8 +55,81 @@ void main() {
     return path;
   }
 
+  test('first import inserts every mapped legacy transaction', () async {
+    final path = await createLegacyDatabase();
+    final legacy = sqlite3.open(path);
+    legacy.execute(
+      'INSERT INTO "Transaction" VALUES '
+      "(10, 0, 25000, 1, 1672531200000, 'Sarapan'), "
+      "(11, 1, 500000, 2, 1703980800000, 'Gaji Desember')",
+    );
+    legacy.close();
+
+    final progress = <(int, int)>[];
+    final summary = await LegacyImporter(database)
+        .import(path, onProgress: (done, total) => progress.add((done, total)));
+    final transactions = await database.select(database.transactions).get();
+    final categories = await database.select(database.categories).get();
+
+    expect(summary.newCount, 2);
+    expect(summary.duplicateCount, 0);
+    expect(summary.failedCount, 0);
+    expect(summary.categoriesCreated, 2);
+    expect(summary.totalIncome, 500000);
+    expect(summary.totalExpense, 25000);
+    expect(progress, [(2, 2)]);
+    expect(categories.map((item) => (item.name, item.type)), {
+      ('Makan', TransactionType.expense),
+      ('Gaji', TransactionType.income),
+    });
+    expect(transactions.map((item) => item.title), {
+      'Sarapan',
+      'Gaji Desember',
+    });
+    expect(transactions.map((item) => item.amount), {25000, 500000});
+    expect(transactions.map((item) => item.type), {
+      TransactionType.expense,
+      TransactionType.income,
+    });
+    expect(
+      transactions.every(
+        (item) =>
+            item.uuid.isNotEmpty &&
+            item.source == TransactionSource.legacyImport &&
+            item.legacySource == LegacySchema.legacySource,
+      ),
+      isTrue,
+    );
+    expect(transactions.map((item) => item.legacyId), {10, 11});
+    expect(
+      transactions.firstWhere((item) => item.legacyId == 10).transactionDate,
+      DateTime(2023),
+    );
+  });
+
+  test('second import of the same database skips every transaction', () async {
+    final path = await createLegacyDatabase();
+    final legacy = sqlite3.open(path);
+    legacy.execute(
+      'INSERT INTO "Transaction" VALUES '
+      "(10, 0, 25000, 1, 1672531200000, 'Sarapan'), "
+      "(11, 1, 500000, 2, 1703980800000, 'Gaji Desember')",
+    );
+    legacy.close();
+
+    await LegacyImporter(database).import(path);
+    final second = await LegacyImporter(database).import(path);
+
+    expect(second.newCount, 0);
+    expect(second.duplicateCount, 2);
+    expect(second.failedCount, 0);
+    expect(second.categoriesCreated, 0);
+    expect(await database.select(database.transactions).get(), hasLength(2));
+    expect(await database.select(database.categories).get(), hasLength(2));
+  });
+
   test(
-    'imports mapped transactions and reports progress and summary',
+    'partially imported database only inserts missing transactions',
     () async {
       final path = await createLegacyDatabase();
       final legacy = sqlite3.open(path);
@@ -67,44 +140,30 @@ void main() {
       );
       legacy.close();
 
-      final progress = <(int, int)>[];
-      final summary = await LegacyImporter(
-        database,
-      ).import(path, onProgress: (done, total) => progress.add((done, total)));
-      final transactions = await database.select(database.transactions).get();
-      final categories = await database.select(database.categories).get();
-
-      expect(summary.transactionsImported, 2);
-      expect(summary.categoriesCreated, 2);
-      expect(summary.totalIncome, 500000);
-      expect(summary.totalExpense, 25000);
-      expect(progress, [(2, 2)]);
-      expect(categories.map((item) => (item.name, item.type)), {
-        ('Makan', TransactionType.expense),
-        ('Gaji', TransactionType.income),
-      });
-      expect(transactions.map((item) => item.title), {
-        'Sarapan',
-        'Gaji Desember',
-      });
-      expect(transactions.map((item) => item.amount), {25000, 500000});
-      expect(transactions.map((item) => item.type), {
-        TransactionType.expense,
-        TransactionType.income,
-      });
-      expect(
-        transactions.every(
-          (item) =>
-              item.uuid.isNotEmpty &&
-              item.source == TransactionSource.legacyImport &&
-              item.legacySource == LegacySchema.legacySource,
-        ),
-        isTrue,
+      final category = await CategoryRepository(database)
+          .create(name: 'Makan', type: TransactionType.expense);
+      await TransactionRepository(database).create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 25000,
+        transactionDate: DateTime(2023),
+        source: TransactionSource.legacyImport,
+        legacySource: LegacySchema.legacySource,
+        legacyId: 10,
       );
-      expect(transactions.map((item) => item.legacyId), {10, 11});
+
+      final summary = await LegacyImporter(database).import(path);
+
+      expect(summary.newCount, 1);
+      expect(summary.duplicateCount, 1);
+      expect(summary.failedCount, 0);
+      expect(summary.categoriesCreated, 1);
+      expect(await database.select(database.transactions).get(), hasLength(2));
       expect(
-        transactions.firstWhere((item) => item.legacyId == 10).transactionDate,
-        DateTime(2023),
+        (await database.select(database.transactions).get()).map(
+          (item) => item.legacyId,
+        ),
+        containsAll([10, 11]),
       );
     },
   );
@@ -114,25 +173,14 @@ void main() {
     final legacy = sqlite3.open(path);
     legacy.execute(
       'INSERT INTO "Transaction" VALUES '
-      "(10, 0, 25000, 1, 1672531200000, 'Duplikat')",
+      "(10, 0, 25000, 1, 1672531200000, 'Valid'), "
+      "(11, 0, 10000, 99, 1672617600000, 'Kategori hilang')",
     );
     legacy.close();
 
-    final category = await CategoryRepository(database)
-        .create(name: 'Existing', type: TransactionType.expense);
-    await TransactionRepository(database).create(
-      type: TransactionType.expense,
-      categoryId: category.id,
-      amount: 1,
-      transactionDate: DateTime(2023),
-      source: TransactionSource.legacyImport,
-      legacySource: LegacySchema.legacySource,
-      legacyId: 10,
-    );
-
     await expectLater(LegacyImporter(database).import(path), throwsException);
 
-    expect(await database.select(database.categories).get(), hasLength(1));
-    expect(await database.select(database.transactions).get(), hasLength(1));
+    expect(await database.select(database.categories).get(), isEmpty);
+    expect(await database.select(database.transactions).get(), isEmpty);
   });
 }

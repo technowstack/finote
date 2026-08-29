@@ -291,10 +291,12 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
           ],
         ),
         const SizedBox(height: 16),
+        _InfoRow(label: 'Transaksi baru', value: summary.newCount.toString()),
         _InfoRow(
-          label: 'Transaksi diimpor',
-          value: summary.transactionsImported.toString(),
+          label: 'Duplikat dilewati',
+          value: summary.duplicateCount.toString(),
         ),
+        _InfoRow(label: 'Gagal', value: summary.failedCount.toString()),
         _InfoRow(
           label: 'Kategori baru',
           value: summary.categoriesCreated.toString(),
