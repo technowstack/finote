@@ -43,6 +43,22 @@ abstract final class LegacySchema {
   /// Legacy menyimpan timestamp dalam milidetik (Unix ms).
   static const String colDate = 'date';
 
+  static const String colCategoryId = 'id';
+  static const String colCategoryName = 'name';
+
+  static DateTime? readDate(Object? value) {
+    final milliseconds = switch (value) {
+      int value => value,
+      double value => value.toInt(),
+      String value => int.tryParse(value),
+      _ => null,
+    };
+    if (milliseconds != null) {
+      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
+    }
+    return value is String ? DateTime.tryParse(value)?.toUtc() : null;
+  }
+
   // ---------------------------------------------------------------------------
   // Nama sumber legacy (digunakan untuk duplicate-protection di masa depan)
   // ---------------------------------------------------------------------------

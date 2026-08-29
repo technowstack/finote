@@ -132,22 +132,9 @@ class LegacyDetector {
       categoryCount: row['catCount'] as int? ?? 0,
       totalIncome: (row['totalIncome'] as num?)?.toInt() ?? 0,
       totalExpense: (row['totalExpense'] as num?)?.toInt() ?? 0,
-      oldest: _readLegacyDate(row['minDate']),
-      newest: _readLegacyDate(row['maxDate']),
+      oldest: LegacySchema.readDate(row['minDate']),
+      newest: LegacySchema.readDate(row['maxDate']),
     );
-  }
-
-  DateTime? _readLegacyDate(Object? value) {
-    final milliseconds = switch (value) {
-      int value => value,
-      double value => value.toInt(),
-      String value => int.tryParse(value),
-      _ => null,
-    };
-    if (milliseconds != null) {
-      return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
-    }
-    return value is String ? DateTime.tryParse(value)?.toUtc() : null;
   }
 }
 

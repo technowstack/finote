@@ -1,34 +1,42 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../data/legacy_detector.dart';
+import '../data/legacy_importer.dart';
 import '../domain/legacy_detection_error.dart';
 import '../domain/legacy_detection_result.dart';
+import '../domain/legacy_import_summary.dart';
 
-/// Halaman deteksi database legacy Catatan Keuangan.
-///
-/// Alur:
-/// 1. Pilih file database (.db / .sqlite / .sqlite3)
-/// 2. Detector membaca metadata secara read-only
-/// 3. Tampilkan hasil: kompatibel / tidak kompatibel
-///
-/// Import belum diimplementasikan di fase ini.
-class LegacyImportPage extends StatefulWidget {
+class LegacyImportPage extends ConsumerStatefulWidget {
   const LegacyImportPage({super.key});
 
   @override
-  State<LegacyImportPage> createState() => _LegacyImportPageState();
+  ConsumerState<LegacyImportPage> createState() => _LegacyImportPageState();
 }
 
-enum _DetectionStep { idle, detecting, compatible, incompatible }
+enum _ImportStep {
+  idle,
+  detecting,
+  compatible,
+  importing,
+  success,
+  incompatible,
+  failed,
+}
 
-class _LegacyImportPageState extends State<LegacyImportPage> {
-  _DetectionStep _step = _DetectionStep.idle;
+class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
+  _ImportStep _step = _ImportStep.idle;
   LegacyDetectionResult? _result;
+  LegacyImportSummary? _summary;
+  String? _selectedPath;
   String? _errorMessage;
+  int _importedCount = 0;
+  int _importTotal = 0;
 
   final _detector = const LegacyDetector();
   final _dateFormat = DateFormat('d MMMM yyyy', 'id_ID');
@@ -47,10 +55,6 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
               child: _buildBody(context),
             ),
           ),
-          if (_step == _DetectionStep.compatible) ...[
-            const SizedBox(height: 16),
-            _buildImportNotice(context),
-          ],
         ],
       ),
     );
@@ -58,14 +62,20 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
 
   Widget _buildBody(BuildContext context) {
     switch (_step) {
-      case _DetectionStep.idle:
+      case _ImportStep.idle:
         return _buildIdle(context);
-      case _DetectionStep.detecting:
+      case _ImportStep.detecting:
         return _buildDetecting();
-      case _DetectionStep.compatible:
+      case _ImportStep.compatible:
         return _buildCompatible(context);
-      case _DetectionStep.incompatible:
+      case _ImportStep.importing:
+        return _buildImporting(context);
+      case _ImportStep.success:
+        return _buildSuccess(context);
+      case _ImportStep.incompatible:
         return _buildIncompatible(context);
+      case _ImportStep.failed:
+        return _buildFailed(context);
     }
   }
 
@@ -185,14 +195,12 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
         const Divider(),
         const SizedBox(height: 16),
 
-        // Import button — disabled (belum diimplementasi di fase ini)
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            // Import belum diimplementasi — Phase 2D
-            onPressed: null,
+            onPressed: _startImport,
             icon: const Icon(Icons.upload_outlined),
-            label: const Text('Mulai import (segera hadir)'),
+            label: const Text('Mulai import'),
           ),
         ),
         const SizedBox(height: 8),
@@ -240,21 +248,107 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Import notice (phase placeholder)
-  // ---------------------------------------------------------------------------
+  Widget _buildImporting(BuildContext context) {
+    final progress = _importTotal == 0 ? null : _importedCount / _importTotal;
+    return Column(
+      children: [
+        CircularProgressIndicator(value: progress),
+        const SizedBox(height: 20),
+        Text(
+          _importTotal == 0
+              ? 'Menyiapkan import...'
+              : 'Mengimpor $_importedCount dari $_importTotal transaksi...',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Jangan tutup aplikasi sampai proses selesai.',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
 
-  Widget _buildImportNotice(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: Icon(
-        Icons.info_outline,
-        color: Theme.of(context).colorScheme.secondary,
-      ),
-      title: const Text('Import belum tersedia'),
-      subtitle: const Text(
-        'Fitur import data dari aplikasi lama akan tersedia pada update berikutnya.',
-      ),
+  Widget _buildSuccess(BuildContext context) {
+    final summary = _summary!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Import selesai',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _InfoRow(
+          label: 'Transaksi diimpor',
+          value: summary.transactionsImported.toString(),
+        ),
+        _InfoRow(
+          label: 'Kategori baru',
+          value: summary.categoriesCreated.toString(),
+        ),
+        _InfoRow(
+          label: 'Total pemasukan',
+          value: formatIdr(summary.totalIncome),
+        ),
+        _InfoRow(
+          label: 'Total pengeluaran',
+          value: formatIdr(summary.totalExpense),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _resetToIdle,
+            child: const Text('Selesai'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFailed(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Icon(Icons.error_outline, size: 56, color: cs.error),
+        const SizedBox(height: 16),
+        Text('Import gagal', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 8),
+        Text(
+          _errorMessage ?? 'Tidak ada data yang diimpor. Silakan coba lagi.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _startImport,
+            child: const Text('Coba lagi'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: _resetToIdle,
+            child: const Text('Pilih file lain'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -273,8 +367,10 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
     if (path == null) return;
 
     setState(() {
-      _step = _DetectionStep.detecting;
+      _step = _ImportStep.detecting;
       _result = null;
+      _summary = null;
+      _selectedPath = path;
       _errorMessage = null;
     });
 
@@ -283,13 +379,13 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
       if (!mounted) return;
       setState(() {
         _result = detected;
-        _step = _DetectionStep.compatible;
+        _step = _ImportStep.compatible;
       });
     } on LegacyDetectionError catch (e) {
       if (!mounted) return;
       setState(() {
         _errorMessage = e.toUserMessage();
-        _step = _DetectionStep.incompatible;
+        _step = _ImportStep.incompatible;
       });
     } catch (error, stackTrace) {
       AppLogger.error(
@@ -300,16 +396,57 @@ class _LegacyImportPageState extends State<LegacyImportPage> {
       if (!mounted) return;
       setState(() {
         _errorMessage = const LegacyDetectionError.unknown('').toUserMessage();
-        _step = _DetectionStep.incompatible;
+        _step = _ImportStep.incompatible;
+      });
+    }
+  }
+
+  Future<void> _startImport() async {
+    final path = _selectedPath;
+    if (path == null) return;
+
+    setState(() {
+      _step = _ImportStep.importing;
+      _importedCount = 0;
+      _importTotal = _result?.transactionCount ?? 0;
+      _errorMessage = null;
+    });
+
+    try {
+      final summary = await LegacyImporter(ref.read(databaseProvider)).import(
+        path,
+        onProgress: (completed, total) {
+          if (!mounted) return;
+          setState(() {
+            _importedCount = completed;
+            _importTotal = total;
+          });
+        },
+      );
+      if (!mounted) return;
+      setState(() {
+        _summary = summary;
+        _step = _ImportStep.success;
+      });
+    } catch (error, stackTrace) {
+      AppLogger.error('Legacy import failed', error, stackTrace);
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Import dibatalkan. Tidak ada data yang disimpan.';
+        _step = _ImportStep.failed;
       });
     }
   }
 
   void _resetToIdle() {
     setState(() {
-      _step = _DetectionStep.idle;
+      _step = _ImportStep.idle;
       _result = null;
+      _summary = null;
+      _selectedPath = null;
       _errorMessage = null;
+      _importedCount = 0;
+      _importTotal = 0;
     });
   }
 }
