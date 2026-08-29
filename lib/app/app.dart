@@ -6,6 +6,7 @@ import '../core/services/app_logger.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_mode_provider.dart';
 import '../features/categories/data/category_repository.dart';
+import '../features/app_lock/presentation/app_lock.dart';
 import 'router.dart';
 
 class FinoteApp extends ConsumerWidget {
@@ -33,6 +34,7 @@ class FinoteApp extends ConsumerWidget {
       supportedLocales: const [Locale('id')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) => AppLock(child: child ?? const SizedBox()),
     );
   }
 }

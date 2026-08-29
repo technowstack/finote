@@ -23,7 +23,9 @@ class TransactionFormPage extends ConsumerWidget {
 
     return initialization.when(
       loading: () => const _LoadingPage(),
-      error: (error, stackTrace) => const _LoadErrorPage(),
+      error: (error, stackTrace) => _LoadErrorPage(
+        onRetry: () => ref.invalidate(categoryInitializationProvider),
+      ),
       data: (_) {
         final id = transactionId;
         if (id == null) return const _TransactionForm();
@@ -32,9 +34,14 @@ class TransactionFormPage extends ConsumerWidget {
             .watch(transactionByIdProvider(id))
             .when(
               loading: () => const _LoadingPage(),
-              error: (error, stackTrace) => const _LoadErrorPage(),
+              error: (error, stackTrace) => _LoadErrorPage(
+                onRetry: () => ref.invalidate(transactionByIdProvider(id)),
+              ),
               data: (transaction) => transaction == null
-                  ? const _LoadErrorPage()
+                  ? _LoadErrorPage(
+                      onRetry: () =>
+                          ref.invalidate(transactionByIdProvider(id)),
+                    )
                   : _TransactionForm(transaction: transaction),
             );
       },
@@ -96,7 +103,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: FilledButton(
-            onPressed: _saving ? null : _save,
+            onPressed: _saving || !categories.hasValue ? null : _save,
             child: Text(_saving ? 'Menyimpan...' : 'Simpan transaksi'),
           ),
         ),
@@ -147,13 +154,21 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: 16),
             categories.when(
               loading: () => const LinearProgressIndicator(),
-              error: (error, stackTrace) =>
-                  const Text('Kategori belum dapat dimuat.'),
+              error: (error, stackTrace) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Kategori belum dapat dimuat.'),
+                trailing: TextButton(
+                  onPressed: () =>
+                      ref.invalidate(categoriesByTypeProvider(_type)),
+                  child: const Text('Coba lagi'),
+                ),
+              ),
               data: (items) {
                 final selectedExists = items.any(
                   (category) => category.id == _categoryId,
                 );
                 return DropdownButtonFormField<int>(
+                  key: ValueKey(_type),
                   initialValue: selectedExists ? _categoryId : null,
                   decoration: const InputDecoration(
                     labelText: 'Kategori',
@@ -226,7 +241,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (selected != null) setState(() => _date = selected);
+    if (selected != null && mounted) setState(() => _date = selected);
   }
 
   Future<void> _save() async {
@@ -251,7 +266,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           source: TransactionSource.manual,
         );
       } else {
-        await repository.update(
+        final updated = await repository.update(
           existing.copyWith(
             type: _type,
             categoryId: categoryId,
@@ -261,6 +276,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             transactionDate: _date,
           ),
         );
+        if (!updated) throw StateError('Transaction is no longer active');
         ref.invalidate(transactionByIdProvider(existing.id));
       }
 
@@ -313,13 +329,24 @@ class _LoadingPage extends StatelessWidget {
 }
 
 class _LoadErrorPage extends StatelessWidget {
-  const _LoadErrorPage();
+  const _LoadErrorPage({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Transaksi')),
-      body: const Center(child: Text('Transaksi belum dapat dimuat.')),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Transaksi belum dapat dimuat.'),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
+          ],
+        ),
+      ),
     );
   }
 }

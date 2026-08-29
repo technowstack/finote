@@ -57,7 +57,7 @@ void main() {
     expect(find.text('-Rp25.000'), findsOneWidget);
     expect(find.text(formatDate(DateTime.now())), findsOneWidget);
     expect(find.text('Semua'), findsOneWidget);
-    expect(find.text('Bulan Ini'), findsOneWidget);
+    expect(find.text('Bulan ini'), findsOneWidget);
     expect(find.byType(SearchBar), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

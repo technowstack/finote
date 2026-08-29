@@ -77,4 +77,20 @@ void main() {
       isNot(contains('Kebugaran')),
     );
   });
+
+  test('rejects case-insensitive duplicate names for the same type', () async {
+    await repository.create(
+      name: 'Transportasi',
+      type: TransactionType.expense,
+    );
+
+    await expectLater(
+      repository.create(name: 'transportasi', type: TransactionType.expense),
+      throwsStateError,
+    );
+    await expectLater(
+      repository.create(name: 'Transportasi', type: TransactionType.income),
+      completes,
+    );
+  });
 }

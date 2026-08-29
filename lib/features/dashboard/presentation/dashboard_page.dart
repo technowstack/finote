@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,11 +9,51 @@ import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/domain/transaction_type.dart';
 import '../data/dashboard_repository.dart';
 
-class DashboardPage extends ConsumerWidget {
+class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage>
+    with WidgetsBindingObserver {
+  Timer? _midnightTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleMidnightRefresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _midnightTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshDateSensitiveData();
+  }
+
+  void _scheduleMidnightRefresh() {
+    final now = DateTime.now();
+    final nextMidnight = DateTime(now.year, now.month, now.day + 1);
+    _midnightTimer = Timer(nextMidnight.difference(now), () {
+      _refreshDateSensitiveData();
+      _scheduleMidnightRefresh();
+    });
+  }
+
+  void _refreshDateSensitiveData() {
+    ref.invalidate(dashboardSummaryProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final summary = ref.watch(dashboardSummaryProvider);
     final recentTransactions = ref.watch(dashboardRecentTransactionsProvider);
 
@@ -34,6 +76,8 @@ class DashboardPage extends ConsumerWidget {
             onSelected: (item) => switch (item) {
               _DashboardMenu.categories => context.push('/categories'),
               _DashboardMenu.backup => context.push('/backup'),
+              _DashboardMenu.legacyImport => context.push('/legacy-import'),
+              _DashboardMenu.security => context.push('/security'),
             },
             itemBuilder: (context) => const [
               PopupMenuItem(
@@ -47,7 +91,21 @@ class DashboardPage extends ConsumerWidget {
                 value: _DashboardMenu.backup,
                 child: ListTile(
                   leading: Icon(Icons.backup_outlined),
-                  title: Text('Backup lokal'),
+                  title: Text('Backup dan restore'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _DashboardMenu.legacyImport,
+                child: ListTile(
+                  leading: Icon(Icons.move_to_inbox_outlined),
+                  title: Text('Import aplikasi lama'),
+                ),
+              ),
+              PopupMenuItem(
+                value: _DashboardMenu.security,
+                child: ListTile(
+                  leading: Icon(Icons.lock_outline),
+                  title: Text('Keamanan'),
                 ),
               ),
             ],
@@ -61,15 +119,19 @@ class DashboardPage extends ConsumerWidget {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(dashboardSummaryProvider);
-          ref.invalidate(dashboardRecentTransactionsProvider);
+          await Future.wait([
+            ref.refresh(dashboardSummaryProvider.future),
+            ref.refresh(dashboardRecentTransactionsProvider.future),
+          ]);
         },
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           children: [
             summary.when(
               loading: () => const _SummaryLoading(),
               error: (error, stackTrace) => _ErrorCard(
+                message: 'Ringkasan belum dapat dimuat.',
                 onRetry: () => ref.invalidate(dashboardSummaryProvider),
               ),
               data: (data) => _Summary(summary: data),
@@ -94,6 +156,7 @@ class DashboardPage extends ConsumerWidget {
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (error, stackTrace) => _ErrorCard(
+                message: 'Transaksi terbaru belum dapat dimuat.',
                 onRetry: () =>
                     ref.invalidate(dashboardRecentTransactionsProvider),
               ),
@@ -116,7 +179,7 @@ class DashboardPage extends ConsumerWidget {
   }
 }
 
-enum _DashboardMenu { categories, backup }
+enum _DashboardMenu { categories, backup, legacyImport, security }
 
 class _Summary extends StatelessWidget {
   const _Summary({required this.summary});
@@ -139,7 +202,11 @@ class _Summary extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Saldo', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Saldo',
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(color: colors.onPrimaryContainer),
+              ),
               const SizedBox(height: 8),
               FittedBox(
                 fit: BoxFit.scaleDown,
@@ -262,9 +329,15 @@ class _RecentTransactionTile extends StatelessWidget {
           transaction.title.isEmpty ? item.category.name : transaction.title,
         ),
         subtitle: transaction.title.isEmpty ? null : Text(item.category.name),
-        trailing: Text(
-          '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
-          style: TextStyle(color: color, fontWeight: FontWeight.w700),
+        trailing: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 140),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
+              style: TextStyle(color: color, fontWeight: FontWeight.w700),
+            ),
+          ),
         ),
       ),
     );
@@ -311,8 +384,9 @@ class _SummaryLoading extends StatelessWidget {
 }
 
 class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.onRetry});
+  const _ErrorCard({required this.message, required this.onRetry});
 
+  final String message;
   final VoidCallback onRetry;
 
   @override
@@ -323,7 +397,7 @@ class _ErrorCard extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const Text('Ringkasan belum dapat dimuat.'),
+            Text(message),
             const SizedBox(height: 8),
             TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],

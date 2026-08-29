@@ -17,9 +17,12 @@ import '../domain/restore_error.dart';
 import '../domain/restore_preview.dart';
 
 class BackupService {
-  BackupService(this._database);
+  BackupService(this._database, {this.databasePath});
 
   final AppDatabase _database;
+  final String? databasePath;
+
+  static const _maximumArchiveBytes = 100 * 1024 * 1024;
 
   // ---------------------------------------------------------------------------
   // BACKUP
@@ -74,7 +77,7 @@ class BackupService {
 
       return BackupArchive(
         fileName:
-            'finance_backup_${DateFormat('yyyy-MM-dd_HH-mm').format(timestamp.toLocal())}.zip',
+            'finance_backup_${DateFormat('yyyy-MM-dd_HH-mm-ss-SSS').format(timestamp.toLocal())}.zip',
         bytes: ZipEncoder().encodeBytes(archive),
         manifest: manifest,
       );
@@ -114,7 +117,7 @@ class BackupService {
   /// dan byte arsip yang siap dipulihkan.
   Future<RestorePreview> parseRestoreFile(Uint8List zipBytes) async {
     final bytes = zipBytes;
-    if (bytes.isEmpty) {
+    if (bytes.isEmpty || bytes.length > _maximumArchiveBytes) {
       throw const RestoreError.invalidZip();
     }
 
@@ -223,29 +226,51 @@ class BackupService {
     // Extract file SQLite ke temp
     final archive = ZipDecoder().decodeBytes(archiveBytes);
     final dbEntry = archive.findFile('database.sqlite');
-    if (dbEntry == null) {
+    if (dbEntry == null || dbEntry.size > _maximumArchiveBytes) {
       throw const RestoreError.invalidZip();
     }
 
     final tempRoot = temporaryDirectory ?? await getTemporaryDirectory();
     final workingDir = await tempRoot.createTemp('finote_restore_');
-    final tempDbFile = File(
-      p.join(workingDir.path, 'database.sqlite'),
-    );
+    final tempDbFile = File(p.join(workingDir.path, 'database.sqlite'));
 
     try {
-      await tempDbFile.writeAsBytes(
-        dbEntry.content as List<int>,
-        flush: true,
-      );
+      await tempDbFile.writeAsBytes(dbEntry.content as List<int>, flush: true);
 
       // Integrity check pada file yang akan di-restore
       await _checkRestoredSnapshot(tempDbFile);
 
-      // Tutup koneksi live dan salin file
-      final targetPath = await AppDatabase.resolveDatabasePath();
+      final targetPath =
+          databasePath ?? await AppDatabase.resolveDatabasePath();
+      final targetFile = File(targetPath);
+      final stamp = DateTime.now().microsecondsSinceEpoch;
+      final stagedFile = File('$targetPath.restore-$stamp');
+      final rollbackFile = File('$targetPath.rollback-$stamp');
+      await tempDbFile.copy(stagedFile.path);
+
       await _database.close();
-      await tempDbFile.copy(targetPath);
+      var movedOriginal = false;
+      try {
+        if (await targetFile.exists()) {
+          await targetFile.rename(rollbackFile.path);
+          movedOriginal = true;
+        }
+        await stagedFile.rename(targetPath);
+        if (await rollbackFile.exists()) {
+          try {
+            await rollbackFile.delete();
+          } catch (_) {
+            // A leftover rollback file is safer than failing a completed restore.
+          }
+        }
+      } catch (_) {
+        if (await stagedFile.exists()) await stagedFile.delete();
+        if (movedOriginal && await rollbackFile.exists()) {
+          if (await targetFile.exists()) await targetFile.delete();
+          await rollbackFile.rename(targetPath);
+        }
+        rethrow;
+      }
     } finally {
       if (await workingDir.exists()) {
         await workingDir.delete(recursive: true);
@@ -258,7 +283,26 @@ class BackupService {
     try {
       db = sqlite3.open(file.path, mode: OpenMode.readOnly);
       final result = db.select('PRAGMA integrity_check').single;
-      if (result['integrity_check'] != 'ok') {
+      final tables = db
+          .select("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .map((row) => row['name'])
+          .toSet();
+      final foreignKeyErrors = db.select('PRAGMA foreign_key_check');
+      if (result['integrity_check'] != 'ok' ||
+          db.userVersion != _database.schemaVersion ||
+          !tables.containsAll({'categories', 'transactions', 'settings'}) ||
+          !_hasColumns(db, 'categories', {'id', 'name', 'type'}) ||
+          !_hasColumns(db, 'transactions', {
+            'id',
+            'uuid',
+            'type',
+            'category_id',
+            'amount',
+            'transaction_date',
+            'source',
+          }) ||
+          !_hasColumns(db, 'settings', {'key', 'value'}) ||
+          foreignKeyErrors.isNotEmpty) {
         throw const RestoreError.integrityCheckFailed();
       }
     } on RestoreError {
@@ -270,6 +314,14 @@ class BackupService {
     } finally {
       db?.close();
     }
+  }
+
+  bool _hasColumns(Database db, String table, Set<String> required) {
+    final columns = db
+        .select('PRAGMA table_info("$table")')
+        .map((row) => row['name'])
+        .toSet();
+    return columns.containsAll(required);
   }
 }
 

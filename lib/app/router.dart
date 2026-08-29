@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/backup/presentation/backup_page.dart';
+import '../features/app_lock/presentation/security_page.dart';
 import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/legacy_import/presentation/legacy_import_page.dart';
@@ -18,6 +19,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CategoryPage(),
       ),
       GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
+      GoRoute(
+        path: '/security',
+        builder: (context, state) => const SecurityPage(),
+      ),
       GoRoute(
         path: '/legacy-import',
         builder: (context, state) => const LegacyImportPage(),
@@ -36,6 +41,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: ':id/edit',
+            redirect: (context, state) =>
+                int.tryParse(state.pathParameters['id'] ?? '') == null
+                ? '/transactions'
+                : null,
             builder: (context, state) => TransactionFormPage(
               transactionId: int.tryParse(state.pathParameters['id'] ?? ''),
             ),

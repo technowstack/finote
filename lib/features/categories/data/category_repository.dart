@@ -74,15 +74,19 @@ class CategoryRepository {
       throw ArgumentError.value(name, 'name', 'Category name cannot be empty');
     }
 
-    return _database
-        .into(_database.categories)
-        .insertReturning(
-          CategoriesCompanion.insert(
-            name: name.trim(),
-            type: type,
-            icon: Value(icon),
-          ),
-        );
+    return _database.transaction(() async {
+      await _requireUniqueName(name.trim(), type);
+
+      return _database
+          .into(_database.categories)
+          .insertReturning(
+            CategoriesCompanion.insert(
+              name: name.trim(),
+              type: type,
+              icon: Value(icon),
+            ),
+          );
+    });
   }
 
   Future<CategoryRecord?> findActiveById(int id) {
@@ -98,18 +102,21 @@ class CategoryRepository {
       throw ArgumentError.value(name, 'name', 'Category name cannot be empty');
     }
 
-    final count =
-        await (_database.update(_database.categories)..where(
-              (category) =>
-                  category.id.equals(id) & category.deletedAt.isNull(),
-            ))
-            .write(
-              CategoriesCompanion(
-                name: Value(normalizedName),
-                updatedAt: Value(DateTime.now().toUtc()),
-              ),
-            );
-    return count == 1;
+    return _database.transaction(() async {
+      final category = await findActiveById(id);
+      if (category == null) return false;
+      await _requireUniqueName(normalizedName, category.type, excludingId: id);
+      final count =
+          await (_database.update(
+            _database.categories,
+          )..where((row) => row.id.equals(id) & row.deletedAt.isNull())).write(
+            CategoriesCompanion(
+              name: Value(normalizedName),
+              updatedAt: Value(DateTime.now().toUtc()),
+            ),
+          );
+      return count == 1;
+    });
   }
 
   Future<bool> softDelete(int id) async {
@@ -123,6 +130,27 @@ class CategoryRepository {
               CategoriesCompanion(updatedAt: Value(now), deletedAt: Value(now)),
             );
     return count == 1;
+  }
+
+  Future<void> _requireUniqueName(
+    String name,
+    TransactionType type, {
+    int? excludingId,
+  }) async {
+    final categories =
+        await (_database.select(_database.categories)..where(
+              (category) =>
+                  category.type.equals(type.name) & category.deletedAt.isNull(),
+            ))
+            .get();
+    final normalized = name.toLowerCase();
+    if (categories.any(
+      (category) =>
+          category.id != excludingId &&
+          category.name.toLowerCase() == normalized,
+    )) {
+      throw StateError('Category name already exists');
+    }
   }
 }
 

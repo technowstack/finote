@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/services/app_logger.dart';
+import '../../../core/database/app_database.dart';
 import '../data/backup_service.dart';
 import '../domain/restore_error.dart';
 import '../domain/restore_preview.dart';
@@ -35,7 +38,7 @@ class _BackupPageState extends ConsumerState<BackupPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup & Restore'),
+        title: const Text('Backup dan restore'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -46,10 +49,7 @@ class _BackupPageState extends ConsumerState<BackupPage>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: const [
-          _BackupTab(),
-          _RestoreTab(),
-        ],
+        children: const [_BackupTab(), _RestoreTab()],
       ),
     );
   }
@@ -104,8 +104,7 @@ class _BackupTabState extends ConsumerState<_BackupTab> {
                     icon: _creating
                         ? const SizedBox.square(
                             dimension: 18,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.save_alt),
                     label: Text(
@@ -338,7 +337,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: cs.errorContainer.withValues(alpha: 0.4),
+            color: cs.errorContainer,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -396,7 +395,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Data telah dipulihkan. Restart aplikasi untuk melihat perubahan.',
+          'Data telah dipulihkan dan siap digunakan.',
           textAlign: TextAlign.center,
         ),
       ],
@@ -498,6 +497,17 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
     );
     if (file == null) return;
 
+    final path = file.path;
+    if (path != null && await File(path).length() > 100 * 1024 * 1024) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'File backup terlalu besar.';
+        _step = _RestoreStep.error;
+      });
+      return;
+    }
+    if (!mounted) return;
+
     setState(() => _step = _RestoreStep.validating);
 
     try {
@@ -518,7 +528,11 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
         _step = _RestoreStep.error;
       });
     } catch (error, stackTrace) {
-      AppLogger.error('Unexpected error during restore validation', error, stackTrace);
+      AppLogger.error(
+        'Unexpected error during restore validation',
+        error,
+        stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         _errorMessage = const RestoreError.unknown('').toUserMessage();
@@ -533,21 +547,14 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
 
     BackupArchive safetyBackup;
     try {
-      safetyBackup = await ref
-          .read(backupServiceProvider)
-          .createSafetyBackup();
+      safetyBackup = await ref.read(backupServiceProvider).createSafetyBackup();
     } catch (error, stackTrace) {
       AppLogger.error('Failed to create safety backup', error, stackTrace);
       if (!mounted) return;
-      // Safety backup gagal — tanya pengguna apakah tetap lanjut
-      final proceed = await _showSafetyBackupFailedDialog();
-      if (!proceed || !mounted) {
-        setState(() => _step = _RestoreStep.preview);
-        return;
-      }
-      // Lanjutkan tanpa safety backup
-      _safetyBackup = null;
-      await _executeRestore();
+      setState(() {
+        _errorMessage = 'Safety backup gagal dibuat. Restore dibatalkan agar data tetap aman.';
+        _step = _RestoreStep.error;
+      });
       return;
     }
 
@@ -571,9 +578,13 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
     setState(() => _step = _RestoreStep.restoring);
 
     try {
-      await ref
-          .read(backupServiceProvider)
-          .restoreFromArchive(_preview!.archiveBytes);
+      try {
+        await ref
+            .read(backupServiceProvider)
+            .restoreFromArchive(_preview!.archiveBytes);
+      } finally {
+        ref.invalidate(databaseProvider);
+      }
 
       if (!mounted) return;
       setState(() => _step = _RestoreStep.success);
@@ -639,40 +650,12 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
         false;
   }
 
-  Future<bool> _showSafetyBackupFailedDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Safety Backup Gagal'),
-            content: const Text(
-              'Gagal membuat safety backup dari data saat ini. '
-              'Apakah Anda tetap ingin melanjutkan restore tanpa safety backup? '
-              'Data saat ini tidak akan bisa dikembalikan jika restore gagal.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Batal'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(ctx).colorScheme.error,
-                ),
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Lanjutkan tanpa safety backup'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-  }
-
   void _resetToIdle() {
     setState(() {
       _step = _RestoreStep.idle;
       _preview = null;
+      _safetyBackup = null;
       _errorMessage = null;
-      // Safety backup sengaja TIDAK di-reset agar path-nya tetap terlihat
     });
   }
 }
@@ -698,16 +681,15 @@ class _PreviewRow extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],

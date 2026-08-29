@@ -130,12 +130,20 @@ class LegacyDetector {
     return _TransactionMeta(
       count: row['txCount'] as int? ?? 0,
       categoryCount: row['catCount'] as int? ?? 0,
-      totalIncome: (row['totalIncome'] as num?)?.toInt() ?? 0,
-      totalExpense: (row['totalExpense'] as num?)?.toInt() ?? 0,
+      totalIncome: _readWholeNumber(row['totalIncome']),
+      totalExpense: _readWholeNumber(row['totalExpense']),
       oldest: LegacySchema.readDate(row['minDate']),
       newest: LegacySchema.readDate(row['maxDate']),
     );
   }
+
+  int _readWholeNumber(Object? value) => switch (value) {
+    null => 0,
+    int value => value,
+    double value when value.isFinite && value == value.truncateToDouble() =>
+      value.toInt(),
+    _ => throw const FormatException('Nominal legacy tidak valid.'),
+  };
 }
 
 /// Data internal untuk metadata tabel Transaction.

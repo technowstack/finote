@@ -175,7 +175,8 @@ class LegacyImporter {
 
   int _readInt(Object? value, String field) => switch (value) {
     int value => value,
-    double value => value.toInt(),
+    double value when value.isFinite && value == value.truncateToDouble() =>
+      value.toInt(),
     String value when int.tryParse(value) != null => int.parse(value),
     _ => throw FormatException('Nilai $field tidak valid.'),
   };

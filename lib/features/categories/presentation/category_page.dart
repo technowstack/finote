@@ -169,7 +169,10 @@ class _CategoryTile extends ConsumerWidget {
     if (name == null || !context.mounted) return;
 
     try {
-      await ref.read(categoryRepositoryProvider).rename(category.id, name);
+      final renamed = await ref
+          .read(categoryRepositoryProvider)
+          .rename(category.id, name);
+      if (!renamed) throw StateError('Category is no longer active');
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,7 +203,10 @@ class _CategoryTile extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await ref.read(categoryRepositoryProvider).softDelete(category.id);
+      final deleted = await ref
+          .read(categoryRepositoryProvider)
+          .softDelete(category.id);
+      if (!deleted) throw StateError('Category is no longer active');
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

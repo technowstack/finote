@@ -31,12 +31,8 @@ void main() {
       'appVersion': '1.0.0',
     };
     final archive = Archive()
-      ..addFile(
-        ArchiveFile.string('manifest.json', jsonEncode(manifest)),
-      )
-      ..addFile(
-        ArchiveFile.bytes('database.sqlite', dbBytes ?? Uint8List(0)),
-      );
+      ..addFile(ArchiveFile.string('manifest.json', jsonEncode(manifest)))
+      ..addFile(ArchiveFile.bytes('database.sqlite', dbBytes ?? Uint8List(0)));
     return ZipEncoder().encodeBytes(archive);
   }
 
@@ -70,7 +66,7 @@ void main() {
         );
         final archive = ZipDecoder().decodeBytes(backup.bytes);
 
-        expect(backup.fileName, 'finance_backup_2026-08-29_14-05.zip');
+        expect(backup.fileName, 'finance_backup_2026-08-29_14-05-00-000.zip');
         expect(archive.files.map((file) => file.name).toSet(), {
           'database.sqlite',
           'manifest.json',
@@ -90,13 +86,13 @@ void main() {
           archive.findFile('database.sqlite')!.content,
           flush: true,
         );
-        final snapshot =
-            sqlite3.open(snapshotFile.path, mode: OpenMode.readOnly);
+        final snapshot = sqlite3.open(
+          snapshotFile.path,
+          mode: OpenMode.readOnly,
+        );
         try {
           expect(
-            snapshot
-                .select('PRAGMA integrity_check')
-                .single['integrity_check'],
+            snapshot.select('PRAGMA integrity_check').single['integrity_check'],
             'ok',
           );
           expect(
@@ -136,9 +132,7 @@ void main() {
     // 1. ZIP tidak valid
     // -------------------------------------------------------------------------
     test('invalid zip — bytes acak melempar RestoreError', () async {
-      final garbage = Uint8List.fromList(
-        List.generate(256, (i) => i % 256),
-      );
+      final garbage = Uint8List.fromList(List.generate(256, (i) => i % 256));
 
       await expectLater(
         service.parseRestoreFile(garbage),
@@ -163,65 +157,70 @@ void main() {
     // -------------------------------------------------------------------------
     // 2. Manifest tidak valid
     // -------------------------------------------------------------------------
-    test('invalid manifest — JSON rusak melempar RestoreError.invalidManifest',
-        () async {
-      // ZIP valid tapi manifest JSON-nya rusak
-      final brokenManifestZip = () {
-        final archive = Archive()
-          ..addFile(ArchiveFile.string('manifest.json', 'not-valid-json{{{'))
-          ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
-        return ZipEncoder().encodeBytes(archive);
-      }();
+    test(
+      'invalid manifest — JSON rusak melempar RestoreError.invalidManifest',
+      () async {
+        // ZIP valid tapi manifest JSON-nya rusak
+        final brokenManifestZip = () {
+          final archive = Archive()
+            ..addFile(ArchiveFile.string('manifest.json', 'not-valid-json{{{'))
+            ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
+          return ZipEncoder().encodeBytes(archive);
+        }();
 
-      try {
-        await service.parseRestoreFile(brokenManifestZip);
-        fail('Expected RestoreError');
-      } on RestoreError catch (e) {
-        expect(e.toUserMessage(), isNotEmpty);
-      }
-    });
+        try {
+          await service.parseRestoreFile(brokenManifestZip);
+          fail('Expected RestoreError');
+        } on RestoreError catch (e) {
+          expect(e.toUserMessage(), isNotEmpty);
+        }
+      },
+    );
 
     test(
-        'invalid manifest — field hilang melempar RestoreError.invalidManifest',
-        () async {
-      // Manifest tanpa field 'application'
-      final missingFieldZip = () {
-        final json = {
-          // 'application' sengaja dihilangkan
-          'backupVersion': BackupManifest.currentBackupVersion,
-          'databaseVersion': 2,
-          'createdAt': DateTime.utc(2026).toIso8601String(),
-          'appVersion': '1.0.0',
-        };
-        final archive = Archive()
-          ..addFile(ArchiveFile.string('manifest.json', jsonEncode(json)))
-          ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
-        return ZipEncoder().encodeBytes(archive);
-      }();
+      'invalid manifest — field hilang melempar RestoreError.invalidManifest',
+      () async {
+        // Manifest tanpa field 'application'
+        final missingFieldZip = () {
+          final json = {
+            // 'application' sengaja dihilangkan
+            'backupVersion': BackupManifest.currentBackupVersion,
+            'databaseVersion': 2,
+            'createdAt': DateTime.utc(2026).toIso8601String(),
+            'appVersion': '1.0.0',
+          };
+          final archive = Archive()
+            ..addFile(ArchiveFile.string('manifest.json', jsonEncode(json)))
+            ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
+          return ZipEncoder().encodeBytes(archive);
+        }();
 
-      await expectLater(
-        service.parseRestoreFile(missingFieldZip),
-        throwsA(isA<RestoreError>()),
-      );
-    });
+        await expectLater(
+          service.parseRestoreFile(missingFieldZip),
+          throwsA(isA<RestoreError>()),
+        );
+      },
+    );
 
     // -------------------------------------------------------------------------
     // 3. Versi backup tidak didukung
     // -------------------------------------------------------------------------
-    test('unsupported backup version melempar RestoreError.unsupportedVersion',
-        () async {
-      const unsupportedVersion = 99;
-      final zip = buildValidZip(backupVersion: unsupportedVersion);
+    test(
+      'unsupported backup version melempar RestoreError.unsupportedVersion',
+      () async {
+        const unsupportedVersion = 99;
+        final zip = buildValidZip(backupVersion: unsupportedVersion);
 
-      try {
-        await service.parseRestoreFile(zip);
-        fail('Expected RestoreError.unsupportedVersion');
-      } on RestoreError catch (e) {
-        final msg = e.toUserMessage();
-        expect(msg, isNotEmpty);
-        expect(msg, contains('$unsupportedVersion'));
-      }
-    });
+        try {
+          await service.parseRestoreFile(zip);
+          fail('Expected RestoreError.unsupportedVersion');
+        } on RestoreError catch (e) {
+          final msg = e.toUserMessage();
+          expect(msg, isNotEmpty);
+          expect(msg, contains('$unsupportedVersion'));
+        }
+      },
+    );
 
     // -------------------------------------------------------------------------
     // 4. Restore berhasil — roundtrip penuh
@@ -281,6 +280,50 @@ void main() {
       } finally {
         restoredDb.close();
       }
+    });
+
+    test('restore atomically replaces a file-backed database', () async {
+      await database.close();
+      final tempDir = await Directory.systemTemp.createTemp(
+        'finote_atomic_restore_test_',
+      );
+      addTearDown(() => tempDir.delete(recursive: true));
+      final path = '${tempDir.path}/finote.sqlite';
+      var live = AppDatabase(NativeDatabase(File(path)));
+
+      final category = await CategoryRepository(live)
+          .create(name: 'Makan', type: TransactionType.expense);
+      await TransactionRepository(live).create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 10000,
+        transactionDate: DateTime(2026, 8, 1),
+      );
+      final fileService = BackupService(live, databasePath: path);
+      final backup = await fileService.buildBackup(
+        appVersion: '1.0.0',
+        temporaryDirectory: tempDir,
+      );
+      await TransactionRepository(live).create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 20000,
+        transactionDate: DateTime(2026, 8, 2),
+      );
+
+      await fileService.restoreFromArchive(
+        backup.bytes,
+        temporaryDirectory: tempDir,
+      );
+      live = AppDatabase(NativeDatabase(File(path)));
+      addTearDown(live.close);
+
+      expect(await live.select(live.transactions).get(), hasLength(1));
+      expect((await live.select(live.transactions).getSingle()).amount, 10000);
+      expect(
+        tempDir.listSync().where((entry) => entry.path.contains('.rollback-')),
+        isEmpty,
+      );
     });
 
     // -------------------------------------------------------------------------

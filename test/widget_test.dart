@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finote/app/app.dart';
 import 'package:finote/core/theme/theme_mode_provider.dart';
+import 'package:finote/features/app_lock/data/pin_repository.dart';
 
 void main() {
   testWidgets('app starts with system theme and configured router', (
@@ -19,7 +20,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(database)],
+        overrides: [
+          databaseProvider.overrideWithValue(database),
+          pinStoreProvider.overrideWithValue(_EmptyPinStore()),
+        ],
         child: const FinoteApp(),
       ),
     );
@@ -32,4 +36,15 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+}
+
+class _EmptyPinStore implements PinStore {
+  @override
+  Future<void> delete() async {}
+
+  @override
+  Future<String?> read() async => null;
+
+  @override
+  Future<void> write(String value) async {}
 }

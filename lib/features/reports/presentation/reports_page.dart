@@ -31,9 +31,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
             child: Row(
               spacing: 8,
               children: [
-                _periodChip('Hari Ini', _ReportPeriod.today),
-                _periodChip('Minggu Ini', _ReportPeriod.week),
-                _periodChip('Bulan Ini', _ReportPeriod.month),
+                _periodChip('Hari ini', _ReportPeriod.today),
+                _periodChip('Minggu ini', _ReportPeriod.week),
+                _periodChip('Bulan ini', _ReportPeriod.month),
                 ChoiceChip(
                   label: const Text('Rentang'),
                   selected: _period == _ReportPeriod.custom,
@@ -42,6 +42,15 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
               ],
             ),
           ),
+          if (_period == _ReportPeriod.custom && _customRange != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                '${DateFormat('d MMM y', 'id_ID').format(_customRange!.start)} - '
+                '${DateFormat('d MMM y', 'id_ID').format(_customRange!.end)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           Expanded(
             child: report.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -72,6 +81,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
       lastDate: DateTime(2100),
       initialDateRange: _customRange ?? DateTimeRange(start: today, end: today),
     );
+    if (!mounted) return;
     if (selected != null) {
       setState(() {
         _customRange = selected;
@@ -146,7 +156,10 @@ class _Summary extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Saldo periode'),
+              Text(
+                'Saldo periode',
+                style: TextStyle(color: colors.onSecondaryContainer),
+              ),
               const SizedBox(height: 6),
               FittedBox(
                 fit: BoxFit.scaleDown,
@@ -254,11 +267,17 @@ class _CategorySection extends StatelessWidget {
                   ListTile(
                     leading: CircleAvatar(child: Text('${index + 1}')),
                     title: Text(items[index].categoryName),
-                    trailing: Text(
-                      formatIdr(items[index].amount),
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.w700,
+                    trailing: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 130),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          formatIdr(items[index].amount),
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                   ),

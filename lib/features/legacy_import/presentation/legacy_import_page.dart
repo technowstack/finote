@@ -198,11 +198,16 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
-            onPressed: _startImport,
+            onPressed: result.transactionCount == 0 ? null : _startImport,
             icon: const Icon(Icons.upload_outlined),
             label: const Text('Mulai import'),
           ),
         ),
+        if (result.transactionCount == 0)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('Tidak ada transaksi untuk diimpor.'),
+          ),
         const SizedBox(height: 8),
         SizedBox(
           width: double.infinity,

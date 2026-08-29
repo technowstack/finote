@@ -66,6 +66,10 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   ),
               ],
               onChanged: _scheduleSearch,
+              textInputAction: TextInputAction.search,
+              onSubmitted: _applySearch,
+              onTapOutside: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
           ),
           _FilterRow(
@@ -89,11 +93,19 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
               ),
             ],
           ),
+          if (_dateFilter == _DateFilter.custom && _customRange != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Text(
+                '${formatDate(_customRange!.start)} - ${formatDate(_customRange!.end)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           _FilterRow(
             children: [
-              _dateChip('Hari Ini', _DateFilter.today),
-              _dateChip('Minggu Ini', _DateFilter.week),
-              _dateChip('Bulan Ini', _DateFilter.month),
+              _dateChip('Hari ini', _DateFilter.today),
+              _dateChip('Minggu ini', _DateFilter.week),
+              _dateChip('Bulan ini', _DateFilter.month),
               ChoiceChip(
                 label: const Text('Rentang'),
                 selected: _dateFilter == _DateFilter.custom,
@@ -123,7 +135,10 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     return ChoiceChip(
       label: Text(label),
       selected: _dateFilter == value,
-      onSelected: (_) => setState(() => _dateFilter = value),
+      onSelected: (_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        setState(() => _dateFilter = value);
+      },
     );
   }
 
@@ -141,6 +156,12 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     setState(() => _search = '');
   }
 
+  void _applySearch(String value) {
+    _searchTimer?.cancel();
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _search = value.trim());
+  }
+
   Future<void> _selectCustomRange() async {
     final today = DateTime.now();
     final selected = await showDateRangePicker(
@@ -149,6 +170,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       lastDate: DateTime(2100),
       initialDateRange: _customRange ?? DateTimeRange(start: today, end: today),
     );
+    if (!mounted) return;
     if (selected != null) {
       setState(() {
         _customRange = selected;
@@ -239,9 +261,18 @@ class _TransactionTile extends ConsumerWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
-              style: TextStyle(color: amountColor, fontWeight: FontWeight.w700),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 130),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
+                  style: TextStyle(
+                    color: amountColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
             ),
             PopupMenuButton<void>(
               tooltip: 'Tindakan transaksi',
@@ -277,9 +308,10 @@ class _TransactionTile extends ConsumerWidget {
     if (confirmed != true || !context.mounted) return;
 
     try {
-      await ref
+      final deleted = await ref
           .read(transactionRepositoryProvider)
           .softDelete(item.transaction.id);
+      if (!deleted) throw StateError('Transaction is no longer active');
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
