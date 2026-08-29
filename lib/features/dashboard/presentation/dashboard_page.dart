@@ -20,6 +20,11 @@ class DashboardPage extends ConsumerWidget {
         title: const Text('Catatan Keuangan'),
         actions: [
           IconButton(
+            tooltip: 'Laporan',
+            onPressed: () => context.push('/reports'),
+            icon: const Icon(Icons.assessment_outlined),
+          ),
+          IconButton(
             tooltip: 'Kategori',
             onPressed: () => context.push('/categories'),
             icon: const Icon(Icons.category_outlined),

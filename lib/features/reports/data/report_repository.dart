@@ -1,0 +1,189 @@
+import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/database/app_database.dart';
+import '../../../core/database/converters.dart';
+
+class ReportRepository {
+  ReportRepository(this._database);
+
+  final AppDatabase _database;
+
+  Stream<ReportData> watchReport(ReportRange range) {
+    const converter = DateOnlyConverter();
+    return _database
+        .customSelect(
+          '''
+WITH filtered AS (
+  SELECT type, amount, category_id, transaction_date
+  FROM transactions
+  WHERE deleted_at IS NULL AND transaction_date BETWEEN ? AND ?
+),
+expense_categories AS (
+  SELECT c.name AS label, SUM(f.amount) AS amount
+  FROM filtered f
+  JOIN categories c ON c.id = f.category_id
+  WHERE f.type = 'expense'
+  GROUP BY c.id, c.name
+  ORDER BY amount DESC, c.name ASC
+  LIMIT 5
+),
+income_categories AS (
+  SELECT c.name AS label, SUM(f.amount) AS amount
+  FROM filtered f
+  JOIN categories c ON c.id = f.category_id
+  WHERE f.type = 'income'
+  GROUP BY c.id, c.name
+  ORDER BY amount DESC, c.name ASC
+  LIMIT 5
+),
+monthly AS (
+  SELECT
+    substr(transaction_date, 1, 7) AS label,
+    SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS income,
+    SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS expense
+  FROM filtered
+  GROUP BY substr(transaction_date, 1, 7)
+)
+SELECT kind, label, income, expense, amount
+FROM (
+  SELECT
+    'summary' AS kind,
+    '' AS label,
+    COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
+    COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expense,
+    0 AS amount,
+    0 AS sort_group
+  FROM filtered
+  UNION ALL
+  SELECT 'expense_category', label, 0, 0, amount, 1 FROM expense_categories
+  UNION ALL
+  SELECT 'income_category', label, 0, 0, amount, 2 FROM income_categories
+  UNION ALL
+  SELECT 'month', label, income, expense, 0, 3 FROM monthly
+)
+ORDER BY
+  sort_group,
+  CASE WHEN kind = 'month' THEN label END DESC,
+  amount DESC,
+  label ASC
+''',
+          variables: [
+            Variable.withString(converter.toSql(range.start)),
+            Variable.withString(converter.toSql(range.end)),
+          ],
+          readsFrom: {_database.transactions, _database.categories},
+        )
+        .watch()
+        .map(_mapRows);
+  }
+
+  ReportData _mapRows(List<QueryRow> rows) {
+    var income = 0;
+    var expense = 0;
+    final expenseCategories = <CategoryTotal>[];
+    final incomeCategories = <CategoryTotal>[];
+    final monthlyHistory = <MonthlyTotal>[];
+
+    for (final row in rows) {
+      switch (row.read<String>('kind')) {
+        case 'summary':
+          income = row.read<int>('income');
+          expense = row.read<int>('expense');
+        case 'expense_category':
+          expenseCategories.add(
+            CategoryTotal(
+              categoryName: row.read<String>('label'),
+              amount: row.read<int>('amount'),
+            ),
+          );
+        case 'income_category':
+          incomeCategories.add(
+            CategoryTotal(
+              categoryName: row.read<String>('label'),
+              amount: row.read<int>('amount'),
+            ),
+          );
+        case 'month':
+          monthlyHistory.add(
+            MonthlyTotal(
+              month: row.read<String>('label'),
+              income: row.read<int>('income'),
+              expense: row.read<int>('expense'),
+            ),
+          );
+      }
+    }
+
+    return ReportData(
+      totalIncome: income,
+      totalExpense: expense,
+      topExpenseCategories: expenseCategories,
+      topIncomeCategories: incomeCategories,
+      monthlyHistory: monthlyHistory,
+    );
+  }
+}
+
+class ReportData {
+  const ReportData({
+    required this.totalIncome,
+    required this.totalExpense,
+    required this.topExpenseCategories,
+    required this.topIncomeCategories,
+    required this.monthlyHistory,
+  });
+
+  final int totalIncome;
+  final int totalExpense;
+  final List<CategoryTotal> topExpenseCategories;
+  final List<CategoryTotal> topIncomeCategories;
+  final List<MonthlyTotal> monthlyHistory;
+
+  int get netBalance => totalIncome - totalExpense;
+  bool get isEmpty => monthlyHistory.isEmpty;
+}
+
+class CategoryTotal {
+  const CategoryTotal({required this.categoryName, required this.amount});
+
+  final String categoryName;
+  final int amount;
+}
+
+class MonthlyTotal {
+  const MonthlyTotal({
+    required this.month,
+    required this.income,
+    required this.expense,
+  });
+
+  final String month;
+  final int income;
+  final int expense;
+
+  int get netBalance => income - expense;
+}
+
+class ReportRange {
+  const ReportRange({required this.start, required this.end});
+
+  final DateTime start;
+  final DateTime end;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReportRange && other.start == start && other.end == end;
+
+  @override
+  int get hashCode => Object.hash(start, end);
+}
+
+final reportRepositoryProvider = Provider<ReportRepository>(
+  (ref) => ReportRepository(ref.watch(databaseProvider)),
+);
+
+final reportProvider = StreamProvider.autoDispose
+    .family<ReportData, ReportRange>(
+      (ref, range) => ref.watch(reportRepositoryProvider).watchReport(range),
+    );

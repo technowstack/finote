@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
+import '../features/reports/presentation/reports_page.dart';
 import '../features/transactions/presentation/transaction_form_page.dart';
 import '../features/transactions/presentation/transactions_page.dart';
 
@@ -13,6 +14,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/categories',
         builder: (context, state) => const CategoryPage(),
+      ),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => const ReportsPage(),
       ),
       GoRoute(
         path: '/transactions',
