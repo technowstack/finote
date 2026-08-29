@@ -1,21 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class StartupPage extends StatelessWidget {
   const StartupPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: SafeArea(
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.account_balance_wallet_outlined, size: 48),
-              SizedBox(height: 16),
-              Text('Catatan Keuangan'),
-              SizedBox(height: 8),
-              Text('Fondasi aplikasi siap.'),
+              const Icon(Icons.account_balance_wallet_outlined, size: 48),
+              const SizedBox(height: 16),
+              const Text('Catatan Keuangan'),
+              const SizedBox(height: 8),
+              const Text('Fondasi aplikasi siap.'),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/categories'),
+                icon: const Icon(Icons.category_outlined),
+                label: const Text('Kelola kategori'),
+              ),
             ],
           ),
         ),

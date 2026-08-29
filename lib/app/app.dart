@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/services/app_logger.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_mode_provider.dart';
+import '../features/categories/data/category_repository.dart';
 import 'router.dart';
 
 class FinoteApp extends ConsumerWidget {
@@ -11,6 +13,16 @@ class FinoteApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(categoryInitializationProvider, (previous, next) {
+      next.whenOrNull(
+        error: (error, stackTrace) => AppLogger.error(
+          'Failed to initialize default categories',
+          error,
+          stackTrace,
+        ),
+      );
+    });
+
     return MaterialApp.router(
       title: 'Catatan Keuangan',
       debugShowCheckedModeBanner: false,
