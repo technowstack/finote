@@ -10,6 +10,34 @@ class TransactionRepository {
 
   final AppDatabase _database;
 
+  Stream<List<TransactionListItem>> watchAll() {
+    final query =
+        _database.select(_database.transactions).join([
+            innerJoin(
+              _database.categories,
+              _database.categories.id.equalsExp(
+                _database.transactions.categoryId,
+              ),
+            ),
+          ])
+          ..where(_database.transactions.deletedAt.isNull())
+          ..orderBy([
+            OrderingTerm.desc(_database.transactions.transactionDate),
+            OrderingTerm.desc(_database.transactions.createdAt),
+          ]);
+
+    return query.watch().map(
+      (rows) => rows
+          .map(
+            (row) => (
+              transaction: row.readTable(_database.transactions),
+              category: row.readTable(_database.categories),
+            ),
+          )
+          .toList(),
+    );
+  }
+
   Future<TransactionRecord> create({
     required TransactionType type,
     required int categoryId,
@@ -118,3 +146,16 @@ class TransactionRepository {
 final transactionRepositoryProvider = Provider<TransactionRepository>(
   (ref) => TransactionRepository(ref.watch(databaseProvider)),
 );
+
+final transactionsProvider = StreamProvider<List<TransactionListItem>>(
+  (ref) => ref.watch(transactionRepositoryProvider).watchAll(),
+);
+
+final transactionByIdProvider = FutureProvider.family<TransactionRecord?, int>(
+  (ref, id) => ref.watch(transactionRepositoryProvider).findActiveById(id),
+);
+
+typedef TransactionListItem = ({
+  TransactionRecord transaction,
+  CategoryRecord category,
+});

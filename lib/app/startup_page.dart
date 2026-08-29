@@ -18,6 +18,12 @@ class StartupPage extends StatelessWidget {
               const SizedBox(height: 8),
               const Text('Fondasi aplikasi siap.'),
               const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => context.go('/transactions'),
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: const Text('Buka transaksi'),
+              ),
+              const SizedBox(height: 8),
               OutlinedButton.icon(
                 onPressed: () => context.go('/categories'),
                 icon: const Icon(Icons.category_outlined),
