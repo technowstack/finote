@@ -228,6 +228,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
                   ? null
                   : (value) => setState(() => _format = value!),
             ),
+            const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<TransactionType?>(
               initialValue: _type,
               decoration: const InputDecoration(labelText: 'Jenis transaksi'),

@@ -160,7 +160,11 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                   ? 'Menyimpan...'
                   : isReceiptDraft
                   ? 'Simpan pengeluaran'
-                  : 'Simpan transaksi',
+                  : isEditing
+                  ? 'Simpan perubahan'
+                  : _type == TransactionType.income
+                  ? 'Simpan pemasukan'
+                  : 'Simpan pengeluaran',
             ),
           ),
         ),
@@ -217,7 +221,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               ),
               validator: (value) => _parseAmount(value ?? '') > 0
                   ? null
-                  : 'Nominal harus lebih dari Rp0.',
+                  : 'Masukkan nominal yang valid.',
               onFieldSubmitted: (_) =>
                   FocusManager.instance.primaryFocus?.unfocus(),
             ),
@@ -279,6 +283,19 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 }),
               ),
             ),
+            if (isEditing &&
+                _categoryId != null &&
+                categories.valueOrNull?.every(
+                      (category) => category.id != _categoryId,
+                    ) ==
+                    true)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  'Kategori lama tidak tersedia. Pilih kategori pengganti.',
+                  style: textTheme.bodySmall?.copyWith(color: colors.error),
+                ),
+              ),
             if (_formKey.currentState?.validate() == false &&
                 _categoryId == null)
               Padding(
@@ -392,10 +409,17 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           item.amount <= 0 ||
           (item.categoryId ?? _categoryId) == null,
     );
+    final availableCategoryIds = ref
+        .read(categoriesByTypeProvider(_type))
+        .valueOrNull
+        ?.map((category) => category.id)
+        .toSet();
     if ((!isItemized && !_formKey.currentState!.validate()) ||
         (isItemized && hasInvalidItem) ||
         (isItemized && itemEntries.isEmpty) ||
-        (!isItemized && _categoryId == null)) {
+        (!isItemized &&
+            (_categoryId == null ||
+                availableCategoryIds?.contains(_categoryId) != true))) {
       // Force rebuild to show category error
       setState(() {});
       return;
@@ -502,7 +526,13 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaksi gagal disimpan. Coba lagi.')),
+          SnackBar(
+            content: Text(
+              widget.transaction == null
+                  ? 'Gagal menyimpan transaksi. Silakan coba lagi.'
+                  : 'Gagal memperbarui transaksi. Silakan coba lagi.',
+            ),
+          ),
         );
       }
     }
@@ -682,6 +712,7 @@ class _ReceiptReviewSection extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<int?>(
                   initialValue: item.categoryId,
                   decoration: const InputDecoration(labelText: 'Kategori'),
@@ -1022,6 +1053,7 @@ class _OptionalFieldsSection extends StatelessWidget {
       subtitle: const Text('Opsional'),
       childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
       children: [
+        const SizedBox(height: AppSpacing.md),
         TextFormField(
           controller: titleController,
           textCapitalization: TextCapitalization.sentences,
@@ -1057,9 +1089,20 @@ class _IdrInputFormatter extends TextInputFormatter {
     final amount = int.tryParse(digits);
     if (amount == null) return oldValue;
     final text = _formatAmountInput(amount);
+    final cursor = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    final digitsBeforeCursor = newValue.text
+        .substring(0, cursor)
+        .replaceAll(RegExp(r'\D'), '')
+        .length;
+    var formattedCursor = 0;
+    var seenDigits = 0;
+    while (formattedCursor < text.length && seenDigits < digitsBeforeCursor) {
+      if (RegExp(r'\d').hasMatch(text[formattedCursor])) seenDigits++;
+      formattedCursor++;
+    }
     return TextEditingValue(
       text: text,
-      selection: TextSelection.collapsed(offset: text.length),
+      selection: TextSelection.collapsed(offset: formattedCursor),
     );
   }
 }

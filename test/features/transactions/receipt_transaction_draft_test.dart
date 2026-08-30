@@ -98,7 +98,7 @@ void main() {
     await tester.tap(find.text('Simpan pengeluaran'));
     await tester.pump();
 
-    expect(find.text('Nominal harus lebih dari Rp0.'), findsOneWidget);
+    expect(find.text('Masukkan nominal yang valid.'), findsOneWidget);
     expect(find.text('Pilih kategori transaksi.'), findsOneWidget);
     expect(await database.select(database.transactions).get(), isEmpty);
 
