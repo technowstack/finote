@@ -11,7 +11,9 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
+import '../../receipt_scanner/data/local_receipt_category_suggestion_service.dart';
 import '../../receipt_scanner/domain/receipt_data.dart';
+import '../../receipt_scanner/domain/receipt_category_suggestion.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_source.dart';
 import '../domain/transaction_type.dart';
@@ -76,6 +78,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   late TransactionType _type;
   late DateTime _date;
   int? _categoryId;
+  CategorySuggestion? _categorySuggestion;
+  bool _categoryManuallySelected = false;
   bool _saving = false;
   late final List<_DraftReceiptItem> _receiptItems;
   ReceiptSaveMode _saveMode = ReceiptSaveMode.single;
@@ -103,6 +107,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       for (final item in draft?.receiptReview?.items ?? const <ReceiptItem>[])
         _DraftReceiptItem(item),
     ];
+    if (draft?.receiptReview != null) {
+      _loadReceiptSuggestions(draft!.receiptReview!);
+    }
   }
 
   @override
@@ -227,12 +234,31 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 }),
                 onAddItem: _addReceiptItem,
                 onItemChanged: () => setState(() {}),
+                onItemCategoryChanged: (item, categoryId) => setState(() {
+                  item.categoryId = categoryId;
+                  item.categoryManuallySelected = true;
+                }),
+                categories: categories.value ?? const [],
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
 
             // ----- Category grid -----
-            Text('Kategori', style: textTheme.titleSmall),
+            Row(
+              children: [
+                Text('Kategori', style: textTheme.titleSmall),
+                if (_categorySuggestion != null &&
+                    !_categoryManuallySelected) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'Disarankan',
+                    style: textTheme.labelSmall?.copyWith(
+                      color: colors.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
             const SizedBox(height: AppSpacing.sm),
             categories.when(
               loading: () => const LinearProgressIndicator(),
@@ -244,7 +270,10 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 categories: items,
                 selectedId: _categoryId,
                 isExpense: _type == TransactionType.expense,
-                onSelected: (id) => setState(() => _categoryId = id),
+                onSelected: (id) => setState(() {
+                  _categoryId = id;
+                  _categoryManuallySelected = true;
+                }),
               ),
             ),
             if (_formKey.currentState?.validate() == false &&
@@ -309,14 +338,46 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     }
   }
 
+  Future<void> _loadReceiptSuggestions(ReceiptReviewData review) async {
+    final service = ref.read(receiptCategorySuggestionServiceProvider);
+    final items = List<_DraftReceiptItem>.of(_receiptItems);
+    final receiptSuggestion = await service.suggestReceiptCategory(
+      merchant: review.merchant,
+      rawText: review.rawOcrText,
+    );
+    final itemSuggestions = <CategorySuggestion?>[];
+    for (final item in items) {
+      itemSuggestions.add(await service.suggestItemCategory(item.item));
+    }
+    if (!mounted) return;
+    setState(() {
+      if (!_categoryManuallySelected && receiptSuggestion != null) {
+        _categoryId = receiptSuggestion.categoryId;
+        _categorySuggestion = receiptSuggestion;
+      }
+      for (var i = 0; i < items.length; i++) {
+        final suggestion = itemSuggestions[i];
+        if (!items[i].categoryManuallySelected && suggestion != null) {
+          items[i]
+            ..categoryId = suggestion.categoryId
+            ..categorySuggestion = suggestion;
+        }
+      }
+    });
+  }
+
   Future<void> _save() async {
+    final router = GoRouter.of(context);
     final itemEntries = [
       for (final item in _receiptItems)
-        if (item.amount > 0 && item.name.trim().isNotEmpty)
+        if (item.amount > 0 &&
+            item.name.trim().isNotEmpty &&
+            (item.categoryId ?? _categoryId) != null)
           (
             amount: item.amount,
             title: item.name.trim(),
             transactionDate: _date,
+            categoryId: (item.categoryId ?? _categoryId)!,
           ),
     ];
     final isItemized =
@@ -324,12 +385,12 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         _saveMode == ReceiptSaveMode.itemized;
     if ((!isItemized && !_formKey.currentState!.validate()) ||
         (isItemized && itemEntries.isEmpty) ||
-        _categoryId == null) {
+        (!isItemized && _categoryId == null)) {
       // Force rebuild to show category error
       setState(() {});
       return;
     }
-    final categoryId = _categoryId!;
+    final categoryId = _categoryId;
 
     setState(() => _saving = true);
     final repository = ref.read(transactionRepositoryProvider);
@@ -339,16 +400,15 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       final existing = widget.transaction;
       if (existing == null) {
         if (isItemized) {
-          await repository.createMany(
+          await repository.createManyWithCategories(
             type: _type,
-            categoryId: categoryId,
             entries: itemEntries,
             source: TransactionSource.receiptScan,
           );
         } else {
           await repository.create(
             type: _type,
-            categoryId: categoryId,
+            categoryId: categoryId!,
             amount: _parseAmount(_amountController.text),
             title: _titleController.text,
             note: note.isEmpty ? null : note,
@@ -360,7 +420,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         final updated = await repository.update(
           existing.copyWith(
             type: _type,
-            categoryId: categoryId,
+            categoryId: categoryId!,
             amount: _parseAmount(_amountController.text),
             title: _titleController.text.trim(),
             note: Value(note.isEmpty ? null : note),
@@ -372,7 +432,24 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       }
 
       if (!mounted) return;
-      context.canPop() ? context.pop() : context.go('/transactions');
+      final service = ref.read(receiptCategorySuggestionServiceProvider);
+      if (_categoryId != null &&
+          widget.draft?.receiptReview?.merchant?.isNotEmpty == true) {
+        await service.learnReceiptCategory(
+          merchant: widget.draft!.receiptReview!.merchant!,
+          categoryId: _categoryId!,
+        );
+      }
+      for (final item in _receiptItems) {
+        final itemCategory = item.categoryId ?? _categoryId;
+        if (itemCategory != null) {
+          await service.learnItemCategory(
+            itemName: item.name,
+            categoryId: itemCategory,
+          );
+        }
+      }
+      router.canPop() ? router.pop() : router.go('/transactions');
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
@@ -405,14 +482,18 @@ class TransactionFormDraft {
 enum ReceiptSaveMode { single, itemized }
 
 class _DraftReceiptItem {
-  _DraftReceiptItem(ReceiptItem item)
+  _DraftReceiptItem(this.item)
     : nameController = TextEditingController(text: item.name),
       amountController = TextEditingController(
         text: item.lineTotal == null ? '' : _formatAmountInput(item.lineTotal!),
       );
 
+  final ReceiptItem item;
   final TextEditingController nameController;
   final TextEditingController amountController;
+  int? categoryId;
+  CategorySuggestion? categorySuggestion;
+  bool categoryManuallySelected = false;
 
   String get name => nameController.text;
   int get amount => _parseAmount(amountController.text);
@@ -432,6 +513,8 @@ class _ReceiptReviewSection extends StatelessWidget {
     required this.onRemoveItem,
     required this.onAddItem,
     required this.onItemChanged,
+    required this.onItemCategoryChanged,
+    required this.categories,
   });
 
   final ReceiptReviewData review;
@@ -441,6 +524,9 @@ class _ReceiptReviewSection extends StatelessWidget {
   final ValueChanged<_DraftReceiptItem> onRemoveItem;
   final VoidCallback onAddItem;
   final VoidCallback onItemChanged;
+  final void Function(_DraftReceiptItem item, int? categoryId)
+  onItemCategoryChanged;
+  final List<CategoryRecord> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -479,31 +565,54 @@ class _ReceiptReviewSection extends StatelessWidget {
         for (final item in items)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: item.nameController,
-                    decoration: const InputDecoration(labelText: 'Nama item'),
-                    onChanged: (_) => onItemChanged(),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: item.nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Nama item',
+                        ),
+                        onChanged: (_) => onItemChanged(),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    SizedBox(
+                      width: 125,
+                      child: TextFormField(
+                        controller: item.amountController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: const [_IdrInputFormatter()],
+                        decoration: const InputDecoration(labelText: 'Nominal'),
+                        onChanged: (_) => onItemChanged(),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Hapus item',
+                      onPressed: () => onRemoveItem(item),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                SizedBox(
-                  width: 125,
-                  child: TextFormField(
-                    controller: item.amountController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: const [_IdrInputFormatter()],
-                    decoration: const InputDecoration(labelText: 'Nominal'),
-                    onChanged: (_) => onItemChanged(),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Hapus item',
-                  onPressed: () => onRemoveItem(item),
-                  icon: const Icon(Icons.remove_circle_outline),
+                DropdownButtonFormField<int?>(
+                  initialValue: item.categoryId,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text('Default struk'),
+                    ),
+                    for (final category in categories)
+                      DropdownMenuItem(
+                        value: category.id,
+                        child: Text(category.name),
+                      ),
+                  ],
+                  onChanged: (id) => onItemCategoryChanged(item, id),
                 ),
               ],
             ),

@@ -147,6 +147,42 @@ class TransactionRepository {
     });
   }
 
+  Future<List<TransactionRecord>> createManyWithCategories({
+    required TransactionType type,
+    required List<
+      ({int amount, String title, DateTime transactionDate, int categoryId})
+    >
+    entries,
+    TransactionSource source = TransactionSource.manual,
+  }) async {
+    if (entries.isEmpty) throw ArgumentError('At least one entry is required');
+    for (final entry in entries) {
+      _validateAmount(entry.amount);
+    }
+
+    return _database.transaction(() async {
+      final result = <TransactionRecord>[];
+      for (final entry in entries) {
+        await _requireMatchingCategory(entry.categoryId, type);
+        result.add(
+          await _database
+              .into(_database.transactions)
+              .insertReturning(
+                TransactionsCompanion.insert(
+                  type: type,
+                  categoryId: entry.categoryId,
+                  amount: entry.amount,
+                  title: Value(entry.title.trim()),
+                  transactionDate: entry.transactionDate,
+                  source: source,
+                ),
+              ),
+        );
+      }
+      return result;
+    });
+  }
+
   Future<bool> update(TransactionRecord transaction) {
     _validateAmount(transaction.amount);
     _validateLegacyIdentity(transaction.legacySource, transaction.legacyId);

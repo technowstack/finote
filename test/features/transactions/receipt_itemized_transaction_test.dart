@@ -111,11 +111,12 @@ void main() {
     expect(find.text('Teks hasil OCR'), findsOneWidget);
     expect(find.text('Jumlah item: Rp33.000'), findsOneWidget);
     expect(find.text('Status: Cocok'), findsOneWidget);
-    await tester.drag(find.byType(ListView).first, const Offset(0, -100));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -250));
     await tester.pump();
+    expect(find.text('Pisahkan per item'), findsOneWidget);
     await tester.tap(find.text('Pisahkan per item'));
     await tester.pump();
-    await tester.drag(find.byType(ListView), const Offset(0, -600));
+    await tester.drag(find.byType(ListView).first, const Offset(0, -600));
     await tester.pump();
     final category = find.text('Belanja').last;
     await tester.tap(category);

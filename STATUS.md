@@ -12,9 +12,10 @@
 - [x] Phase 4D — Auto Transaction Draft
 - [x] Phase 4D.1 — Receipt Review & Itemized Transaction Fix
 - [x] Phase 4D.2 — Receipt Review Completion & AI-Ready OCR Pipeline
+- [x] Phase 4E — Receipt Category Suggestion
 
 ## Current
 
 ## Next
 
-- [ ] Phase 4E — Receipt Category Suggestion
+- [ ] Phase 4F — Receipt Safety & Duplicate Detection
