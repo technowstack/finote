@@ -36,8 +36,42 @@ class IndonesianReceiptParser implements ReceiptParser {
       ),
       total: _findTotal(lines),
       receiptNumber: _findReceiptNumber(lines),
+      items: _findItems(lines),
       rawText: rawText,
     );
+  }
+
+  List<ReceiptItem> _findItems(List<String> lines) {
+    final items = <ReceiptItem>[];
+    for (final line in lines) {
+      final lower = line.toLowerCase();
+      if (_containsDate(line) ||
+          RegExp(
+            r'\b(?:total|sub\s*total|grand|pajak|tax|ppn|diskon|discount|tunai|cash|kembalian|change|payment|bayar|jumlah|amount|receipt|nota|invoice|no(?:mor)?|telp|telepon|phone|alamat|jalan|jl)\b',
+          ).hasMatch(lower)) {
+        continue;
+      }
+      final matches = _amountPattern.allMatches(line).toList();
+      if (matches.isEmpty) continue;
+      final last = matches.last;
+      final name = line
+          .substring(0, last.start)
+          .replaceAll(RegExp(r'[.*:=-]+\s*$'), '')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      if (name.length < 2 ||
+          !RegExp(r'[A-Za-z]{2}').hasMatch(name) ||
+          RegExp(
+            r'^(?:rp|idr|qty|x|pcs|liter|l|kg|/)+$',
+            caseSensitive: false,
+          ).hasMatch(name)) {
+        continue;
+      }
+      final amount = _parseAmount(last.group(0)!);
+      if (amount == null || amount <= 0) continue;
+      items.add(ReceiptItem(name: name, lineTotal: amount, rawLine: line));
+    }
+    return items;
   }
 
   int? _findTotal(List<String> lines) {

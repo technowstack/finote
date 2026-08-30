@@ -7,8 +7,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../transactions/domain/transaction_source.dart';
+import '../../transactions/domain/transaction_type.dart';
+import '../../transactions/presentation/transaction_form_page.dart';
 import '../data/device_receipt_image_picker.dart';
+import '../data/indonesian_receipt_parser.dart';
 import '../data/ml_kit_receipt_ocr_service.dart';
+import '../domain/receipt_data.dart';
 import '../domain/receipt_image.dart';
 import '../domain/receipt_ocr.dart';
 
@@ -22,6 +27,7 @@ class ReceiptScannerPage extends ConsumerStatefulWidget {
 class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   late final ReceiptImagePicker _picker;
   late final ReceiptOcrService _ocrService;
+  late final ReceiptParser _parser;
   ReceiptImage? _image;
   ReceiptOcrResult? _ocrResult;
   String? _error;
@@ -36,6 +42,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
     super.initState();
     _picker = ref.read(receiptImagePickerProvider);
     _ocrService = ref.read(receiptOcrServiceProvider);
+    _parser = IndonesianReceiptParser();
     WidgetsBinding.instance.addPostFrameCallback((_) => _showSourceSheet());
   }
 
@@ -211,11 +218,14 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
           child: SelectableText(_ocrResult!.rawText),
         ),
         const SizedBox(height: AppSpacing.lg),
-        FilledButton(onPressed: _changePhoto, child: const Text('Ganti foto')),
+        FilledButton(
+          onPressed: _openReceiptDraft,
+          child: const Text('Tinjau draft pengeluaran'),
+        ),
         const SizedBox(height: AppSpacing.sm),
         OutlinedButton(
-          onPressed: _openManualTransaction,
-          child: const Text('Isi manual'),
+          onPressed: _changePhoto,
+          child: const Text('Ganti foto'),
         ),
         TextButton(onPressed: _cancel, child: const Text('Selesai')),
       ],
@@ -369,6 +379,25 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   Future<void> _openManualTransaction() async {
     await _discardCurrent();
     if (mounted) context.pushReplacement('/transactions/new');
+  }
+
+  Future<void> _openReceiptDraft() async {
+    final result = _ocrResult;
+    if (result == null) return;
+    final receipt = _parser.parse(result);
+    final review = receipt.toReviewData();
+    final draft = TransactionFormDraft(
+      type: TransactionType.expense,
+      source: TransactionSource.receiptScan,
+      amount: review.total,
+      title: review.merchant ?? '',
+      date: review.transactionDate,
+      receiptReview: review,
+    );
+    await _discardCurrent();
+    if (mounted) {
+      context.pushReplacement('/transactions/new', extra: draft);
+    }
   }
 
   String _messageFor(ReceiptImageFailureReason reason) => switch (reason) {

@@ -11,14 +11,16 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
+import '../../receipt_scanner/domain/receipt_data.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_source.dart';
 import '../domain/transaction_type.dart';
 
 class TransactionFormPage extends ConsumerWidget {
-  const TransactionFormPage({super.key, this.transactionId});
+  const TransactionFormPage({super.key, this.transactionId, this.draft});
 
   final int? transactionId;
+  final TransactionFormDraft? draft;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,7 +33,7 @@ class TransactionFormPage extends ConsumerWidget {
       ),
       data: (_) {
         final id = transactionId;
-        if (id == null) return const _TransactionForm();
+        if (id == null) return _TransactionForm(draft: draft);
 
         return ref
             .watch(transactionByIdProvider(id))
@@ -57,9 +59,10 @@ class TransactionFormPage extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _TransactionForm extends ConsumerStatefulWidget {
-  const _TransactionForm({this.transaction});
+  const _TransactionForm({this.transaction, this.draft});
 
   final TransactionRecord? transaction;
+  final TransactionFormDraft? draft;
 
   @override
   ConsumerState<_TransactionForm> createState() => _TransactionFormState();
@@ -74,19 +77,32 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   late DateTime _date;
   int? _categoryId;
   bool _saving = false;
+  late final List<_DraftReceiptItem> _receiptItems;
+  ReceiptSaveMode _saveMode = ReceiptSaveMode.single;
 
   @override
   void initState() {
     super.initState();
     final transaction = widget.transaction;
-    _type = transaction?.type ?? TransactionType.expense;
-    _date = transaction?.transactionDate ?? DateTime.now();
+    final draft = widget.draft;
+    _type = transaction?.type ?? draft?.type ?? TransactionType.expense;
+    _date = transaction?.transactionDate ?? draft?.date ?? DateTime.now();
     _categoryId = transaction?.categoryId;
     _amountController = TextEditingController(
-      text: transaction == null ? '' : _formatAmountInput(transaction.amount),
+      text: transaction != null
+          ? _formatAmountInput(transaction.amount)
+          : draft?.amount == null
+          ? ''
+          : _formatAmountInput(draft!.amount!),
     );
-    _titleController = TextEditingController(text: transaction?.title ?? '');
+    _titleController = TextEditingController(
+      text: transaction?.title ?? draft?.title ?? '',
+    );
     _noteController = TextEditingController(text: transaction?.note ?? '');
+    _receiptItems = [
+      for (final item in draft?.receiptReview?.items ?? const <ReceiptItem>[])
+        _DraftReceiptItem(item),
+    ];
   }
 
   @override
@@ -94,6 +110,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _amountController.dispose();
     _titleController.dispose();
     _noteController.dispose();
+    for (final item in _receiptItems) {
+      item.dispose();
+    }
     super.dispose();
   }
 
@@ -101,12 +120,21 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(_type));
     final isEditing = widget.transaction != null;
+    final isReceiptDraft =
+        widget.draft?.source == TransactionSource.receiptScan;
+    final review = widget.draft?.receiptReview;
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Ubah transaksi' : 'Tambah transaksi'),
+        title: Text(
+          isEditing
+              ? 'Ubah transaksi'
+              : isReceiptDraft
+              ? 'Tinjau pengeluaran'
+              : 'Tambah transaksi',
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -118,7 +146,13 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           ),
           child: FilledButton(
             onPressed: _saving || !categories.hasValue ? null : _save,
-            child: Text(_saving ? 'Menyimpan...' : 'Simpan transaksi'),
+            child: Text(
+              _saving
+                  ? 'Menyimpan...'
+                  : isReceiptDraft
+                  ? 'Simpan pengeluaran'
+                  : 'Simpan transaksi',
+            ),
           ),
         ),
       ),
@@ -133,15 +167,18 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           ),
           children: [
             // ----- Type toggle (compact) -----
-            _TypeToggle(
-              value: _type,
-              onChanged: (type) {
-                setState(() {
-                  _type = type;
-                  _categoryId = null;
-                });
-              },
-            ),
+            if (isReceiptDraft)
+              const Text('Pengeluaran dari struk')
+            else
+              _TypeToggle(
+                value: _type,
+                onChanged: (type) {
+                  setState(() {
+                    _type = type;
+                    _categoryId = null;
+                  });
+                },
+              ),
             const SizedBox(height: AppSpacing.lg),
 
             // ----- Amount (hero) -----
@@ -178,6 +215,20 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const Divider(),
             const SizedBox(height: AppSpacing.md),
 
+            if (review != null) ...[
+              _ReceiptReviewSection(
+                review: review,
+                items: _receiptItems,
+                saveMode: _saveMode,
+                onSaveModeChanged: (mode) => setState(() => _saveMode = mode),
+                onRemoveItem: (item) => setState(() {
+                  _receiptItems.remove(item);
+                  item.dispose();
+                }),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+            ],
+
             // ----- Category grid -----
             Text('Kategori', style: textTheme.titleSmall),
             const SizedBox(height: AppSpacing.sm),
@@ -207,6 +258,16 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
             // ----- Date chip -----
             _DateChip(date: _date, onTap: _selectDate),
+            if (isReceiptDraft && widget.draft!.date == null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  'Tanggal tidak terbaca. Menggunakan hari ini, silakan periksa.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
             const SizedBox(height: AppSpacing.md),
 
             // ----- Optional title & note -----
@@ -214,9 +275,10 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               titleController: _titleController,
               noteController: _noteController,
               initiallyExpanded:
+                  isReceiptDraft ||
                   isEditing &&
-                  (_titleController.text.isNotEmpty ||
-                      _noteController.text.isNotEmpty),
+                      (_titleController.text.isNotEmpty ||
+                          _noteController.text.isNotEmpty),
             ),
           ],
         ),
@@ -235,7 +297,21 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate() || _categoryId == null) {
+    final itemEntries = [
+      for (final item in _receiptItems)
+        if (item.amount > 0 && item.name.trim().isNotEmpty)
+          (
+            amount: item.amount,
+            title: item.name.trim(),
+            transactionDate: _date,
+          ),
+    ];
+    final isItemized =
+        widget.draft?.receiptReview != null &&
+        _saveMode == ReceiptSaveMode.itemized;
+    if ((!isItemized && !_formKey.currentState!.validate()) ||
+        (isItemized && itemEntries.isEmpty) ||
+        _categoryId == null) {
       // Force rebuild to show category error
       setState(() {});
       return;
@@ -249,15 +325,24 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     try {
       final existing = widget.transaction;
       if (existing == null) {
-        await repository.create(
-          type: _type,
-          categoryId: categoryId,
-          amount: _parseAmount(_amountController.text),
-          title: _titleController.text,
-          note: note.isEmpty ? null : note,
-          transactionDate: _date,
-          source: TransactionSource.manual,
-        );
+        if (isItemized) {
+          await repository.createMany(
+            type: _type,
+            categoryId: categoryId,
+            entries: itemEntries,
+            source: TransactionSource.receiptScan,
+          );
+        } else {
+          await repository.create(
+            type: _type,
+            categoryId: categoryId,
+            amount: _parseAmount(_amountController.text),
+            title: _titleController.text,
+            note: note.isEmpty ? null : note,
+            transactionDate: _date,
+            source: widget.draft?.source ?? TransactionSource.manual,
+          );
+        }
       } else {
         final updated = await repository.update(
           existing.copyWith(
@@ -283,6 +368,173 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         );
       }
     }
+  }
+}
+
+class TransactionFormDraft {
+  const TransactionFormDraft({
+    required this.type,
+    required this.source,
+    this.amount,
+    this.title = '',
+    this.date,
+    this.receiptReview,
+  });
+
+  final TransactionType type;
+  final TransactionSource source;
+  final int? amount;
+  final String title;
+  final DateTime? date;
+  final ReceiptReviewData? receiptReview;
+}
+
+enum ReceiptSaveMode { single, itemized }
+
+class _DraftReceiptItem {
+  _DraftReceiptItem(ReceiptItem item)
+    : nameController = TextEditingController(text: item.name),
+      amountController = TextEditingController(
+        text: item.lineTotal == null ? '' : _formatAmountInput(item.lineTotal!),
+      );
+
+  final TextEditingController nameController;
+  final TextEditingController amountController;
+
+  String get name => nameController.text;
+  int get amount => _parseAmount(amountController.text);
+
+  void dispose() {
+    nameController.dispose();
+    amountController.dispose();
+  }
+}
+
+class _ReceiptReviewSection extends StatelessWidget {
+  const _ReceiptReviewSection({
+    required this.review,
+    required this.items,
+    required this.saveMode,
+    required this.onSaveModeChanged,
+    required this.onRemoveItem,
+  });
+
+  final ReceiptReviewData review;
+  final List<_DraftReceiptItem> items;
+  final ReceiptSaveMode saveMode;
+  final ValueChanged<ReceiptSaveMode> onSaveModeChanged;
+  final ValueChanged<_DraftReceiptItem> onRemoveItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final itemTotal = items.fold(0, (sum, item) => sum + item.amount);
+    final difference = review.total == null ? null : itemTotal - review.total!;
+    final warnings = [
+      ...review.warnings,
+      if (items.any((item) => item.amount <= 0))
+        'Periksa nominal setiap item sebelum memilih mode per item.',
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Detail struk', style: textTheme.titleSmall),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Merchant: ${review.merchant?.isNotEmpty == true ? review.merchant : 'Belum terbaca'}',
+        ),
+        if (review.receiptNumber != null)
+          Text('Nomor struk: ${review.receiptNumber}'),
+        const SizedBox(height: AppSpacing.md),
+        Text('Item', style: textTheme.titleSmall),
+        if (items.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Text('Tidak ada item yang terbaca.'),
+          ),
+        for (final item in items)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: item.nameController,
+                    decoration: const InputDecoration(labelText: 'Nama item'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                SizedBox(
+                  width: 125,
+                  child: TextFormField(
+                    controller: item.amountController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: const [_IdrInputFormatter()],
+                    decoration: const InputDecoration(labelText: 'Nominal'),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Hapus item',
+                  onPressed: () => onRemoveItem(item),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+              ],
+            ),
+          ),
+        Text('Jumlah item: ${formatIdr(itemTotal)}'),
+        if (review.subtotal != null)
+          Text('Subtotal terdeteksi: ${formatIdr(review.subtotal!)}'),
+        if (review.total != null) ...[
+          Text('Total struk: ${formatIdr(review.total!)}'),
+          Text(
+            difference == 0
+                ? 'Status: Cocok'
+                : 'Selisih: ${formatIdr(difference!.abs())}. Periksa pajak, diskon, item yang belum terbaca, atau OCR.',
+          ),
+        ],
+        if (review.tax != null)
+          Text('Pajak terdeteksi: ${formatIdr(review.tax!)}'),
+        if (review.discount != null)
+          Text('Diskon terdeteksi: ${formatIdr(review.discount!)}'),
+        if (warnings.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Text(
+              warnings.join('\n'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        const SizedBox(height: AppSpacing.md),
+        Text('Cara menyimpan', style: textTheme.titleSmall),
+        SegmentedButton<ReceiptSaveMode>(
+          segments: const [
+            ButtonSegment(
+              value: ReceiptSaveMode.single,
+              label: Text('Satu transaksi'),
+            ),
+            ButtonSegment(
+              value: ReceiptSaveMode.itemized,
+              label: Text('Pisahkan per item'),
+            ),
+          ],
+          selected: {saveMode},
+          onSelectionChanged: (selection) =>
+              onSaveModeChanged(selection.single),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          title: const Text('Teks hasil OCR'),
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SelectableText(review.rawOcrText),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 

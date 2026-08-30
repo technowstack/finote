@@ -161,5 +161,28 @@ TOTAL\nRp 25.000
       expect(result.rawText, ocr.rawText);
       expect(result.items, isEmpty);
     });
+
+    test('extracts multiple item lines and excludes summary/payment lines', () {
+      final result = parser.parseText('''
+TOKO CONTOH
+ROTI TAWAR        15.000
+SUSU UHT          18.000
+SABUN             12.500
+AIR MINERAL        5.000
+SUBTOTAL          50.500
+PAJAK              0
+TOTAL             50.500
+CASH              60.000
+KEMBALIAN          9.500
+''');
+
+      expect(result.items.map((item) => (item.name, item.lineTotal)).toList(), [
+        ('ROTI TAWAR', 15000),
+        ('SUSU UHT', 18000),
+        ('SABUN', 12500),
+        ('AIR MINERAL', 5000),
+      ]);
+      expect(result.items.fold(0, (sum, item) => sum + item.lineTotal!), 50500);
+    });
   });
 }

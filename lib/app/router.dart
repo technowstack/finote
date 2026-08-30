@@ -63,7 +63,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // ------------------------------------------------------------------
       GoRoute(
         path: '/transactions/new',
-        builder: (context, state) => const TransactionFormPage(),
+        builder: (context, state) => TransactionFormPage(
+          draft: state.extra is TransactionFormDraft
+              ? state.extra! as TransactionFormDraft
+              : null,
+        ),
       ),
       GoRoute(
         path: '/transactions/:id/edit',

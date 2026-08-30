@@ -5,9 +5,11 @@ import 'package:finote/features/receipt_scanner/data/ml_kit_receipt_ocr_service.
 import 'package:finote/features/receipt_scanner/domain/receipt_image.dart';
 import 'package:finote/features/receipt_scanner/domain/receipt_ocr.dart';
 import 'package:finote/features/receipt_scanner/presentation/receipt_scanner_page.dart';
+import 'package:finote/features/transactions/presentation/transaction_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets('shows OCR result without creating a transaction', (
@@ -29,6 +31,59 @@ void main() {
     expect(ocr.calls, 1);
 
     await _dispose(tester);
+  });
+
+  testWidgets('maps parsed receipt to an expense transaction draft', (
+    tester,
+  ) async {
+    final router = GoRouter(
+      initialLocation: '/receipt-scan',
+      routes: [
+        GoRoute(
+          path: '/receipt-scan',
+          builder: (context, state) => const ReceiptScannerPage(),
+        ),
+        GoRoute(
+          path: '/transactions/new',
+          builder: (context, state) {
+            final draft = state.extra! as TransactionFormDraft;
+            return Scaffold(
+              body: Text(
+                '${draft.type.name}|${draft.source.name}|${draft.amount}|${draft.title}|${draft.date}',
+              ),
+            );
+          },
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    final ocr = _FakeReceiptOcrService([
+      const ReceiptOcrResult(
+        rawText: 'TOKO CONTOH\n30/08/2026\nTOTAL Rp25.000',
+      ),
+    ]);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          receiptImagePickerProvider.overrideWithValue(
+            _FakeReceiptImagePicker(),
+          ),
+          receiptOcrServiceProvider.overrideWithValue(ocr),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await _selectGalleryAndUse(tester);
+    await tester.tap(find.text('Tinjau draft pengeluaran'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'expense|receiptScan|25000|TOKO CONTOH|2026-08-30 00:00:00.000',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows OCR failure actions', (tester) async {
