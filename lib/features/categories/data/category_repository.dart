@@ -120,6 +120,16 @@ class CategoryRepository {
   }
 
   Future<bool> softDelete(int id) async {
+    final referenced =
+        await (_database.select(_database.transactions)..where(
+              (transaction) =>
+                  transaction.categoryId.equals(id) &
+                  transaction.deletedAt.isNull(),
+            ))
+            .get();
+    if (referenced.isNotEmpty) {
+      throw StateError('Category is used by active transactions');
+    }
     final now = DateTime.now().toUtc();
     final count =
         await (_database.update(_database.categories)..where(

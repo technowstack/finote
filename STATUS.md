@@ -16,6 +16,7 @@
 - [x] Phase 4E — Receipt Category Suggestion
 - [x] Phase 4F — Receipt Safety & Duplicate Detection
 - [x] Phase 4G — Receipt Scanner Polish & Automated Coverage
+- [x] Phase 5B — Core Finance Audit & Stabilization
 
 ## Current
 
@@ -26,6 +27,7 @@
   - experimental but usable, or
   - hidden behind a feature flag for the first public release.
 - [ ] Complete Phase 5A manual export validation on Android: save, share, open, date/type filters, and all themes.
+- [ ] Resolve or explicitly accept the remaining risks documented in `docs/core_stability_audit.md` before release.
 
 ## Next
 

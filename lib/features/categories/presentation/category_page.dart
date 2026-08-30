@@ -236,11 +236,15 @@ class _CategoryTile extends ConsumerWidget {
           .read(categoryRepositoryProvider)
           .softDelete(category.id);
       if (!deleted) throw StateError('Category is no longer active');
-    } catch (_) {
+    } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kategori gagal dihapus. Coba lagi.')),
-        );
+        final message =
+            error is StateError &&
+                error.message == 'Category is used by active transactions'
+            ? 'Kategori masih digunakan transaksi aktif dan tidak dapat dihapus.'
+            : 'Kategori gagal dihapus. Coba lagi.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
       }
     }
   }

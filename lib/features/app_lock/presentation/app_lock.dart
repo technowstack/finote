@@ -166,9 +166,17 @@ class _UnlockPageState extends ConsumerState<_UnlockPage> {
       _checking = true;
       _error = null;
     });
-    final result = await ref
-        .read(pinRepositoryProvider)
-        .verify(_controller.text);
+    PinVerification result;
+    try {
+      result = await ref.read(pinRepositoryProvider).verify(_controller.text);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _checking = false;
+        _error = 'Keamanan aplikasi belum dapat diverifikasi. Coba lagi.';
+      });
+      return;
+    }
     if (!mounted) return;
     if (result.isSuccess) {
       widget.onUnlocked();

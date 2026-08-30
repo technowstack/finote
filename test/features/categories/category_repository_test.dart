@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -92,5 +93,21 @@ void main() {
       repository.create(name: 'Transportasi', type: TransactionType.income),
       completes,
     );
+  });
+
+  test('does not delete a category used by an active transaction', () async {
+    final category = await repository.create(
+      name: 'Makanan',
+      type: TransactionType.expense,
+    );
+    await TransactionRepository(database).create(
+      type: TransactionType.expense,
+      categoryId: category.id,
+      amount: 1000,
+      transactionDate: DateTime(2026, 8, 30),
+    );
+
+    await expectLater(repository.softDelete(category.id), throwsStateError);
+    expect((await repository.findActiveById(category.id))?.name, 'Makanan');
   });
 }
