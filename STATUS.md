@@ -8,10 +8,10 @@
 - [x] Phase 3.5H — Theme Mode & Color System
 - [x] Phase 4A — Receipt Scanner Foundation
 - [x] Phase 4B — On-device OCR
+- [x] Phase 4C — Receipt Parser
 
 ## Current
 
 ## Next
 
-- [ ] Phase 4C — Receipt Parser
 - [ ] Phase 4D — Auto Transaction Draft
