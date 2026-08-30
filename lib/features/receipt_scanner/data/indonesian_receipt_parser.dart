@@ -69,7 +69,14 @@ class IndonesianReceiptParser implements ReceiptParser {
       }
       final amount = _parseAmount(last.group(0)!);
       if (amount == null || amount <= 0) continue;
-      items.add(ReceiptItem(name: name, lineTotal: amount, rawLine: line));
+      items.add(
+        ReceiptItem(
+          name: name,
+          lineTotal: amount,
+          rawLine: line,
+          source: ReceiptItemSource.ocr,
+        ),
+      );
     }
     return items;
   }

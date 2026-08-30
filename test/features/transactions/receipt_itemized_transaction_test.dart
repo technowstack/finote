@@ -10,6 +10,57 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  testWidgets('can add, edit, and remove a manual receipt item', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    const draft = TransactionFormDraft(
+      type: TransactionType.expense,
+      source: TransactionSource.receiptScan,
+      receiptReview: ReceiptReviewData(rawOcrText: 'receipt'),
+    );
+    final router = _router(draft);
+    addTearDown(router.dispose);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tambah item'));
+    await tester.pumpAndSettle();
+
+    final nameField = find.bySemanticsLabel('Nama item');
+    final quantityField = find.bySemanticsLabel('Jumlah / Quantity (opsional)');
+    final unitPriceField = find.bySemanticsLabel('Harga satuan (opsional)');
+    final totalField = find.bySemanticsLabel('Total item *');
+    await tester.enterText(nameField, 'Roti');
+    await tester.enterText(quantityField, '2');
+    await tester.enterText(unitPriceField, '7500');
+    await tester.pump();
+    expect(totalField, findsOneWidget);
+    await tester.tap(find.text('Tambahkan'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Roti'), findsOneWidget);
+    expect(find.text('15.000'), findsOneWidget);
+    await tester.enterText(find.bySemanticsLabel('Nominal'), '16000');
+    await tester.pump();
+    expect(find.text('Jumlah item: Rp16.000'), findsOneWidget);
+    await tester.tap(find.byTooltip('Hapus item'));
+    await tester.pump();
+    expect(
+      find.textContaining('Belum ada item yang berhasil dibaca.'),
+      findsOneWidget,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
   testWidgets('itemized receipt draft saves editable items atomically', (
     tester,
   ) async {
@@ -60,7 +111,10 @@ void main() {
     expect(find.text('Teks hasil OCR'), findsOneWidget);
     expect(find.text('Jumlah item: Rp33.000'), findsOneWidget);
     expect(find.text('Status: Cocok'), findsOneWidget);
+    await tester.drag(find.byType(ListView).first, const Offset(0, -100));
+    await tester.pump();
     await tester.tap(find.text('Pisahkan per item'));
+    await tester.pump();
     await tester.drag(find.byType(ListView), const Offset(0, -600));
     await tester.pump();
     final category = find.text('Belanja').last;
@@ -85,3 +139,17 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 }
+
+GoRouter _router(TransactionFormDraft draft) => GoRouter(
+  initialLocation: '/transactions/new',
+  routes: [
+    GoRoute(
+      path: '/transactions/new',
+      builder: (context, state) => TransactionFormPage(draft: draft),
+    ),
+    GoRoute(
+      path: '/transactions',
+      builder: (context, state) => const Scaffold(body: Text('saved')),
+    ),
+  ],
+);

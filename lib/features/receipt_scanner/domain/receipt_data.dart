@@ -1,5 +1,7 @@
 import 'receipt_ocr.dart';
 
+enum ReceiptItemSource { ocr, manual, ai }
+
 class ReceiptItem {
   const ReceiptItem({
     required this.name,
@@ -7,6 +9,7 @@ class ReceiptItem {
     this.unitPrice,
     this.lineTotal,
     this.rawLine,
+    this.source = ReceiptItemSource.ocr,
   });
 
   final String name;
@@ -14,6 +17,7 @@ class ReceiptItem {
   final int? unitPrice;
   final int? lineTotal;
   final String? rawLine;
+  final ReceiptItemSource source;
 }
 
 class ReceiptData {

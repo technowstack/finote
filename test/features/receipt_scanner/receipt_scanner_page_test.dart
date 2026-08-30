@@ -5,6 +5,7 @@ import 'package:finote/features/receipt_scanner/data/ml_kit_receipt_ocr_service.
 import 'package:finote/features/receipt_scanner/domain/receipt_image.dart';
 import 'package:finote/features/receipt_scanner/domain/receipt_ocr.dart';
 import 'package:finote/features/receipt_scanner/presentation/receipt_scanner_page.dart';
+import 'package:finote/features/receipt_scanner/data/rule_based_receipt_interpreter.dart';
 import 'package:finote/features/transactions/presentation/transaction_form_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  test('rule-based interpreter keeps the provider replaceable', () async {
+    final result = await RuleBasedReceiptInterpreter().interpret(
+      const ReceiptOcrResult(rawText: 'TOKO LOKAL\nTOTAL 12.000'),
+    );
+
+    expect(result.merchant, 'TOKO LOKAL');
+    expect(result.total, 12000);
+  });
+
   testWidgets('shows OCR result without creating a transaction', (
     tester,
   ) async {

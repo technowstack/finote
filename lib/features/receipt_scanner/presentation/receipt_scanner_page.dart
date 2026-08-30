@@ -11,10 +11,10 @@ import '../../transactions/domain/transaction_source.dart';
 import '../../transactions/domain/transaction_type.dart';
 import '../../transactions/presentation/transaction_form_page.dart';
 import '../data/device_receipt_image_picker.dart';
-import '../data/indonesian_receipt_parser.dart';
+import '../data/rule_based_receipt_interpreter.dart';
 import '../data/ml_kit_receipt_ocr_service.dart';
-import '../domain/receipt_data.dart';
 import '../domain/receipt_image.dart';
+import '../domain/receipt_interpreter.dart';
 import '../domain/receipt_ocr.dart';
 
 class ReceiptScannerPage extends ConsumerStatefulWidget {
@@ -27,7 +27,7 @@ class ReceiptScannerPage extends ConsumerStatefulWidget {
 class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   late final ReceiptImagePicker _picker;
   late final ReceiptOcrService _ocrService;
-  late final ReceiptParser _parser;
+  late final ReceiptInterpreter _interpreter;
   ReceiptImage? _image;
   ReceiptOcrResult? _ocrResult;
   String? _error;
@@ -42,7 +42,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
     super.initState();
     _picker = ref.read(receiptImagePickerProvider);
     _ocrService = ref.read(receiptOcrServiceProvider);
-    _parser = IndonesianReceiptParser();
+    _interpreter = ref.read(receiptInterpreterProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) => _showSourceSheet());
   }
 
@@ -384,7 +384,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   Future<void> _openReceiptDraft() async {
     final result = _ocrResult;
     if (result == null) return;
-    final receipt = _parser.parse(result);
+    final receipt = await _interpreter.interpret(result);
     final review = receipt.toReviewData();
     final draft = TransactionFormDraft(
       type: TransactionType.expense,

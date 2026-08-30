@@ -225,6 +225,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                   _receiptItems.remove(item);
                   item.dispose();
                 }),
+                onAddItem: _addReceiptItem,
+                onItemChanged: () => setState(() {}),
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
@@ -294,6 +296,17 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       lastDate: DateTime(2100),
     );
     if (selected != null && mounted) setState(() => _date = selected);
+  }
+
+  Future<void> _addReceiptItem() async {
+    final item = await showModalBottomSheet<ReceiptItem>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => const _AddReceiptItemSheet(),
+    );
+    if (item != null && mounted) {
+      setState(() => _receiptItems.add(_DraftReceiptItem(item)));
+    }
   }
 
   Future<void> _save() async {
@@ -417,6 +430,8 @@ class _ReceiptReviewSection extends StatelessWidget {
     required this.saveMode,
     required this.onSaveModeChanged,
     required this.onRemoveItem,
+    required this.onAddItem,
+    required this.onItemChanged,
   });
 
   final ReceiptReviewData review;
@@ -424,6 +439,8 @@ class _ReceiptReviewSection extends StatelessWidget {
   final ReceiptSaveMode saveMode;
   final ValueChanged<ReceiptSaveMode> onSaveModeChanged;
   final ValueChanged<_DraftReceiptItem> onRemoveItem;
+  final VoidCallback onAddItem;
+  final VoidCallback onItemChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -448,10 +465,17 @@ class _ReceiptReviewSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Text('Item', style: textTheme.titleSmall),
         if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text('Tidak ada item yang terbaca.'),
+          const Text(
+            'Belum ada item yang berhasil dibaca. Kamu dapat menambahkan item secara manual.',
           ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: onAddItem,
+            icon: const Icon(Icons.add),
+            label: const Text('Tambah item'),
+          ),
+        ),
         for (final item in items)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -462,6 +486,7 @@ class _ReceiptReviewSection extends StatelessWidget {
                   child: TextFormField(
                     controller: item.nameController,
                     decoration: const InputDecoration(labelText: 'Nama item'),
+                    onChanged: (_) => onItemChanged(),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -472,6 +497,7 @@ class _ReceiptReviewSection extends StatelessWidget {
                     keyboardType: TextInputType.number,
                     inputFormatters: const [_IdrInputFormatter()],
                     decoration: const InputDecoration(labelText: 'Nominal'),
+                    onChanged: (_) => onItemChanged(),
                   ),
                 ),
                 IconButton(
@@ -534,6 +560,117 @@ class _ReceiptReviewSection extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _AddReceiptItemSheet extends StatefulWidget {
+  const _AddReceiptItemSheet();
+
+  @override
+  State<_AddReceiptItemSheet> createState() => _AddReceiptItemSheetState();
+}
+
+class _AddReceiptItemSheetState extends State<_AddReceiptItemSheet> {
+  final _name = TextEditingController();
+  final _quantity = TextEditingController();
+  final _unitPrice = TextEditingController();
+  final _total = TextEditingController();
+  bool _totalOverridden = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _quantity.dispose();
+    _unitPrice.dispose();
+    _total.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg + bottom,
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          Text('Tambah item', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Nama item'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _quantity,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Jumlah / Quantity (opsional)',
+            ),
+            onChanged: (_) => _calculateTotal(),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _unitPrice,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Harga satuan (opsional)',
+            ),
+            onChanged: (_) => _calculateTotal(),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            controller: _total,
+            keyboardType: TextInputType.number,
+            inputFormatters: const [_IdrInputFormatter()],
+            decoration: const InputDecoration(labelText: 'Total item *'),
+            onChanged: (_) => _totalOverridden = true,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(onPressed: _submit, child: const Text('Tambahkan')),
+        ],
+      ),
+    );
+  }
+
+  void _calculateTotal() {
+    if (_totalOverridden) return;
+    final quantity = int.tryParse(_quantity.text.trim());
+    final unitPrice = _parseAmount(_unitPrice.text);
+    if (quantity != null && quantity > 0 && unitPrice > 0) {
+      final text = _formatAmountInput(quantity * unitPrice);
+      _total.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+  }
+
+  void _submit() {
+    final name = _name.text.trim();
+    final total = _parseAmount(_total.text);
+    if (name.isEmpty || total <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nama dan total item wajib diisi.')),
+      );
+      return;
+    }
+    final unitPrice = _parseAmount(_unitPrice.text);
+    Navigator.pop(
+      context,
+      ReceiptItem(
+        name: name,
+        quantity: int.tryParse(_quantity.text.trim()),
+        unitPrice: unitPrice > 0 ? unitPrice : null,
+        lineTotal: total,
+        source: ReceiptItemSource.manual,
+      ),
     );
   }
 }
