@@ -1,22 +1,62 @@
 import 'receipt_image.dart';
 
-class ReceiptTextBlock {
-  const ReceiptTextBlock({required this.text, this.confidence});
+class ReceiptBoundingBox {
+  const ReceiptBoundingBox({
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+  });
 
-  final String text;
-  final double? confidence;
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
 }
 
-class ReceiptOcrResult {
-  const ReceiptOcrResult({
-    required this.rawText,
-    this.blocks = const [],
+class ReceiptTextElement {
+  const ReceiptTextElement({
+    required this.text,
+    required this.boundingBox,
     this.confidence,
   });
 
+  final String text;
+  final ReceiptBoundingBox boundingBox;
+  final double? confidence;
+}
+
+class ReceiptTextLine {
+  const ReceiptTextLine({
+    required this.text,
+    required this.boundingBox,
+    this.elements = const [],
+    this.confidence,
+  });
+
+  final String text;
+  final ReceiptBoundingBox boundingBox;
+  final List<ReceiptTextElement> elements;
+  final double? confidence;
+}
+
+class ReceiptTextBlock {
+  const ReceiptTextBlock({
+    required this.text,
+    required this.boundingBox,
+    this.lines = const [],
+  });
+
+  final String text;
+  final ReceiptBoundingBox boundingBox;
+  final List<ReceiptTextLine> lines;
+}
+
+class ReceiptOcrResult {
+  const ReceiptOcrResult({required this.rawText, this.blocks = const []});
+
   final String rawText;
   final List<ReceiptTextBlock> blocks;
-  final double? confidence;
 }
 
 abstract interface class ReceiptOcrService {

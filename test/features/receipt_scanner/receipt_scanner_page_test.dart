@@ -1,50 +1,80 @@
 import 'dart:io';
 
 import 'package:finote/features/receipt_scanner/data/device_receipt_image_picker.dart';
+import 'package:finote/features/receipt_scanner/data/ml_kit_receipt_ocr_service.dart';
 import 'package:finote/features/receipt_scanner/domain/receipt_image.dart';
+import 'package:finote/features/receipt_scanner/domain/receipt_ocr.dart';
 import 'package:finote/features/receipt_scanner/presentation/receipt_scanner_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('gallery image can be previewed without creating a transaction', (
+  testWidgets('shows OCR result without creating a transaction', (
     tester,
   ) async {
-    final imageFile = File(
-      'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png',
-    ).absolute;
-    final picker = _FakeReceiptImagePicker(
-      image: ReceiptImage(
-        path: imageFile.path,
-        name: 'receipt.png',
-        origin: ReceiptImageOrigin.gallery,
-        isTemporary: false,
-      ),
-    );
+    final ocr = _FakeReceiptOcrService([
+      const ReceiptOcrResult(rawText: 'TOKO CONTOH\nTOTAL 25000'),
+    ]);
 
-    await tester.pumpWidget(_app(picker));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Pilih dari galeri').last);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpWidget(_app(_FakeReceiptImagePicker(), ocr));
+    await _selectGalleryAndUse(tester);
 
-    expect(picker.origins, [ReceiptImageOrigin.gallery]);
-    expect(find.text('Pratinjau foto'), findsOneWidget);
-    expect(find.text('Gunakan foto'), findsOneWidget);
-
-    await tester.tap(find.text('Gunakan foto'));
-    await tester.pump();
-
-    expect(find.text('Foto siap digunakan'), findsOneWidget);
+    expect(find.text('Hasil OCR'), findsOneWidget);
+    expect(find.text('TOKO CONTOH\nTOTAL 25000'), findsOneWidget);
     expect(
       find.textContaining('Belum ada transaksi yang dibuat'),
       findsOneWidget,
     );
+    expect(ocr.calls, 1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
+    await _dispose(tester);
+  });
+
+  testWidgets('shows OCR failure actions', (tester) async {
+    final ocr = _FakeReceiptOcrService([Exception('OCR failed')]);
+
+    await tester.pumpWidget(_app(_FakeReceiptImagePicker(), ocr));
+    await _selectGalleryAndUse(tester);
+
+    expect(find.text('Struk belum berhasil dibaca.'), findsOneWidget);
+    expect(find.text('Coba lagi'), findsOneWidget);
+    expect(find.text('Ganti foto'), findsOneWidget);
+    expect(find.text('Isi manual'), findsOneWidget);
+
+    await _dispose(tester);
+  });
+
+  testWidgets('treats empty OCR text as unreadable receipt', (tester) async {
+    final ocr = _FakeReceiptOcrService([
+      const ReceiptOcrResult(rawText: '   '),
+    ]);
+
+    await tester.pumpWidget(_app(_FakeReceiptImagePicker(), ocr));
+    await _selectGalleryAndUse(tester);
+
+    expect(find.text('Struk belum berhasil dibaca.'), findsOneWidget);
+    expect(find.text('Hasil OCR'), findsNothing);
+
+    await _dispose(tester);
+  });
+
+  testWidgets('retries OCR with the same image', (tester) async {
+    final ocr = _FakeReceiptOcrService([
+      Exception('OCR failed'),
+      const ReceiptOcrResult(rawText: 'TOTAL 42000'),
+    ]);
+
+    await tester.pumpWidget(_app(_FakeReceiptImagePicker(), ocr));
+    await _selectGalleryAndUse(tester);
+    await tester.tap(find.text('Coba lagi'));
     await tester.pump();
+
+    expect(find.text('Hasil OCR'), findsOneWidget);
+    expect(find.text('TOTAL 42000'), findsOneWidget);
+    expect(ocr.calls, 2);
+
+    await _dispose(tester);
   });
 
   testWidgets('permanently denied camera permission links to settings', (
@@ -56,7 +86,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(_app(picker));
+    await tester.pumpWidget(_app(picker, _FakeReceiptOcrService([])));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Ambil foto').last);
@@ -70,31 +100,55 @@ void main() {
     await tester.pump();
     expect(picker.settingsOpened, isTrue);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
+    await _dispose(tester);
   });
 }
 
-Widget _app(ReceiptImagePicker picker) {
+Future<void> _selectGalleryAndUse(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.text('Pilih dari galeri').last);
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.text('Pratinjau foto'), findsOneWidget);
+
+  await tester.tap(find.text('Gunakan foto'));
+  await tester.pump();
+}
+
+Future<void> _dispose(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump();
+}
+
+Widget _app(ReceiptImagePicker picker, ReceiptOcrService ocr) {
   return ProviderScope(
-    overrides: [receiptImagePickerProvider.overrideWithValue(picker)],
+    overrides: [
+      receiptImagePickerProvider.overrideWithValue(picker),
+      receiptOcrServiceProvider.overrideWithValue(ocr),
+    ],
     child: const MaterialApp(home: ReceiptScannerPage()),
   );
 }
 
 class _FakeReceiptImagePicker implements ReceiptImagePicker {
-  _FakeReceiptImagePicker({this.image, this.failure});
+  _FakeReceiptImagePicker({this.failure});
 
-  final ReceiptImage? image;
   final ReceiptImageFailure? failure;
-  final List<ReceiptImageOrigin> origins = [];
   bool settingsOpened = false;
 
   @override
   Future<ReceiptImage?> pick(ReceiptImageOrigin origin) async {
-    origins.add(origin);
     if (failure != null) throw failure!;
-    return image;
+    final imageFile = File(
+      'ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png',
+    ).absolute;
+    return ReceiptImage(
+      path: imageFile.path,
+      name: 'receipt.png',
+      origin: origin,
+      isTemporary: false,
+    );
   }
 
   @override
@@ -104,5 +158,20 @@ class _FakeReceiptImagePicker implements ReceiptImagePicker {
   Future<bool> openSettings() async {
     settingsOpened = true;
     return true;
+  }
+}
+
+class _FakeReceiptOcrService implements ReceiptOcrService {
+  _FakeReceiptOcrService(this.responses);
+
+  final List<Object> responses;
+  int calls = 0;
+
+  @override
+  Future<ReceiptOcrResult> recognize(ReceiptImage image) async {
+    calls++;
+    final response = responses.removeAt(0);
+    if (response is Exception) throw response;
+    return response as ReceiptOcrResult;
   }
 }

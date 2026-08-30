@@ -8,7 +8,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/device_receipt_image_picker.dart';
+import '../data/ml_kit_receipt_ocr_service.dart';
 import '../domain/receipt_image.dart';
+import '../domain/receipt_ocr.dart';
 
 class ReceiptScannerPage extends ConsumerStatefulWidget {
   const ReceiptScannerPage({super.key});
@@ -19,10 +21,13 @@ class ReceiptScannerPage extends ConsumerStatefulWidget {
 
 class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   late final ReceiptImagePicker _picker;
+  late final ReceiptOcrService _ocrService;
   ReceiptImage? _image;
+  ReceiptOcrResult? _ocrResult;
   String? _error;
   bool _loading = false;
-  bool _accepted = false;
+  bool _recognizing = false;
+  bool _ocrFailed = false;
   bool _imageReadable = true;
   bool _canOpenSettings = false;
 
@@ -30,6 +35,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   void initState() {
     super.initState();
     _picker = ref.read(receiptImagePickerProvider);
+    _ocrService = ref.read(receiptOcrServiceProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) => _showSourceSheet());
   }
 
@@ -48,12 +54,29 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
       appBar: AppBar(title: const Text('Scan struk')),
       body: SafeArea(
         child: _loading
-            ? const AppLoadingState()
-            : _accepted
-            ? _buildAccepted(context)
+            ? _buildLoading()
+            : _ocrFailed
+            ? _buildOcrFailure()
+            : _ocrResult != null
+            ? _buildOcrResult(context)
             : _image == null
             ? _buildSourceSelection(context)
             : _buildPreview(context),
+      ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          if (_recognizing) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Text('Membaca struk...'),
+          ],
+        ],
       ),
     );
   }
@@ -151,9 +174,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
         ),
         const SizedBox(height: AppSpacing.lg),
         FilledButton(
-          onPressed: _imageReadable
-              ? () => setState(() => _accepted = true)
-              : null,
+          onPressed: _imageReadable ? _recognize : null,
           child: const Text('Gunakan foto'),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -170,25 +191,56 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
     );
   }
 
-  Widget _buildAccepted(BuildContext context) {
+  Widget _buildOcrResult(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenH),
+      children: [
+        Text('Hasil OCR', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        const Text(
+          'Teks ini hanya untuk ditinjau. Belum ada transaksi yang dibuat.',
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: colors.surfaceContainer,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SelectableText(_ocrResult!.rawText),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton(onPressed: _changePhoto, child: const Text('Ganti foto')),
+        const SizedBox(height: AppSpacing.sm),
+        OutlinedButton(
+          onPressed: _openManualTransaction,
+          child: const Text('Isi manual'),
+        ),
+        TextButton(onPressed: _cancel, child: const Text('Selesai')),
+      ],
+    );
+  }
+
+  Widget _buildOcrFailure() {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenH),
       children: [
         const AppEmptyState(
-          icon: Icons.check_circle_outline,
-          message: 'Foto siap digunakan',
-          subtitle: 'Pembacaan teks struk akan tersedia pada Phase 4B. Belum ada transaksi yang dibuat.',
+          icon: Icons.document_scanner_outlined,
+          message: 'Struk belum berhasil dibaca.',
+          subtitle: 'Coba gunakan foto yang lebih terang dan tidak blur.',
         ),
-        FilledButton(
-          onPressed: _openManualTransaction,
-          child: const Text('Isi transaksi manual'),
-        ),
+        FilledButton(onPressed: _recognize, child: const Text('Coba lagi')),
         const SizedBox(height: AppSpacing.sm),
         OutlinedButton(
-          onPressed: () => setState(() => _accepted = false),
-          child: const Text('Kembali ke pratinjau'),
+          onPressed: _changePhoto,
+          child: const Text('Ganti foto'),
         ),
-        TextButton(onPressed: _cancel, child: const Text('Selesai')),
+        TextButton(
+          onPressed: _openManualTransaction,
+          child: const Text('Isi manual'),
+        ),
       ],
     );
   }
@@ -267,10 +319,43 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
     if (mounted) await _pick(origin);
   }
 
+  Future<void> _changePhoto() async {
+    await _discardCurrent();
+    if (mounted) await _showSourceSheet();
+  }
+
+  Future<void> _recognize() async {
+    final image = _image;
+    if (image == null) return;
+    setState(() {
+      _loading = true;
+      _recognizing = true;
+      _ocrFailed = false;
+    });
+    try {
+      final result = await _ocrService.recognize(image);
+      if (!mounted) return;
+      setState(() {
+        _ocrResult = result.rawText.trim().isEmpty ? null : result;
+        _ocrFailed = result.rawText.trim().isEmpty;
+        _loading = false;
+        _recognizing = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _ocrFailed = true;
+        _loading = false;
+        _recognizing = false;
+      });
+    }
+  }
+
   Future<void> _discardCurrent() async {
     final image = _image;
     _image = null;
-    _accepted = false;
+    _ocrResult = null;
+    _ocrFailed = false;
     if (image != null) {
       await _picker.discard(image);
     }
