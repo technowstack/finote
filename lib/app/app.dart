@@ -28,7 +28,7 @@ class FinoteApp extends ConsumerWidget {
         ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
 
     return MaterialApp.router(
-      title: 'Catatan Keuangan',
+      title: 'Finote',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

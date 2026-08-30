@@ -61,7 +61,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     final recentTransactions = ref.watch(dashboardRecentTransactionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Catatan Keuangan')),
+      appBar: AppBar(title: const Text('Finote')),
       body: RefreshIndicator(
         onRefresh: () async {
           await Future.wait([

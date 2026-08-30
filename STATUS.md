@@ -22,6 +22,7 @@
 - [x] Phase 5D — Reports & Financial Accuracy
 - [x] Phase 5E — Backup / Restore / Legacy Migration Hardening
 - [x] Phase 5F — Performance & Reliability
+- [x] Phase 5G — Play Store Preparation
 
 ## Current
 
@@ -38,7 +39,6 @@
 
 ## Next
 
-- [ ] Phase 5G — Play Store Preparation
 - [ ] Phase 5H — Closed Testing
 - [ ] Phase 5I — Production Release v1.0
 

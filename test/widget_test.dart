@@ -36,7 +36,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Catatan Keuangan'), findsOneWidget);
+    expect(find.text('Finote'), findsOneWidget);
     expect(find.text('Saldo'), findsOneWidget);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
 

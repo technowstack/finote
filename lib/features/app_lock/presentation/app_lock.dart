@@ -120,7 +120,7 @@ class _UnlockPageState extends ConsumerState<_UnlockPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Buka Catatan Keuangan',
+                    'Buka Finote',
                     style: Theme.of(context).textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),

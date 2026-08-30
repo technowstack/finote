@@ -22,7 +22,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Data pribadi'), findsNothing);
-    expect(find.text('Buka Catatan Keuangan'), findsOneWidget);
+    expect(find.text('Buka Finote'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '1234');
     await tester.tap(find.text('Buka'));
@@ -32,7 +32,7 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pumpAndSettle();
     expect(find.text('Data pribadi'), findsNothing);
-    expect(find.text('Buka Catatan Keuangan'), findsOneWidget);
+    expect(find.text('Buka Finote'), findsOneWidget);
   });
 }
 

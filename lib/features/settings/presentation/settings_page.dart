@@ -63,7 +63,7 @@ class SettingsPage extends ConsumerWidget {
             children: [
               _SettingsTile(
                 icon: Icons.info_outline,
-                title: 'Catatan Keuangan',
+                title: 'Finote',
                 subtitle: 'Versi 1.0.0',
                 onTap: () {},
               ),

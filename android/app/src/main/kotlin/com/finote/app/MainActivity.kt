@@ -1,4 +1,4 @@
-package com.example.finote
+package com.finote.app
 
 import io.flutter.embedding.android.FlutterActivity
 
