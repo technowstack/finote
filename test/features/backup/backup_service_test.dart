@@ -32,8 +32,14 @@ void main() {
     };
     final archive = Archive()
       ..addFile(ArchiveFile.string('manifest.json', jsonEncode(manifest)))
-      ..addFile(ArchiveFile.bytes('database.sqlite', dbBytes ?? Uint8List(0)));
-    return ZipEncoder().encodeBytes(archive);
+      ..addFile(
+        ArchiveFile(
+          'database.sqlite',
+          (dbBytes ?? Uint8List(0)).length,
+          dbBytes ?? Uint8List(0),
+        ),
+      );
+    return Uint8List.fromList(ZipEncoder().encode(archive)!);
   }
 
   // ---------------------------------------------------------------------------
@@ -164,8 +170,8 @@ void main() {
         final brokenManifestZip = () {
           final archive = Archive()
             ..addFile(ArchiveFile.string('manifest.json', 'not-valid-json{{{'))
-            ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
-          return ZipEncoder().encodeBytes(archive);
+            ..addFile(ArchiveFile('database.sqlite', 0, Uint8List(0)));
+          return Uint8List.fromList(ZipEncoder().encode(archive)!);
         }();
 
         try {
@@ -191,8 +197,8 @@ void main() {
           };
           final archive = Archive()
             ..addFile(ArchiveFile.string('manifest.json', jsonEncode(json)))
-            ..addFile(ArchiveFile.bytes('database.sqlite', Uint8List(0)));
-          return ZipEncoder().encodeBytes(archive);
+            ..addFile(ArchiveFile('database.sqlite', 0, Uint8List(0)));
+          return Uint8List.fromList(ZipEncoder().encode(archive)!);
         }();
 
         await expectLater(

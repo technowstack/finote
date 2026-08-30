@@ -61,12 +61,10 @@ class BackupService {
         createdAt: timestamp,
         appVersion: appVersion,
       );
+      final databaseBytes = await databaseFile.readAsBytes();
       final archive = Archive()
         ..addFile(
-          ArchiveFile.bytes(
-            'database.sqlite',
-            await databaseFile.readAsBytes(),
-          ),
+          ArchiveFile('database.sqlite', databaseBytes.length, databaseBytes),
         )
         ..addFile(
           ArchiveFile.string(
@@ -78,7 +76,7 @@ class BackupService {
       return BackupArchive(
         fileName:
             'finance_backup_${DateFormat('yyyy-MM-dd_HH-mm-ss-SSS').format(timestamp.toLocal())}.zip',
-        bytes: ZipEncoder().encodeBytes(archive),
+        bytes: Uint8List.fromList(ZipEncoder().encode(archive)!),
         manifest: manifest,
       );
     } finally {

@@ -25,6 +25,7 @@
   - stable enough for v1.0,
   - experimental but usable, or
   - hidden behind a feature flag for the first public release.
+- [ ] Complete Phase 5A manual export validation on Android: save, share, open, date/type filters, and all themes.
 
 ## Next
 
