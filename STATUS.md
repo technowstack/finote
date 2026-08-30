@@ -43,7 +43,7 @@
 ## Next
 
 - [ ] Phase 5H — Closed Testing
-- [ ] Phase 5I — Production Release v1.0
+- [ ] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.
 
 ---
 
