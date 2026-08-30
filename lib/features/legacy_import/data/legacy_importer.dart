@@ -76,31 +76,23 @@ class LegacyImporter {
         categoriesCreated++;
       }
 
-      for (var index = 0; index < data.transactions.length; index++) {
-        final transaction = data.transactions[index];
-        if (!importedIds.contains(transaction.id)) {
-          await _database
-              .into(_database.transactions)
-              .insert(
-                TransactionsCompanion.insert(
-                  type: transaction.type,
-                  categoryId:
-                      categoryIds[(transaction.subType, transaction.type)]!,
-                  amount: transaction.amount,
-                  title: Value(transaction.title.trim()),
-                  transactionDate: transaction.date.toLocal(),
-                  source: TransactionSource.legacyImport,
-                  legacySource: Value(legacySource),
-                  legacyId: Value(transaction.id),
-                ),
-              );
-        }
-
-        final completed = index + 1;
-        if (completed == data.transactions.length || completed % 100 == 0) {
-          onProgress?.call(completed, data.transactions.length);
-          await Future<void>.delayed(Duration.zero);
-        }
+      await _database.batch((batch) {
+        batch.insertAll(_database.transactions, [
+          for (final transaction in newTransactions)
+            TransactionsCompanion.insert(
+              type: transaction.type,
+              categoryId: categoryIds[(transaction.subType, transaction.type)]!,
+              amount: transaction.amount,
+              title: Value(transaction.title.trim()),
+              transactionDate: transaction.date.toLocal(),
+              source: TransactionSource.legacyImport,
+              legacySource: Value(legacySource),
+              legacyId: Value(transaction.id),
+            ),
+        ]);
+      });
+      if (data.transactions.isNotEmpty) {
+        onProgress?.call(data.transactions.length, data.transactions.length);
       }
 
       return LegacyImportSummary(
