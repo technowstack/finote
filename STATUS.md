@@ -36,6 +36,9 @@
 - [ ] Resolve or explicitly accept the remaining risks documented in `docs/core_stability_audit.md` before release.
 - [ ] Complete real-device backup/restore validation, including app restart and 10,000+ transactions.
 - [ ] Complete real-device performance/profile validation for long lists, exports, and lifecycle interruptions.
+- [ ] Execute the Phase 5H candidate test plan and device matrix.
+- [ ] Perform an upgrade test from a previous Finote build before release.
+- [ ] Resolve the release gates in `docs/release_readiness.md`.
 
 ## Next
 
