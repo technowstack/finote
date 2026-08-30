@@ -208,6 +208,78 @@ void main() {
       containsAll(['categories', 'transactions', 'settings']),
     );
   });
+
+  test('populated version 2 database preserves financial rows', () async {
+    await database.close();
+    database = AppDatabase(
+      NativeDatabase.memory(
+        setup: (sqlite) {
+          sqlite.execute('''
+            CREATE TABLE categories (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              uuid TEXT NOT NULL UNIQUE,
+              name TEXT NOT NULL,
+              type TEXT NOT NULL,
+              icon TEXT,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL,
+              deleted_at INTEGER
+            )
+          ''');
+          sqlite.execute('''
+            CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)
+          ''');
+          sqlite.execute('''
+            CREATE TABLE transactions (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              uuid TEXT NOT NULL UNIQUE,
+              type TEXT NOT NULL,
+              category_id INTEGER NOT NULL,
+              amount INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              note TEXT,
+              transaction_date TEXT NOT NULL,
+              source TEXT NOT NULL,
+              legacy_source TEXT,
+              legacy_id INTEGER,
+              created_at INTEGER NOT NULL,
+              updated_at INTEGER NOT NULL,
+              deleted_at INTEGER
+            )
+          ''');
+          sqlite.execute(
+            "INSERT INTO categories VALUES "
+            "(1, 'category-v2', 'Makan', 'expense', NULL, 1, 1, NULL)",
+          );
+          sqlite.execute(
+            "INSERT INTO transactions VALUES "
+            "(1, 'transaction-v2', 'expense', 1, 25000, 'Sarapan', NULL, "
+            "'2026-08-29', 'manual', NULL, NULL, 1, 1, NULL)",
+          );
+          sqlite.userVersion = 2;
+        },
+      ),
+    );
+
+    final transaction = await database
+        .select(database.transactions)
+        .getSingle();
+    final category = await database.select(database.categories).getSingle();
+    final columns = await database
+        .customSelect('PRAGMA table_info(transactions)')
+        .get();
+
+    expect(database.schemaVersion, 3);
+    expect(transaction.uuid, 'transaction-v2');
+    expect(transaction.amount, 25000);
+    expect(transaction.transactionDate, DateTime(2026, 8, 29));
+    expect(transaction.deletedAt, isNull);
+    expect(category.uuid, 'category-v2');
+    expect(
+      columns.map((row) => row.read<String>('name')),
+      contains('receipt_fingerprint'),
+    );
+  });
 }
 
 final _uuidPattern = RegExp(

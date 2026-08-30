@@ -54,7 +54,7 @@
 ## Remaining Risks
 
 - Real-device restore/provider refresh validation remains pending.
-- Legacy imports use the existing shared legacy source identity; cross-file ID collisions
-  remain documented in `docs/core_stability_audit.md`.
+- Legacy import identity and repeat-import behavior are covered in the Phase 5E
+  data-safety audit; copying a legacy file to a new path creates a new source.
 - Large transaction-history UI performance still needs device measurement.
 - Manual Android export validation remains pending.

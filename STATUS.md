@@ -19,6 +19,7 @@
 - [x] Phase 5B — Core Finance Audit & Stabilization
 - [x] Phase 5C — Transaction UX & Workflow Hardening
 - [x] Phase 5D — Reports & Financial Accuracy
+- [x] Phase 5E — Backup / Restore / Legacy Migration Hardening
 
 ## Current
 
@@ -30,6 +31,7 @@
   - hidden behind a feature flag for the first public release.
 - [ ] Complete Phase 5A manual export validation on Android: save, share, open, date/type filters, and all themes.
 - [ ] Resolve or explicitly accept the remaining risks documented in `docs/core_stability_audit.md` before release.
+- [ ] Complete real-device backup/restore validation, including app restart and 10,000+ transactions.
 
 ## Next
 
@@ -37,7 +39,6 @@
 - [ ] Phase 5B — Core Finance Audit & Stabilization
 - [ ] Phase 5C — Transaction UX & Workflow Hardening
 - [ ] Phase 5D — Reports & Financial Accuracy
-- [ ] Phase 5E — Backup / Restore / Legacy Migration Hardening
 - [ ] Phase 5F — Performance & Reliability
 - [ ] Phase 5G — Play Store Preparation
 - [ ] Phase 5H — Closed Testing
@@ -232,7 +233,7 @@ The following are release-critical for Finote v1.0:
 - [ ] PDF export
 - [ ] Core finance stabilization audit
 - [ ] Financial accuracy audit
-- [ ] Backup / restore / legacy hardening
+- [x] Backup / restore / legacy hardening
 - [ ] Performance validation
 - [ ] Play Store preparation
 - [ ] Closed testing

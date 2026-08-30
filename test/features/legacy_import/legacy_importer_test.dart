@@ -25,8 +25,8 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  Future<String> createLegacyDatabase() async {
-    final path = '${tempDir.path}/legacy.db';
+  Future<String> createLegacyDatabase([String name = 'legacy.db']) async {
+    final path = '${tempDir.path}/$name';
     final legacy = sqlite3.open(path);
     legacy.execute('''
       CREATE TABLE "Transaction" (
@@ -96,7 +96,7 @@ void main() {
         (item) =>
             item.uuid.isNotEmpty &&
             item.source == TransactionSource.legacyImport &&
-            item.legacySource == LegacySchema.legacySource,
+            item.legacySource?.startsWith(LegacySchema.legacySource) == true,
       ),
       isTrue,
     );
@@ -126,6 +126,25 @@ void main() {
     expect(second.categoriesCreated, 0);
     expect(await database.select(database.transactions).get(), hasLength(2));
     expect(await database.select(database.categories).get(), hasLength(2));
+  });
+
+  test('different legacy databases do not collide on reused IDs', () async {
+    final firstPath = await createLegacyDatabase('first.db');
+    final secondPath = await createLegacyDatabase('second.db');
+    for (final path in [firstPath, secondPath]) {
+      final legacy = sqlite3.open(path);
+      legacy.execute(
+        'INSERT INTO "Transaction" VALUES '
+        "(10, 0, 25000, 1, 1672531200000, 'Sarapan')",
+      );
+      legacy.close();
+    }
+
+    await LegacyImporter(database).import(firstPath);
+    final second = await LegacyImporter(database).import(secondPath);
+
+    expect(second.newCount, 1);
+    expect(await database.select(database.transactions).get(), hasLength(2));
   });
 
   test(

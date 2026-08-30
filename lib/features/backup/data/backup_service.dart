@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:drift/native.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -107,13 +108,16 @@ class BackupService {
   ///
   /// Validasi yang dilakukan (berurutan):
   /// 1. Memastikan [zipBytes] dapat di-decode sebagai ZIP → [RestoreError.invalidZip]
-  /// 2. Memastikan `manifest.json` ada dan valid → [RestoreError.invalidManifest]
+  /// 2. Memastikan `manifest.json` dan `database.sqlite` ada serta valid
   /// 3. Memastikan `backupVersion` yang didukung → [RestoreError.unsupportedVersion]
   /// 4. Memastikan `databaseVersion` cocok dengan versi live → [RestoreError.databaseMismatch]
   ///
   /// Jika semua validasi lolos, mengembalikan [RestorePreview] berisi manifest
   /// dan byte arsip yang siap dipulihkan.
-  Future<RestorePreview> parseRestoreFile(Uint8List zipBytes) async {
+  Future<RestorePreview> parseRestoreFile(
+    Uint8List zipBytes, {
+    Directory? temporaryDirectory,
+  }) async {
     final bytes = zipBytes;
     if (bytes.isEmpty || bytes.length > _maximumArchiveBytes) {
       throw const RestoreError.invalidZip();
@@ -132,7 +136,7 @@ class BackupService {
     if (manifestFile == null) {
       throw const RestoreError.invalidManifest();
     }
-
+    final dbEntry = archive.findFile('database.sqlite');
     // 3. Decode JSON mentah
     Map<String, dynamic> rawJson;
     try {
@@ -165,14 +169,46 @@ class BackupService {
     }
 
     // 6. Periksa databaseVersion
-    if (manifest.databaseVersion != _database.schemaVersion) {
+    if (manifest.databaseVersion > _database.schemaVersion) {
       throw RestoreError.databaseMismatch(
         backupVersion: manifest.databaseVersion,
         currentVersion: _database.schemaVersion,
       );
     }
 
-    return RestorePreview(manifest: manifest, archiveBytes: bytes);
+    if (dbEntry == null ||
+        dbEntry.size == 0 ||
+        dbEntry.size > _maximumArchiveBytes) {
+      throw const RestoreError.invalidZip();
+    }
+
+    final tempRoot = temporaryDirectory ?? await getTemporaryDirectory();
+    final workingDirectory = await tempRoot.createTemp('finote_validate_');
+    final snapshot = File(p.join(workingDirectory.path, 'database.sqlite'));
+    try {
+      await snapshot.writeAsBytes(dbEntry.content as List<int>, flush: true);
+      await _migrateSnapshot(snapshot);
+      await _checkRestoredSnapshot(snapshot);
+      final stats = _readSnapshotStats(snapshot);
+      return RestorePreview(
+        manifest: manifest,
+        archiveBytes: bytes,
+        transactionCount: stats.transactionCount,
+        categoryCount: stats.categoryCount,
+        totalIncome: stats.totalIncome,
+        totalExpense: stats.totalExpense,
+        oldestTransactionAt: stats.oldestTransactionAt,
+        newestTransactionAt: stats.newestTransactionAt,
+      );
+    } on RestoreError {
+      rethrow;
+    } catch (_) {
+      throw const RestoreError.integrityCheckFailed();
+    } finally {
+      if (await workingDirectory.exists()) {
+        await workingDirectory.delete(recursive: true);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -193,7 +229,11 @@ class BackupService {
       await safetyDir.create(recursive: true);
     }
 
-    final safetyFile = File(p.join(safetyDir.path, backup.fileName));
+    final safetyName = backup.fileName.replaceFirst(
+      'finance_backup_',
+      'pre_restore_backup_',
+    );
+    final safetyFile = await _uniqueFile(safetyDir, safetyName);
     await safetyFile.writeAsBytes(backup.bytes, flush: true);
 
     return BackupArchive(
@@ -201,6 +241,18 @@ class BackupService {
       bytes: backup.bytes,
       manifest: backup.manifest,
     );
+  }
+
+  Future<File> _uniqueFile(Directory directory, String fileName) async {
+    final extension = p.extension(fileName);
+    final stem = p.basenameWithoutExtension(fileName);
+    var candidate = File(p.join(directory.path, fileName));
+    var suffix = 2;
+    while (await candidate.exists()) {
+      candidate = File(p.join(directory.path, '$stem-$suffix$extension'));
+      suffix++;
+    }
+    return candidate;
   }
 
   // ---------------------------------------------------------------------------
@@ -222,9 +274,16 @@ class BackupService {
     Directory? temporaryDirectory,
   }) async {
     // Extract file SQLite ke temp
-    final archive = ZipDecoder().decodeBytes(archiveBytes);
+    Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(archiveBytes);
+    } catch (_) {
+      throw const RestoreError.invalidZip();
+    }
     final dbEntry = archive.findFile('database.sqlite');
-    if (dbEntry == null || dbEntry.size > _maximumArchiveBytes) {
+    if (dbEntry == null ||
+        dbEntry.size == 0 ||
+        dbEntry.size > _maximumArchiveBytes) {
       throw const RestoreError.invalidZip();
     }
 
@@ -236,6 +295,7 @@ class BackupService {
       await tempDbFile.writeAsBytes(dbEntry.content as List<int>, flush: true);
 
       // Integrity check pada file yang akan di-restore
+      await _migrateSnapshot(tempDbFile);
       await _checkRestoredSnapshot(tempDbFile);
 
       final targetPath =
@@ -254,13 +314,7 @@ class BackupService {
           movedOriginal = true;
         }
         await stagedFile.rename(targetPath);
-        if (await rollbackFile.exists()) {
-          try {
-            await rollbackFile.delete();
-          } catch (_) {
-            // A leftover rollback file is safer than failing a completed restore.
-          }
-        }
+        await _checkRestoredSnapshot(targetFile);
       } catch (_) {
         if (await stagedFile.exists()) await stagedFile.delete();
         if (movedOriginal && await rollbackFile.exists()) {
@@ -268,6 +322,13 @@ class BackupService {
           await rollbackFile.rename(targetPath);
         }
         rethrow;
+      }
+      if (await rollbackFile.exists()) {
+        try {
+          await rollbackFile.delete();
+        } catch (_) {
+          // A leftover rollback file is safer than failing a verified restore.
+        }
       }
     } finally {
       if (await workingDir.exists()) {
@@ -314,6 +375,50 @@ class BackupService {
     }
   }
 
+  Future<void> _migrateSnapshot(File file) async {
+    try {
+      final raw = sqlite3.open(file.path, mode: OpenMode.readOnly);
+      final version = raw.userVersion;
+      raw.close();
+      if (version >= _database.schemaVersion) return;
+
+      final database = AppDatabase(NativeDatabase(file));
+      await database.close();
+    } catch (_) {
+      throw const RestoreError.integrityCheckFailed();
+    }
+  }
+
+  _RestoreStats _readSnapshotStats(File file) {
+    final db = sqlite3.open(file.path, mode: OpenMode.readOnly);
+    try {
+      final row = db.select('''
+        SELECT
+          COUNT(*) AS transaction_count,
+          COUNT(DISTINCT category_id) AS category_count,
+          COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
+          COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS total_expense,
+          MIN(transaction_date) AS oldest,
+          MAX(transaction_date) AS newest
+        FROM transactions
+        WHERE deleted_at IS NULL
+      ''').single;
+      return _RestoreStats(
+        transactionCount: row['transaction_count'] as int,
+        categoryCount: row['category_count'] as int,
+        totalIncome: row['total_income'] as int,
+        totalExpense: row['total_expense'] as int,
+        oldestTransactionAt: _readDate(row['oldest']),
+        newestTransactionAt: _readDate(row['newest']),
+      );
+    } finally {
+      db.close();
+    }
+  }
+
+  DateTime? _readDate(Object? value) =>
+      value is String ? DateTime.tryParse(value) : null;
+
   bool _hasColumns(Database db, String table, Set<String> required) {
     final columns = db
         .select('PRAGMA table_info("$table")')
@@ -321,6 +426,24 @@ class BackupService {
         .toSet();
     return columns.containsAll(required);
   }
+}
+
+class _RestoreStats {
+  const _RestoreStats({
+    required this.transactionCount,
+    required this.categoryCount,
+    required this.totalIncome,
+    required this.totalExpense,
+    required this.oldestTransactionAt,
+    required this.newestTransactionAt,
+  });
+
+  final int transactionCount;
+  final int categoryCount;
+  final int totalIncome;
+  final int totalExpense;
+  final DateTime? oldestTransactionAt;
+  final DateTime? newestTransactionAt;
 }
 
 class BackupArchive {

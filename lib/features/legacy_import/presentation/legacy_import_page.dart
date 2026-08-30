@@ -6,6 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../categories/data/category_repository.dart';
+import '../../dashboard/data/dashboard_repository.dart';
+import '../../reports/data/report_repository.dart';
+import '../../transactions/data/transaction_repository.dart';
 import '../data/legacy_detector.dart';
 import '../data/legacy_importer.dart';
 import '../domain/legacy_detection_error.dart';
@@ -430,6 +434,12 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
           });
         },
       );
+      ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(dashboardRecentTransactionsProvider);
+      ref.invalidate(transactionHistoryProvider);
+      ref.invalidate(reportProvider);
+      ref.invalidate(categoriesProvider);
+      ref.invalidate(categoriesByTypeProvider);
       if (!mounted) return;
       setState(() {
         _summary = summary;

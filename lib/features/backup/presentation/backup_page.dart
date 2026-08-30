@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/services/app_logger.dart';
 import '../../../core/database/app_database.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../data/backup_service.dart';
 import '../domain/restore_error.dart';
 import '../domain/restore_preview.dart';
@@ -332,6 +333,29 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
         _PreviewRow(
           label: 'Format backup',
           value: 'v${manifest.backupVersion}',
+        ),
+        _PreviewRow(
+          label: 'Jumlah transaksi',
+          value: preview.transactionCount.toString(),
+        ),
+        _PreviewRow(
+          label: 'Jumlah kategori',
+          value: preview.categoryCount.toString(),
+        ),
+        _PreviewRow(
+          label: 'Total pemasukan',
+          value: formatIdr(preview.totalIncome),
+        ),
+        _PreviewRow(
+          label: 'Total pengeluaran',
+          value: formatIdr(preview.totalExpense),
+        ),
+        _PreviewRow(
+          label: 'Rentang tanggal',
+          value: preview.oldestTransactionAt == null
+              ? '-'
+              : '${DateFormat('d MMM yyyy').format(preview.oldestTransactionAt!)}'
+                    ' - ${DateFormat('d MMM yyyy').format(preview.newestTransactionAt!)}',
         ),
         const SizedBox(height: 24),
         Container(

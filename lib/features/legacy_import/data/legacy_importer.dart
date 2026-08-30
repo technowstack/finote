@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
+import 'package:cryptography/cryptography.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import '../../../core/database/app_database.dart';
@@ -19,11 +23,14 @@ class LegacyImporter {
   }) async {
     await const LegacyDetector().detect(filePath);
     final data = _readLegacy(filePath);
+    final legacySource = await _sourceFor(filePath);
 
     return _database.transaction(() async {
       final imported =
           await (_database.select(_database.transactions)..where(
-                (row) => row.legacySource.equals(LegacySchema.legacySource),
+                (row) =>
+                    row.legacySource.equals(legacySource) |
+                    row.legacySource.equals(LegacySchema.legacySource),
               ))
               .get();
       final importedIds = imported.map((row) => row.legacyId).nonNulls.toSet();
@@ -83,7 +90,7 @@ class LegacyImporter {
                   title: Value(transaction.title.trim()),
                   transactionDate: transaction.date.toLocal(),
                   source: TransactionSource.legacyImport,
-                  legacySource: const Value(LegacySchema.legacySource),
+                  legacySource: Value(legacySource),
                   legacyId: Value(transaction.id),
                 ),
               );
@@ -109,6 +116,14 @@ class LegacyImporter {
             .fold(0, (total, item) => total + item.amount),
       );
     });
+  }
+
+  Future<String> _sourceFor(String filePath) async {
+    final digest = await Sha256().hash(utf8.encode(p.absolute(filePath)));
+    final fingerprint = digest.bytes
+        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
+        .join();
+    return '${LegacySchema.legacySource}:$fingerprint';
   }
 
   _LegacyData _readLegacy(String filePath) {

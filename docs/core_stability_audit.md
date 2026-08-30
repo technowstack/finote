@@ -15,18 +15,19 @@ Scope: Phase 5B release-critical core. No private financial data is included.
 - **Remaining risk:** Users must create/select a replacement category before the
   old category can be deleted.
 
-### Medium: restore lifecycle is not fully coordinated with active providers
+### Medium: restore lifecycle needs real-device validation
 
 - **Root cause:** Restore closes and replaces the database while existing Drift
   streams may still be mounted; provider invalidation is handled by the backup UI.
-- **Fix:** Not changed in this audit because the current file replacement flow is
-  data-safe and a coordinated database restart requires an app lifecycle design.
+- **Fix:** Phase 5E validates the staged database before and after replacement,
+  retains a rollback copy until post-swap verification, and invalidates the
+  database provider after restore.
 - **Test coverage:** Existing tests cover atomic file replacement and failed
   restore rollback.
 - **Remaining risk:** Real-device restore while dashboard/reports/history streams
   are mounted needs manual validation before release.
 
-### Medium: version-1 migration coverage is incomplete
+### Medium: version-1 migration coverage remains incomplete
 
 - **Root cause:** The migration history contains a broad `from < 2` branch, but
   tests do not include a realistic prior database with existing records.
@@ -35,15 +36,14 @@ Scope: Phase 5B release-critical core. No private financial data is included.
   available version-1 fixture.
 - **Remaining risk:** Add and run a real historical v1 fixture before release.
 
-### Medium: legacy duplicate identity is shared across source files
+### Medium: moved legacy copies have no portable source identity
 
-- **Root cause:** Every legacy import uses the same `legacySource`, so reused
-  legacy IDs from different source databases can be treated as duplicates.
-- **Fix:** Not changed because changing identity semantics requires a persisted
-  compatibility decision for already-imported data.
-- **Test coverage:** Existing tests cover repeat import protection for one source.
-- **Remaining risk:** Importing two distinct legacy databases with overlapping IDs
-  can skip records from the second source.
+- **Root cause:** The legacy format has no stable database identifier.
+- **Fix:** Phase 5E hashes the canonical selected path for new imports and retains
+  compatibility with the historical constant source key.
+- **Test coverage:** Same-file repeat imports and separate files reusing IDs.
+- **Remaining risk:** Copying a legacy database to a new path is treated as a new
+  source and may intentionally import duplicate financial records.
 
 ### Medium: history materializes all matching transactions
 
@@ -99,5 +99,5 @@ Scope: Phase 5B release-critical core. No private financial data is included.
 
 - Manual Android restore lifecycle validation.
 - Real historical migration fixture validation.
-- Two-source legacy import collision decision/test.
+- Real-device restore lifecycle validation.
 - 10,000+ transaction performance measurement on target devices.

@@ -254,9 +254,18 @@ void main() {
       );
 
       // Validasi backup: parseRestoreFile harus berhasil
-      final preview = await service.parseRestoreFile(backup.bytes);
+      final preview = await service.parseRestoreFile(
+        backup.bytes,
+        temporaryDirectory: tempDir,
+      );
       expect(preview.manifest.databaseVersion, database.schemaVersion);
       expect(preview.manifest.appVersion, '1.0.0');
+      expect(preview.transactionCount, 1);
+      expect(preview.categoryCount, 1);
+      expect(preview.totalIncome, 0);
+      expect(preview.totalExpense, 10000);
+      expect(preview.oldestTransactionAt, DateTime(2026, 8, 1));
+      expect(preview.newestTransactionAt, DateTime(2026, 8, 1));
 
       // Ekstrak database.sqlite dari backup dan verifikasi isi
       final archive = ZipDecoder().decodeBytes(backup.bytes);
@@ -371,16 +380,9 @@ void main() {
         );
         final corruptZip = buildValidZip(dbBytes: corruptDbBytes);
 
-        // parseRestoreFile lolos (manifest valid), tapi restoreFromArchive
-        // harus gagal di integrity check
-        final preview = await service.parseRestoreFile(corruptZip);
-
-        // restoreFromArchive harus melempar error karena db korup
+        // Validasi harus menolak database korup sebelum restore dimulai.
         await expectLater(
-          service.restoreFromArchive(
-            preview.archiveBytes,
-            temporaryDirectory: tempDir,
-          ),
+          service.parseRestoreFile(corruptZip, temporaryDirectory: tempDir),
           throwsA(isA<RestoreError>()),
         );
 
