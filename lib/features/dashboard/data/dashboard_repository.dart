@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/converters.dart';
+import '../../../core/utils/financial_date_range.dart';
 import '../../transactions/data/transaction_repository.dart';
 
 class DashboardRepository {
@@ -17,8 +18,9 @@ class DashboardRepository {
       referenceDate.month,
       referenceDate.day,
     );
-    final monthStart = DateTime(today.year, today.month);
-    final monthEnd = DateTime(today.year, today.month + 1, 0);
+    final month = resolveFinancialDateRange(FinancialPeriod.month, now: today);
+    final monthStart = month.start;
+    final monthEnd = month.end;
 
     return _database
         .customSelect(

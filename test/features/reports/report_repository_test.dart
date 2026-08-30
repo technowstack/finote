@@ -87,6 +87,7 @@ void main() {
 
     expect(report.totalIncome, 1200000);
     expect(report.totalExpense, 650000);
+    expect(report.transactionCount, 5);
     expect(report.netBalance, 550000);
     expect(
       report.topExpenseCategories.map(
@@ -149,6 +150,7 @@ void main() {
     addTearDown(iterator.cancel);
     expect(await iterator.moveNext(), isTrue);
     expect(iterator.current.isEmpty, isTrue);
+    expect(iterator.current.transactionCount, 0);
 
     await transactions.create(
       type: TransactionType.expense,
@@ -177,4 +179,40 @@ void main() {
     expect(report.topExpenseCategories, hasLength(5));
     expect(report.topExpenseCategories.first.categoryName, 'Expense 6');
   });
+
+  test(
+    'editing type and date moves the amount between report periods',
+    () async {
+      final transaction = await transactions.create(
+        type: TransactionType.expense,
+        categoryId: food.id,
+        amount: 100000,
+        transactionDate: DateTime(2026, 7, 31),
+      );
+
+      final july = ReportRange(
+        start: DateTime(2026, 7, 1),
+        end: DateTime(2026, 7, 31),
+      );
+      expect((await reports.watchReport(july).first).totalExpense, 100000);
+
+      await transactions.update(
+        transaction.copyWith(
+          type: TransactionType.income,
+          categoryId: salary.id,
+          transactionDate: DateTime(2026, 8, 1),
+        ),
+      );
+
+      final august = ReportRange(
+        start: DateTime(2026, 8, 1),
+        end: DateTime(2026, 8, 31),
+      );
+      expect((await reports.watchReport(july).first).totalExpense, 0);
+      final augustReport = await reports.watchReport(august).first;
+      expect(augustReport.totalIncome, 100000);
+      expect(augustReport.totalExpense, 0);
+      expect(augustReport.balance, 100000);
+    },
+  );
 }

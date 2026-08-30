@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../export/data/export_repository.dart';
 import '../../export/data/export_service.dart';
@@ -648,24 +649,30 @@ ReportRange _reportRange(
   DateTimeRange? customRange,
   DateTime now,
 ) {
-  final today = DateTime(now.year, now.month, now.day);
+  final periodRange = period == _ReportPeriod.all
+      ? null
+      : resolveFinancialDateRange(
+          switch (period) {
+            _ReportPeriod.today => FinancialPeriod.today,
+            _ReportPeriod.week => FinancialPeriod.week,
+            _ReportPeriod.month => FinancialPeriod.month,
+            _ReportPeriod.custom => FinancialPeriod.custom,
+            _ReportPeriod.all => FinancialPeriod.today,
+          },
+          now: now,
+          customStart: customRange?.start,
+          customEnd: customRange?.end,
+        );
   return switch (period) {
     _ReportPeriod.all => ReportRange(
       start: DateTime(2000, 1, 1),
       end: DateTime(2100, 12, 31),
     ),
-    _ReportPeriod.today => ReportRange(start: today, end: today),
-    _ReportPeriod.week => ReportRange(
-      start: today.subtract(Duration(days: today.weekday - 1)),
-      end: today.add(Duration(days: 7 - today.weekday)),
-    ),
-    _ReportPeriod.month => ReportRange(
-      start: DateTime(today.year, today.month),
-      end: DateTime(today.year, today.month + 1, 0),
-    ),
+    _ReportPeriod.today || _ReportPeriod.week || _ReportPeriod.month =>
+      ReportRange(start: periodRange!.start, end: periodRange.end),
     _ReportPeriod.custom => ReportRange(
-      start: customRange?.start ?? today,
-      end: customRange?.end ?? today,
+      start: periodRange!.start,
+      end: periodRange.end,
     ),
   };
 }

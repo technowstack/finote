@@ -1,4 +1,5 @@
 import '../../transactions/domain/transaction_type.dart';
+import '../../../core/finance/financial_summary.dart';
 
 class ExportFilter {
   const ExportFilter({
@@ -25,6 +26,12 @@ class ExportDocument {
   final DateTime generatedAt;
   final List<ExportTransaction> transactions;
 
+  FinancialSummary get summary => FinancialSummary(
+    totalIncome: totalIncome,
+    totalExpense: totalExpense,
+    transactionCount: transactions.length,
+  );
+
   int get totalIncome => transactions
       .where((row) => row.type == TransactionType.income)
       .fold(0, (sum, row) => sum + row.amount);
@@ -33,7 +40,7 @@ class ExportDocument {
       .where((row) => row.type == TransactionType.expense)
       .fold(0, (sum, row) => sum + row.amount);
 
-  int get balance => totalIncome - totalExpense;
+  int get balance => summary.balance;
 }
 
 class ExportTransaction {

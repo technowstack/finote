@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/database/converters.dart';
+import '../../../core/finance/financial_summary.dart';
 
 class ReportRepository {
   ReportRepository(this._database);
@@ -45,22 +46,23 @@ monthly AS (
   FROM filtered
   GROUP BY substr(transaction_date, 1, 7)
 )
-SELECT kind, label, income, expense, amount
+ SELECT kind, label, income, expense, amount, transaction_count
 FROM (
   SELECT
     'summary' AS kind,
     '' AS label,
     COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) AS income,
     COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expense,
-    0 AS amount,
-    0 AS sort_group
+     0 AS amount,
+     COUNT(*) AS transaction_count,
+     0 AS sort_group
   FROM filtered
   UNION ALL
-  SELECT 'expense_category', label, 0, 0, amount, 1 FROM expense_categories
+   SELECT 'expense_category', label, 0, 0, amount, 0, 1 FROM expense_categories
   UNION ALL
-  SELECT 'income_category', label, 0, 0, amount, 2 FROM income_categories
+   SELECT 'income_category', label, 0, 0, amount, 0, 2 FROM income_categories
   UNION ALL
-  SELECT 'month', label, income, expense, 0, 3 FROM monthly
+   SELECT 'month', label, income, expense, 0, 0, 3 FROM monthly
 )
 ORDER BY
   sort_group,
@@ -81,6 +83,7 @@ ORDER BY
   ReportData _mapRows(List<QueryRow> rows) {
     var income = 0;
     var expense = 0;
+    var transactionCount = 0;
     final expenseCategories = <CategoryTotal>[];
     final incomeCategories = <CategoryTotal>[];
     final monthlyHistory = <MonthlyTotal>[];
@@ -90,6 +93,7 @@ ORDER BY
         case 'summary':
           income = row.read<int>('income');
           expense = row.read<int>('expense');
+          transactionCount = row.read<int>('transaction_count');
         case 'expense_category':
           expenseCategories.add(
             CategoryTotal(
@@ -118,6 +122,7 @@ ORDER BY
     return ReportData(
       totalIncome: income,
       totalExpense: expense,
+      transactionCount: transactionCount,
       topExpenseCategories: expenseCategories,
       topIncomeCategories: incomeCategories,
       monthlyHistory: monthlyHistory,
@@ -125,23 +130,22 @@ ORDER BY
   }
 }
 
-class ReportData {
+class ReportData extends FinancialSummary {
   const ReportData({
-    required this.totalIncome,
-    required this.totalExpense,
+    required super.totalIncome,
+    required super.totalExpense,
+    required super.transactionCount,
     required this.topExpenseCategories,
     required this.topIncomeCategories,
     required this.monthlyHistory,
   });
 
-  final int totalIncome;
-  final int totalExpense;
   final List<CategoryTotal> topExpenseCategories;
   final List<CategoryTotal> topIncomeCategories;
   final List<MonthlyTotal> monthlyHistory;
 
-  int get netBalance => totalIncome - totalExpense;
-  bool get isEmpty => monthlyHistory.isEmpty;
+  int get netBalance => balance;
+  bool get isEmpty => transactionCount == 0;
 }
 
 class CategoryTotal {

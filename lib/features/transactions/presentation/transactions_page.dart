@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_type.dart';
@@ -455,22 +456,18 @@ class _TransactionRow extends ConsumerWidget {
   DateTimeRange? customRange,
   DateTime now,
 ) {
-  final today = DateTime(now.year, now.month, now.day);
-  return switch (filter) {
-    _DateFilter.today => (start: today, end: today),
-    _DateFilter.week => (
-      start: today.subtract(Duration(days: today.weekday - 1)),
-      end: today.add(Duration(days: 7 - today.weekday)),
-    ),
-    _DateFilter.month => (
-      start: DateTime(today.year, today.month),
-      end: DateTime(today.year, today.month + 1, 0),
-    ),
-    _DateFilter.custom => (
-      start: customRange?.start ?? today,
-      end: customRange?.end ?? today,
-    ),
-  };
+  final range = resolveFinancialDateRange(
+    switch (filter) {
+      _DateFilter.today => FinancialPeriod.today,
+      _DateFilter.week => FinancialPeriod.week,
+      _DateFilter.month => FinancialPeriod.month,
+      _DateFilter.custom => FinancialPeriod.custom,
+    },
+    now: now,
+    customStart: customRange?.start,
+    customEnd: customRange?.end,
+  );
+  return (start: range.start, end: range.end);
 }
 
 bool _isSameDate(DateTime first, DateTime second) =>

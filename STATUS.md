@@ -18,6 +18,7 @@
 - [x] Phase 4G — Receipt Scanner Polish & Automated Coverage
 - [x] Phase 5B — Core Finance Audit & Stabilization
 - [x] Phase 5C — Transaction UX & Workflow Hardening
+- [x] Phase 5D — Reports & Financial Accuracy
 
 ## Current
 
