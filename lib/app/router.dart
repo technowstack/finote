@@ -10,6 +10,8 @@ import '../features/reports/presentation/reports_page.dart';
 import '../features/receipt_scanner/presentation/receipt_scanner_page.dart';
 import '../features/settings/presentation/settings_page.dart';
 import '../features/transactions/presentation/transaction_form_page.dart';
+import '../features/transactions/presentation/monthly_transactions_page.dart';
+import '../features/transactions/presentation/transaction_detail_page.dart';
 import '../features/transactions/presentation/transactions_page.dart';
 import 'main_scaffold.dart';
 
@@ -78,6 +80,21 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => TransactionFormPage(
           transactionId: int.tryParse(state.pathParameters['id'] ?? ''),
         ),
+      ),
+      GoRoute(
+        path: '/transactions/:id',
+        redirect: (context, state) =>
+            int.tryParse(state.pathParameters['id'] ?? '') == null
+            ? '/transactions'
+            : null,
+        builder: (context, state) => TransactionDetailPage(
+          transactionId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/reports/history/:month',
+        builder: (context, state) =>
+            MonthlyTransactionsPage(month: state.pathParameters['month']!),
       ),
       GoRoute(
         path: '/categories',

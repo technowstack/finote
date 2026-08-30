@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -574,7 +575,12 @@ class _HistoryTab extends StatelessWidget {
           child: Column(
             children: [
               for (var i = 0; i < data.monthlyHistory.length; i++) ...[
-                _MonthlyRow(month: data.monthlyHistory[i]),
+                _MonthlyRow(
+                  month: data.monthlyHistory[i],
+                  onTap: () => context.push(
+                    '/reports/history/${data.monthlyHistory[i].month}',
+                  ),
+                ),
                 if (i < data.monthlyHistory.length - 1)
                   const Divider(indent: 16, endIndent: 16),
               ],
@@ -587,9 +593,10 @@ class _HistoryTab extends StatelessWidget {
 }
 
 class _MonthlyRow extends StatelessWidget {
-  const _MonthlyRow({required this.month});
+  const _MonthlyRow({required this.month, required this.onTap});
 
   final MonthlyTotal month;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -597,44 +604,56 @@ class _MonthlyRow extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final isPositive = month.netBalance >= 0;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_formatMonth(month.month), style: textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Text(
-                '+${formatIdr(month.income)}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.incomeColor,
-                ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_formatMonth(month.month), style: textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Text(
+                        '+${formatIdr(month.income)}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colors.incomeColor,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.lg),
+                      Text(
+                        '-${formatIdr(month.expense)}',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colors.expenseColor,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        formatIdr(month.netBalance),
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: isPositive
+                              ? colors.positiveBalance
+                              : colors.negativeBalance,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: AppSpacing.lg),
-              Text(
-                '-${formatIdr(month.expense)}',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.expenseColor,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                formatIdr(month.netBalance),
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: isPositive
-                      ? colors.positiveBalance
-                      : colors.negativeBalance,
-                ),
-              ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+          ],
+        ),
       ),
     );
   }
