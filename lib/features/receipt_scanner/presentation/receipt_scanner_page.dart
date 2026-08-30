@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -218,6 +219,14 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
           child: SelectableText(_ocrResult!.rawText),
         ),
         const SizedBox(height: AppSpacing.lg),
+        if (kDebugMode) ...[
+          OutlinedButton.icon(
+            onPressed: _showDiagnostics,
+            icon: const Icon(Icons.bug_report_outlined),
+            label: const Text('Lihat detail teknis'),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         FilledButton(
           onPressed: _openReceiptDraft,
           child: const Text('Tinjau draft pengeluaran'),
@@ -398,6 +407,44 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
     if (mounted) {
       context.pushReplacement('/transactions/new', extra: draft);
     }
+  }
+
+  Future<void> _showDiagnostics() async {
+    final result = _ocrResult;
+    if (result == null || !mounted) return;
+    final receipt = await _interpreter.interpret(result);
+    if (!mounted) return;
+    final items = receipt.items
+        .map(
+          (item) =>
+              '${item.name}: qty=${item.quantity ?? '-'}, unit=${item.unitPrice ?? '-'}, total=${item.lineTotal ?? '-'}',
+        )
+        .join('\n');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Detail parser'),
+        content: SingleChildScrollView(
+          child: SelectableText('''
+merchant: ${receipt.merchant ?? '-'}
+date: ${receipt.transactionDate?.toIso8601String() ?? '-'}
+subtotal: ${receipt.subtotal ?? '-'}
+tax: ${receipt.tax ?? '-'}
+discount: ${receipt.discount ?? '-'}
+total: ${receipt.total ?? '-'}
+receipt number: ${receipt.receiptNumber ?? '-'}
+items: ${receipt.items.length}
+$items
+'''),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _messageFor(ReceiptImageFailureReason reason) => switch (reason) {

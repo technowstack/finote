@@ -17,6 +17,9 @@
 
 ## Current
 
+- Phase 4G implementation and automated coverage complete; manual device matrix pending.
+
 ## Next
 
 - [ ] Phase 4G — Receipt Scanner Polish & Real-World Testing
+- [ ] Run `docs/receipt_scanner_manual_test.md` on camera/gallery-capable devices.

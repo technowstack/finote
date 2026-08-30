@@ -54,8 +54,9 @@ class IndonesianReceiptParser implements ReceiptParser {
       final matches = _amountPattern.allMatches(line).toList();
       if (matches.isEmpty) continue;
       final last = matches.last;
-      final name = line
-          .substring(0, last.start)
+      final prefix = line.substring(0, last.start);
+      final pricing = _parseItemPricing(prefix);
+      final name = (pricing?.name ?? prefix)
           .replaceAll(RegExp(r'[.*:=-]+\s*$'), '')
           .replaceAll(RegExp(r'\s+'), ' ')
           .trim();
@@ -72,6 +73,8 @@ class IndonesianReceiptParser implements ReceiptParser {
       items.add(
         ReceiptItem(
           name: name,
+          quantity: pricing?.quantity,
+          unitPrice: pricing?.unitPrice,
           lineTotal: amount,
           rawLine: line,
           source: ReceiptItemSource.ocr,
@@ -79,6 +82,21 @@ class IndonesianReceiptParser implements ReceiptParser {
       );
     }
     return items;
+  }
+
+  _ItemPricing? _parseItemPricing(String prefix) {
+    final match = RegExp(r'^(.+?)\s+(\d+)\s*[xX@]\s*([0-9.,]+)\s*$')
+        .firstMatch(prefix.trim());
+    if (match == null) return null;
+    final quantity = int.tryParse(match.group(2)!);
+    final unitPrice = _parseAmount(match.group(3)!);
+    if (quantity == null ||
+        quantity <= 0 ||
+        unitPrice == null ||
+        unitPrice <= 0) {
+      return null;
+    }
+    return _ItemPricing(match.group(1)!, quantity, unitPrice);
   }
 
   int? _findTotal(List<String> lines) {
@@ -302,4 +320,12 @@ class _AmountCandidate {
 
   final int amount;
   final int score;
+}
+
+class _ItemPricing {
+  const _ItemPricing(this.name, this.quantity, this.unitPrice);
+
+  final String name;
+  final int quantity;
+  final int unitPrice;
 }

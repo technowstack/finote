@@ -184,5 +184,24 @@ KEMBALIAN          9.500
       ]);
       expect(result.items.fold(0, (sum, item) => sum + item.lineTotal!), 50500);
     });
+
+    test('extracts quantity and unit price from item lines', () {
+      final result = parser.parseText('''
+TOKO CONTOH
+KOPI 2 x 5.000 10.000
+ROTI 3 @ 4.000 12.000
+TOTAL 22.000
+''');
+
+      expect(
+        result.items
+            .map(
+              (item) =>
+                  (item.name, item.quantity, item.unitPrice, item.lineTotal),
+            )
+            .toList(),
+        [('KOPI', 2, 5000, 10000), ('ROTI', 3, 4000, 12000)],
+      );
+    });
   });
 }
