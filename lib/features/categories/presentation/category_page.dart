@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/shared_widgets.dart';
 import '../../transactions/domain/transaction_type.dart';
 import '../data/category_repository.dart';
 
@@ -21,20 +23,26 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Kategori')),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: initialization.hasValue ? _createCategory : null,
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah kategori'),
+        tooltip: 'Tambah kategori',
+        child: const Icon(Icons.add),
       ),
       body: initialization.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => _ErrorState(
+        loading: () => const AppLoadingState(),
+        error: (error, stackTrace) => AppErrorState(
+          message: 'Kategori belum dapat dimuat.',
           onRetry: () => ref.invalidate(categoryInitializationProvider),
         ),
         data: (_) => Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.sm,
+                AppSpacing.screenH,
+                AppSpacing.lg,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: SegmentedButton<TransactionType>(
@@ -99,20 +107,40 @@ class _CategoryList extends ConsumerWidget {
     final categories = ref.watch(categoriesByTypeProvider(type));
 
     return categories.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => _ErrorState(
+      loading: () => const AppLoadingState(),
+      error: (error, stackTrace) => AppErrorState(
+        message: 'Kategori belum dapat dimuat.',
         onRetry: () => ref.invalidate(categoriesByTypeProvider(type)),
       ),
       data: (items) {
         if (items.isEmpty) {
-          return const Center(child: Text('Belum ada kategori.'));
+          return const AppEmptyState(
+            icon: Icons.category_outlined,
+            message: 'Belum ada kategori.',
+          );
         }
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-          itemCount: items.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 8),
-          itemBuilder: (context, index) =>
-              _CategoryTile(category: items[index]),
+
+        // Wrap all items in a single card with dividers
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenH,
+            0,
+            AppSpacing.screenH,
+            96,
+          ),
+          children: [
+            Card(
+              child: Column(
+                children: [
+                  for (var i = 0; i < items.length; i++) ...[
+                    _CategoryTile(category: items[i]),
+                    if (i < items.length - 1)
+                      const Divider(indent: 56, endIndent: 16),
+                  ],
+                ],
+              ),
+            ),
+          ],
         );
       },
     );
@@ -129,30 +157,29 @@ class _CategoryTile extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final isExpense = category.type == TransactionType.expense;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: isExpense
-              ? colors.errorContainer
-              : colors.primaryContainer,
-          foregroundColor: isExpense
-              ? colors.onErrorContainer
-              : colors.onPrimaryContainer,
-          child: Icon(isExpense ? Icons.arrow_upward : Icons.arrow_downward),
+    return ListTile(
+      leading: CircleAvatar(
+        radius: 16,
+        backgroundColor:
+            isExpense ? colors.errorContainer : colors.primaryContainer,
+        foregroundColor:
+            isExpense ? colors.onErrorContainer : colors.onPrimaryContainer,
+        child: Icon(
+          isExpense ? Icons.arrow_upward : Icons.arrow_downward,
+          size: 16,
         ),
-        title: Text(category.name),
-        trailing: PopupMenuButton<_CategoryAction>(
-          tooltip: 'Tindakan kategori',
-          onSelected: (action) => switch (action) {
-            _CategoryAction.edit => _rename(context, ref),
-            _CategoryAction.delete => _delete(context, ref),
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: _CategoryAction.edit, child: Text('Ubah')),
-            PopupMenuItem(value: _CategoryAction.delete, child: Text('Hapus')),
-          ],
-        ),
+      ),
+      title: Text(category.name),
+      trailing: PopupMenuButton<_CategoryAction>(
+        tooltip: 'Tindakan kategori',
+        onSelected: (action) => switch (action) {
+          _CategoryAction.edit => _rename(context, ref),
+          _CategoryAction.delete => _delete(context, ref),
+        },
+        itemBuilder: (context) => const [
+          PopupMenuItem(value: _CategoryAction.edit, child: Text('Ubah')),
+          PopupMenuItem(value: _CategoryAction.delete, child: Text('Hapus')),
+        ],
       ),
     );
   }
@@ -187,7 +214,7 @@ class _CategoryTile extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus kategori?'),
-        content: Text('Kategori “${category.name}” tidak akan muncul lagi.'),
+        content: Text('Kategori "${category.name}" tidak akan muncul lagi.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -279,26 +306,6 @@ class _CategoryNameDialogState extends State<_CategoryNameDialog> {
       return;
     }
     Navigator.pop(context, name);
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Kategori belum dapat dimuat.'),
-          const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-        ],
-      ),
-    );
   }
 }
 

@@ -23,7 +23,8 @@ void main() {
     expect(find.text('Makanan & Minuman'), findsOneWidget);
     expect(find.text('Gaji'), findsNothing);
 
-    await tester.tap(find.text('Tambah kategori'));
+    // FAB is now a standard icon-only FAB (no label text)
+    await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'Olahraga');
     await tester.tap(find.widgetWithText(FilledButton, 'Tambah'));

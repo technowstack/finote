@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/widgets/shared_widgets.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_type.dart';
 
@@ -23,6 +26,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   DateTimeRange? _customRange;
   String _search = '';
   Timer? _searchTimer;
+  bool _searchOpen = false;
 
   @override
   void dispose() {
@@ -41,88 +45,168 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       search: _search,
     );
     final transactions = ref.watch(transactionHistoryProvider(filter));
+    final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Transaksi')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/transactions/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah transaksi'),
+      appBar: AppBar(
+        title: _searchOpen ? null : const Text('Transaksi'),
+        flexibleSpace: _searchOpen
+            ? SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                  ),
+                  child: SearchBar(
+                    controller: _searchController,
+                    hintText: 'Cari judul, catatan, atau kategori',
+                    autoFocus: true,
+                    leading: const Icon(Icons.search, size: 20),
+                    trailing: [
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: _closeSearch,
+                        tooltip: 'Tutup pencarian',
+                      ),
+                    ],
+                    onChanged: _scheduleSearch,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: _applySearch,
+                    onTapOutside: (_) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
+                  ),
+                ),
+              )
+            : null,
+        actions: [
+          if (!_searchOpen)
+            IconButton(
+              icon: const Icon(Icons.search),
+              tooltip: 'Cari transaksi',
+              onPressed: () => setState(() => _searchOpen = true),
+            ),
+        ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: SearchBar(
-              controller: _searchController,
-              hintText: 'Cari judul, catatan, atau kategori',
-              leading: const Icon(Icons.search),
-              trailing: [
-                if (_searchController.text.isNotEmpty)
-                  IconButton(
-                    tooltip: 'Hapus pencarian',
-                    onPressed: _clearSearch,
-                    icon: const Icon(Icons.close),
+          // ----- Single filter row -----
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.xs,
+              AppSpacing.screenH,
+              AppSpacing.xs,
+            ),
+            child: Row(
+              spacing: AppSpacing.sm,
+              children: [
+                // Type filters
+                _filterChip(
+                  'Semua',
+                  selected: _type == null,
+                  onSelected: () => setState(() => _type = null),
+                ),
+                _filterChip(
+                  'Pemasukan',
+                  selected: _type == TransactionType.income,
+                  onSelected: () =>
+                      setState(() => _type = TransactionType.income),
+                ),
+                _filterChip(
+                  'Pengeluaran',
+                  selected: _type == TransactionType.expense,
+                  onSelected: () =>
+                      setState(() => _type = TransactionType.expense),
+                ),
+                // Divider dot
+                Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colors.outlineVariant,
                   ),
+                ),
+                // Date filters
+                _filterChip(
+                  'Hari ini',
+                  selected: _dateFilter == _DateFilter.today,
+                  onSelected: () =>
+                      setState(() => _dateFilter = _DateFilter.today),
+                ),
+                _filterChip(
+                  'Minggu ini',
+                  selected: _dateFilter == _DateFilter.week,
+                  onSelected: () =>
+                      setState(() => _dateFilter = _DateFilter.week),
+                ),
+                _filterChip(
+                  'Bulan ini',
+                  selected: _dateFilter == _DateFilter.month,
+                  onSelected: () =>
+                      setState(() => _dateFilter = _DateFilter.month),
+                ),
+                ChoiceChip(
+                  label: const Text('Rentang'),
+                  selected: _dateFilter == _DateFilter.custom,
+                  onSelected: (_) => _selectCustomRange(),
+                ),
               ],
-              onChanged: _scheduleSearch,
-              textInputAction: TextInputAction.search,
-              onSubmitted: _applySearch,
-              onTapOutside: (_) =>
-                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
           ),
-          _FilterRow(
-            children: [
-              ChoiceChip(
-                label: const Text('Semua'),
-                selected: _type == null,
-                onSelected: (_) => setState(() => _type = null),
-              ),
-              ChoiceChip(
-                label: const Text('Pemasukan'),
-                selected: _type == TransactionType.income,
-                onSelected: (_) =>
-                    setState(() => _type = TransactionType.income),
-              ),
-              ChoiceChip(
-                label: const Text('Pengeluaran'),
-                selected: _type == TransactionType.expense,
-                onSelected: (_) =>
-                    setState(() => _type = TransactionType.expense),
-              ),
-            ],
-          ),
+
+          // ----- Custom range label -----
           if (_dateFilter == _DateFilter.custom && _customRange != null)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenH,
+                vertical: AppSpacing.xs,
+              ),
               child: Text(
                 '${formatDate(_customRange!.start)} - ${formatDate(_customRange!.end)}',
-                style: Theme.of(context).textTheme.bodySmall,
+                style: textTheme.bodySmall,
               ),
             ),
-          _FilterRow(
-            children: [
-              _dateChip('Hari ini', _DateFilter.today),
-              _dateChip('Minggu ini', _DateFilter.week),
-              _dateChip('Bulan ini', _DateFilter.month),
-              ChoiceChip(
-                label: const Text('Rentang'),
-                selected: _dateFilter == _DateFilter.custom,
-                onSelected: (_) => _selectCustomRange(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+
+          // ----- Period summary strip -----
+          transactions.whenOrNull(
+                data: (items) {
+                  if (items.isEmpty) return null;
+                  var income = 0;
+                  var expense = 0;
+                  for (final item in items) {
+                    if (item.transaction.type == TransactionType.income) {
+                      income += item.transaction.amount;
+                    } else {
+                      expense += item.transaction.amount;
+                    }
+                  }
+                  return _PeriodSummaryStrip(
+                    income: income,
+                    expense: expense,
+                  );
+                },
+              ) ??
+              const SizedBox.shrink(),
+
+          // ----- Transaction list -----
           Expanded(
             child: transactions.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => _ErrorState(
+              loading: () => const AppLoadingState(),
+              error: (error, stackTrace) => AppErrorState(
+                message: 'Transaksi belum dapat dimuat.',
                 onRetry: () =>
                     ref.invalidate(transactionHistoryProvider(filter)),
               ),
               data: (items) => items.isEmpty
-                  ? const _EmptyState()
+                  ? const AppEmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      message: 'Tidak ada transaksi yang cocok.',
+                    )
                   : _GroupedTransactionList(items: items),
             ),
           ),
@@ -131,29 +215,35 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     );
   }
 
-  Widget _dateChip(String label, _DateFilter value) {
+  Widget _filterChip(
+    String label, {
+    required bool selected,
+    required VoidCallback onSelected,
+  }) {
     return ChoiceChip(
       label: Text(label),
-      selected: _dateFilter == value,
+      selected: selected,
       onSelected: (_) {
         FocusManager.instance.primaryFocus?.unfocus();
-        setState(() => _dateFilter = value);
+        onSelected();
       },
     );
   }
 
   void _scheduleSearch(String value) {
-    setState(() {});
     _searchTimer?.cancel();
     _searchTimer = Timer(const Duration(milliseconds: 300), () {
       if (mounted) setState(() => _search = value.trim());
     });
   }
 
-  void _clearSearch() {
+  void _closeSearch() {
     _searchTimer?.cancel();
     _searchController.clear();
-    setState(() => _search = '');
+    setState(() {
+      _search = '';
+      _searchOpen = false;
+    });
   }
 
   void _applySearch(String value) {
@@ -180,20 +270,54 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   }
 }
 
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.children});
+// ---------------------------------------------------------------------------
+// Period summary strip
+// ---------------------------------------------------------------------------
 
-  final List<Widget> children;
+class _PeriodSummaryStrip extends StatelessWidget {
+  const _PeriodSummaryStrip({required this.income, required this.expense});
+
+  final int income;
+  final int expense;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(spacing: 8, children: children),
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenH,
+        vertical: AppSpacing.sm,
+      ),
+      color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+      child: Row(
+        children: [
+          Icon(Icons.south_west, size: 14, color: colors.incomeColor),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            formatIdr(income),
+            style:
+                textTheme.labelMedium?.copyWith(color: colors.incomeColor),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+          Icon(Icons.north_east, size: 14, color: colors.expenseColor),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            formatIdr(expense),
+            style:
+                textTheme.labelMedium?.copyWith(color: colors.expenseColor),
+          ),
+        ],
+      ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Grouped transaction list — flat rows, no individual cards
+// ---------------------------------------------------------------------------
 
 class _GroupedTransactionList extends StatelessWidget {
   const _GroupedTransactionList({required this.items});
@@ -203,12 +327,16 @@ class _GroupedTransactionList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.xs,
+        AppSpacing.screenH,
+        96,
+      ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final showDate =
-            index == 0 ||
+        final showDate = index == 0 ||
             !_isSameDate(
               item.transaction.transactionDate,
               items[index - 1].transaction.transactionDate,
@@ -218,14 +346,16 @@ class _GroupedTransactionList extends StatelessWidget {
           children: [
             if (showDate)
               Padding(
-                padding: EdgeInsets.only(top: index == 0 ? 4 : 20, bottom: 8),
+                padding: EdgeInsets.only(
+                  top: index == 0 ? AppSpacing.xs : AppSpacing.lg,
+                  bottom: AppSpacing.sm,
+                ),
                 child: Text(
                   formatDate(item.transaction.transactionDate),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-            _TransactionTile(item: item),
-            const SizedBox(height: 8),
+            _TransactionRow(item: item),
           ],
         );
       },
@@ -233,8 +363,8 @@ class _GroupedTransactionList extends StatelessWidget {
   }
 }
 
-class _TransactionTile extends ConsumerWidget {
-  const _TransactionTile({required this.item});
+class _TransactionRow extends ConsumerWidget {
+  const _TransactionRow({required this.item});
 
   final TransactionListItem item;
 
@@ -242,53 +372,53 @@ class _TransactionTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final transaction = item.transaction;
     final isExpense = transaction.type == TransactionType.expense;
-    final amountColor = isExpense
-        ? Theme.of(context).colorScheme.error
-        : Theme.of(context).colorScheme.primary;
+    final colors = Theme.of(context).colorScheme;
 
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ListTile(
-        onTap: () => context.push('/transactions/${transaction.id}/edit'),
-        leading: Icon(
-          isExpense ? Icons.arrow_upward : Icons.arrow_downward,
-          color: amountColor,
+    return Dismissible(
+      key: ValueKey(transaction.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppSpacing.xl),
+        decoration: BoxDecoration(
+          color: colors.errorContainer,
+          borderRadius: BorderRadius.circular(12),
         ),
-        title: Text(
-          transaction.title.isEmpty ? item.category.name : transaction.title,
-        ),
-        subtitle: transaction.title.isEmpty ? null : Text(item.category.name),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 130),
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
-                  style: TextStyle(
-                    color: amountColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+        child: Icon(Icons.delete_outline, color: colors.onErrorContainer),
+      ),
+      confirmDismiss: (_) => _confirmDelete(context),
+      onDismissed: (_) => _performDelete(context, ref),
+      child: Card(
+        child: ListTile(
+          onTap: () => context.push('/transactions/${transaction.id}/edit'),
+          leading: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: colors.amountColor(isExpense: isExpense),
             ),
-            PopupMenuButton<void>(
-              tooltip: 'Tindakan transaksi',
-              onSelected: (_) => _delete(context, ref),
-              itemBuilder: (context) => const [
-                PopupMenuItem(child: Text('Hapus')),
-              ],
-            ),
-          ],
+          ),
+          title: Text(
+            transaction.title.isEmpty
+                ? item.category.name
+                : transaction.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          subtitle:
+              transaction.title.isEmpty ? null : Text(item.category.name),
+          trailing: CurrencyText(
+            amount: transaction.amount,
+            type: transaction.type,
+          ),
         ),
       ),
     );
   }
 
-  Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+  Future<bool?> _confirmDelete(BuildContext context) {
+    return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Hapus transaksi?'),
@@ -305,8 +435,9 @@ class _TransactionTile extends ConsumerWidget {
         ],
       ),
     );
-    if (confirmed != true || !context.mounted) return;
+  }
 
+  Future<void> _performDelete(BuildContext context, WidgetRef ref) async {
     try {
       final deleted = await ref
           .read(transactionRepositoryProvider)
@@ -322,47 +453,9 @@ class _TransactionTile extends ConsumerWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 48,
-            color: Theme.of(context).colorScheme.outline,
-          ),
-          const SizedBox(height: 12),
-          const Text('Tidak ada transaksi yang cocok.'),
-        ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Transaksi belum dapat dimuat.'),
-          const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-        ],
-      ),
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 ({DateTime start, DateTime end}) _dateRange(
   _DateFilter filter,

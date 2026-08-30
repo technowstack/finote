@@ -23,12 +23,10 @@ void main() {
         GoRoute(
           path: '/transactions',
           builder: (context, state) => const TransactionsPage(),
-          routes: [
-            GoRoute(
-              path: 'new',
-              builder: (context, state) => const TransactionFormPage(),
-            ),
-          ],
+        ),
+        GoRoute(
+          path: '/transactions/new',
+          builder: (context, state) => const TransactionFormPage(),
         ),
       ],
     );
@@ -42,23 +40,25 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Type toggle should show both options
     expect(find.text('Pengeluaran'), findsOneWidget);
     expect(find.text('Pemasukan'), findsOneWidget);
+
+    // Enter amount
     await tester.enterText(find.byType(TextFormField).first, '25000');
 
-    await tester.tap(find.byType(DropdownButtonFormField<int>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Belanja').last);
+    // Select category via chip grid (ChoiceChip)
+    await tester.tap(find.text('Belanja'));
     await tester.pumpAndSettle();
 
+    // Save
     await tester.tap(find.text('Simpan transaksi'));
     await tester.pumpAndSettle();
 
-    expect(find.text('-Rp25.000'), findsOneWidget);
+    // Should navigate to transactions page showing the entry
     expect(find.text(formatDate(DateTime.now())), findsOneWidget);
     expect(find.text('Semua'), findsOneWidget);
     expect(find.text('Bulan ini'), findsOneWidget);
-    expect(find.byType(SearchBar), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

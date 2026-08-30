@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
+import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_source.dart';
@@ -48,6 +51,10 @@ class TransactionFormPage extends ConsumerWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Form
+// ---------------------------------------------------------------------------
 
 class _TransactionForm extends ConsumerStatefulWidget {
   const _TransactionForm({this.transaction});
@@ -94,6 +101,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(_type));
     final isEditing = widget.transaction != null;
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -101,7 +110,12 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.lg,
+          ),
           child: FilledButton(
             onPressed: _saving || !categories.hasValue ? null : _save,
             child: Text(_saving ? 'Menyimpan...' : 'Simpan transaksi'),
@@ -111,122 +125,101 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenH,
+            AppSpacing.screenV,
+            AppSpacing.screenH,
+            AppSpacing.xl,
+          ),
           children: [
-            SegmentedButton<TransactionType>(
-              segments: const [
-                ButtonSegment(
-                  value: TransactionType.expense,
-                  icon: Icon(Icons.arrow_upward),
-                  label: Text('Pengeluaran'),
-                ),
-                ButtonSegment(
-                  value: TransactionType.income,
-                  icon: Icon(Icons.arrow_downward),
-                  label: Text('Pemasukan'),
-                ),
-              ],
-              selected: {_type},
-              onSelectionChanged: (selection) {
+            // ----- Type toggle (compact) -----
+            _TypeToggle(
+              value: _type,
+              onChanged: (type) {
                 setState(() {
-                  _type = selection.single;
+                  _type = type;
                   _categoryId = null;
                 });
               },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.lg),
+
+            // ----- Amount (hero) -----
             TextFormField(
               controller: _amountController,
               autofocus: !isEditing,
               keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               inputFormatters: const [_IdrInputFormatter()],
-              style: Theme.of(context).textTheme.headlineMedium,
-              decoration: const InputDecoration(
-                labelText: 'Nominal',
+              style: textTheme.displayMedium?.copyWith(
+                color: colors.amountColor(
+                  isExpense: _type == TransactionType.expense,
+                ),
+              ),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: '0',
+                hintStyle: textTheme.displayMedium?.copyWith(
+                  color: colors.onSurfaceVariant.withValues(alpha: 0.3),
+                ),
                 prefixText: 'Rp',
-                border: OutlineInputBorder(),
+                prefixStyle: textTheme.headlineMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                filled: false,
               ),
               validator: (value) => _parseAmount(value ?? '') > 0
                   ? null
                   : 'Nominal harus lebih dari Rp0.',
-            ),
-            const SizedBox(height: 16),
-            categories.when(
-              loading: () => const LinearProgressIndicator(),
-              error: (error, stackTrace) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Kategori belum dapat dimuat.'),
-                trailing: TextButton(
-                  onPressed: () =>
-                      ref.invalidate(categoriesByTypeProvider(_type)),
-                  child: const Text('Coba lagi'),
-                ),
-              ),
-              data: (items) {
-                final selectedExists = items.any(
-                  (category) => category.id == _categoryId,
-                );
-                return DropdownButtonFormField<int>(
-                  key: ValueKey(_type),
-                  initialValue: selectedExists ? _categoryId : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Kategori',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    for (final category in items)
-                      DropdownMenuItem(
-                        value: category.id,
-                        child: Text(category.name),
-                      ),
-                  ],
-                  onChanged: (value) => setState(() => _categoryId = value),
-                  validator: (value) =>
-                      value == null ? 'Pilih kategori transaksi.' : null,
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-              leading: const Icon(Icons.calendar_today_outlined),
-              title: const Text('Tanggal'),
-              subtitle: Text(formatDate(_date)),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _selectDate,
+              onFieldSubmitted: (_) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
             const Divider(),
-            ExpansionTile(
-              tilePadding: const EdgeInsets.symmetric(horizontal: 4),
-              initiallyExpanded:
-                  isEditing &&
+            const SizedBox(height: AppSpacing.md),
+
+            // ----- Category grid -----
+            Text('Kategori', style: textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            categories.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (error, stackTrace) => AppErrorState(
+                message: 'Kategori belum dapat dimuat.',
+                onRetry: () =>
+                    ref.invalidate(categoriesByTypeProvider(_type)),
+              ),
+              data: (items) => _CategoryGrid(
+                categories: items,
+                selectedId: _categoryId,
+                isExpense: _type == TransactionType.expense,
+                onSelected: (id) => setState(() => _categoryId = id),
+              ),
+            ),
+            if (_formKey.currentState?.validate() == false &&
+                _categoryId == null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  'Pilih kategori transaksi.',
+                  style: textTheme.bodySmall?.copyWith(color: colors.error),
+                ),
+              ),
+            const SizedBox(height: AppSpacing.lg),
+
+            // ----- Date chip -----
+            _DateChip(
+              date: _date,
+              onTap: _selectDate,
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // ----- Optional title & note -----
+            _OptionalFieldsSection(
+              titleController: _titleController,
+              noteController: _noteController,
+              initiallyExpanded: isEditing &&
                   (_titleController.text.isNotEmpty ||
                       _noteController.text.isNotEmpty),
-              title: const Text('Judul dan catatan'),
-              subtitle: const Text('Opsional'),
-              childrenPadding: const EdgeInsets.only(bottom: 8),
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  textCapitalization: TextCapitalization.sentences,
-                  decoration: const InputDecoration(
-                    labelText: 'Judul',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _noteController,
-                  textCapitalization: TextCapitalization.sentences,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    labelText: 'Catatan',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
             ),
           ],
         ),
@@ -245,9 +238,12 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    final categoryId = _categoryId;
-    if (categoryId == null) return;
+    if (!_formKey.currentState!.validate() || _categoryId == null) {
+      // Force rebuild to show category error
+      setState(() {});
+      return;
+    }
+    final categoryId = _categoryId!;
 
     setState(() => _saving = true);
     final repository = ref.read(transactionRepositoryProvider);
@@ -293,6 +289,178 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Type toggle — compact pill
+// ---------------------------------------------------------------------------
+
+class _TypeToggle extends StatelessWidget {
+  const _TypeToggle({required this.value, required this.onChanged});
+
+  final TransactionType value;
+  final ValueChanged<TransactionType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    return SegmentedButton<TransactionType>(
+      segments: [
+        ButtonSegment(
+          value: TransactionType.expense,
+          icon: Icon(
+            Icons.arrow_upward,
+            size: 18,
+            color: value == TransactionType.expense
+                ? colors.expenseColor
+                : null,
+          ),
+          label: const Text('Pengeluaran'),
+        ),
+        ButtonSegment(
+          value: TransactionType.income,
+          icon: Icon(
+            Icons.arrow_downward,
+            size: 18,
+            color: value == TransactionType.income
+                ? colors.incomeColor
+                : null,
+          ),
+          label: const Text('Pemasukan'),
+        ),
+      ],
+      selected: {value},
+      onSelectionChanged: (selection) => onChanged(selection.single),
+      style: SegmentedButton.styleFrom(
+        visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category chip grid
+// ---------------------------------------------------------------------------
+
+class _CategoryGrid extends StatelessWidget {
+  const _CategoryGrid({
+    required this.categories,
+    required this.selectedId,
+    required this.isExpense,
+    required this.onSelected,
+  });
+
+  final List<CategoryRecord> categories;
+  final int? selectedId;
+  final bool isExpense;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Text('Belum ada kategori.'),
+      );
+    }
+
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: [
+        for (final category in categories)
+          ChoiceChip(
+            label: Text(category.name),
+            selected: category.id == selectedId,
+            onSelected: (_) => onSelected(category.id),
+          ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Date chip
+// ---------------------------------------------------------------------------
+
+class _DateChip extends StatelessWidget {
+  const _DateChip({required this.date, required this.onTap});
+
+  final DateTime date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isToday = date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ActionChip(
+        avatar: const Icon(Icons.calendar_today_outlined, size: 16),
+        label: Text(isToday ? 'Hari ini' : formatDate(date)),
+        onPressed: onTap,
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Optional fields
+// ---------------------------------------------------------------------------
+
+class _OptionalFieldsSection extends StatelessWidget {
+  const _OptionalFieldsSection({
+    required this.titleController,
+    required this.noteController,
+    required this.initiallyExpanded,
+  });
+
+  final TextEditingController titleController;
+  final TextEditingController noteController;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      initiallyExpanded: initiallyExpanded,
+      shape: const Border(),
+      collapsedShape: const Border(),
+      title: Text(
+        'Judul dan catatan',
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      subtitle: const Text('Opsional'),
+      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      children: [
+        TextFormField(
+          controller: titleController,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+            labelText: 'Judul',
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        TextFormField(
+          controller: noteController,
+          textCapitalization: TextCapitalization.sentences,
+          minLines: 2,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            labelText: 'Catatan',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Input formatter & helpers
+// ---------------------------------------------------------------------------
+
 class _IdrInputFormatter extends TextInputFormatter {
   const _IdrInputFormatter();
 
@@ -319,12 +487,16 @@ int _parseAmount(String value) =>
 String _formatAmountInput(int amount) =>
     formatIdr(amount).replaceFirst('Rp', '');
 
+// ---------------------------------------------------------------------------
+// Loading / error scaffolds
+// ---------------------------------------------------------------------------
+
 class _LoadingPage extends StatelessWidget {
   const _LoadingPage();
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return const Scaffold(body: AppLoadingState());
   }
 }
 
@@ -337,15 +509,9 @@ class _LoadErrorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Transaksi')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Transaksi belum dapat dimuat.'),
-            const SizedBox(height: 8),
-            TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-          ],
-        ),
+      body: AppErrorState(
+        message: 'Transaksi belum dapat dimuat.',
+        onRetry: onRetry,
       ),
     );
   }

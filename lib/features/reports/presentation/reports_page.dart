@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/widgets/shared_widgets.dart';
 import '../data/report_repository.dart';
 
 class ReportsPage extends ConsumerStatefulWidget {
@@ -12,9 +15,23 @@ class ReportsPage extends ConsumerStatefulWidget {
   ConsumerState<ReportsPage> createState() => _ReportsPageState();
 }
 
-class _ReportsPageState extends ConsumerState<ReportsPage> {
+class _ReportsPageState extends ConsumerState<ReportsPage>
+    with SingleTickerProviderStateMixin {
   _ReportPeriod _period = _ReportPeriod.month;
   DateTimeRange? _customRange;
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,14 +39,29 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     final report = ref.watch(reportProvider(range));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporan')),
+      appBar: AppBar(
+        title: const Text('Laporan'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Ringkasan'),
+            Tab(text: 'Riwayat'),
+          ],
+        ),
+      ),
       body: Column(
         children: [
+          // ----- Period selector -----
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.sm,
+              AppSpacing.screenH,
+              AppSpacing.xs,
+            ),
             child: Row(
-              spacing: 8,
+              spacing: AppSpacing.sm,
               children: [
                 _periodChip('Hari ini', _ReportPeriod.today),
                 _periodChip('Minggu ini', _ReportPeriod.week),
@@ -44,20 +76,34 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
           ),
           if (_period == _ReportPeriod.custom && _customRange != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                0,
+                AppSpacing.screenH,
+                AppSpacing.sm,
+              ),
               child: Text(
                 '${DateFormat('d MMM y', 'id_ID').format(_customRange!.start)} - '
                 '${DateFormat('d MMM y', 'id_ID').format(_customRange!.end)}',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
+
+          // ----- Content -----
           Expanded(
             child: report.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => _ErrorState(
+              loading: () => const AppLoadingState(),
+              error: (error, stackTrace) => AppErrorState(
+                message: 'Laporan belum dapat dimuat.',
                 onRetry: () => ref.invalidate(reportProvider(range)),
               ),
-              data: (data) => _ReportContent(data: data),
+              data: (data) => TabBarView(
+                controller: _tabController,
+                children: [
+                  _SummaryTab(data: data),
+                  _HistoryTab(data: data),
+                ],
+              ),
             ),
           ),
         ],
@@ -91,282 +137,340 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
   }
 }
 
-class _ReportContent extends StatelessWidget {
-  const _ReportContent({required this.data});
+// ---------------------------------------------------------------------------
+// Tab 1: Summary (balance + categories)
+// ---------------------------------------------------------------------------
+
+class _SummaryTab extends StatelessWidget {
+  const _SummaryTab({required this.data});
 
   final ReportData data;
 
   @override
   Widget build(BuildContext context) {
+    if (data.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.summarize_outlined,
+        message: 'Belum ada data pada periode ini.',
+      );
+    }
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.sm,
+        AppSpacing.screenH,
+        AppSpacing.xxl,
+      ),
       children: [
-        _Summary(data: data),
-        if (data.isEmpty) ...[
-          const SizedBox(height: 24),
-          const _EmptyState(),
-        ] else ...[
-          const SizedBox(height: 28),
-          _CategorySection(
-            title: 'Kategori pengeluaran teratas',
+        _CompactSummary(data: data),
+        const SizedBox(height: AppSpacing.xl),
+        if (data.topExpenseCategories.isNotEmpty) ...[
+          _CategoryBreakdown(
+            title: 'Pengeluaran per kategori',
             items: data.topExpenseCategories,
-            color: Theme.of(context).colorScheme.error,
+            total: data.totalExpense,
+            isExpense: true,
           ),
-          const SizedBox(height: 24),
-          _CategorySection(
-            title: 'Kategori pemasukan teratas',
-            items: data.topIncomeCategories,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Riwayat bulanan',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          for (final month in data.monthlyHistory)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: _MonthlyTile(month: month),
-            ),
+          const SizedBox(height: AppSpacing.lg),
         ],
+        if (data.topIncomeCategories.isNotEmpty)
+          _CategoryBreakdown(
+            title: 'Pemasukan per kategori',
+            items: data.topIncomeCategories,
+            total: data.totalIncome,
+            isExpense: false,
+          ),
       ],
     );
   }
 }
 
-class _Summary extends StatelessWidget {
-  const _Summary({required this.data});
+class _CompactSummary extends StatelessWidget {
+  const _CompactSummary({required this.data});
 
   final ReportData data;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Saldo periode',
+            style: textTheme.labelLarge?.copyWith(
+              color: colors.onSecondaryContainer.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatIdr(data.netBalance),
+              style: textTheme.displayMedium?.copyWith(
+                color: colors.onSecondaryContainer,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Icon(Icons.south_west, size: 14, color: colors.incomeColor),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                formatIdr(data.totalIncome),
+                style: textTheme.titleMedium?.copyWith(
+                  color: colors.incomeColor,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xl),
+              Icon(Icons.north_east, size: 14, color: colors.expenseColor),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                formatIdr(data.totalExpense),
+                style: textTheme.titleMedium?.copyWith(
+                  color: colors.expenseColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category breakdown with proportion bars
+// ---------------------------------------------------------------------------
+
+class _CategoryBreakdown extends StatelessWidget {
+  const _CategoryBreakdown({
+    required this.title,
+    required this.items,
+    required this.total,
+    required this.isExpense,
+  });
+
+  final String title;
+  final List<CategoryTotal> items;
+  final int total;
+  final bool isExpense;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final barColor = isExpense ? colors.expenseColor : colors.incomeColor;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: colors.secondaryContainer,
-            borderRadius: BorderRadius.circular(20),
-          ),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        Card(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Saldo periode',
-                style: TextStyle(color: colors.onSecondaryContainer),
-              ),
-              const SizedBox(height: 6),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
+              for (var i = 0; i < items.length; i++) ...[
+                _CategoryRow(
+                  item: items[i],
+                  fraction: total > 0 ? items[i].amount / total : 0,
+                  barColor: barColor,
+                  isExpense: isExpense,
+                ),
+                if (i < items.length - 1)
+                  const Divider(indent: 16, endIndent: 16),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.item,
+    required this.fraction,
+    required this.barColor,
+    required this.isExpense,
+  });
+
+  final CategoryTotal item;
+  final double fraction;
+  final Color barColor;
+  final bool isExpense;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
                 child: Text(
-                  formatIdr(data.netBalance),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.onSecondaryContainer,
+                  item.categoryName,
+                  style: textTheme.bodyLarge,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${(fraction * 100).round()}%',
+                style: textTheme.labelMedium,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    formatIdr(item.amount),
+                    style: textTheme.titleMedium?.copyWith(
+                      color: colors.amountColor(isExpense: isExpense),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _TotalCard(
-                label: 'Total pemasukan',
-                amount: data.totalIncome,
-                color: colors.primary,
-              ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: fraction.clamp(0, 1).toDouble(),
+              backgroundColor: barColor.withValues(alpha: 0.12),
+              color: barColor,
+              minHeight: 4,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _TotalCard(
-                label: 'Total pengeluaran',
-                amount: data.totalExpense,
-                color: colors.error,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TotalCard extends StatelessWidget {
-  const _TotalCard({
-    required this.label,
-    required this.amount,
-    required this.color,
-  });
-
-  final String label;
-  final int amount;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, maxLines: 2),
-            const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                formatIdr(amount),
-                style: Theme.of(context).textTheme.titleLarge
-                    ?.copyWith(color: color, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CategorySection extends StatelessWidget {
-  const _CategorySection({
-    required this.title,
-    required this.items,
-    required this.color,
-  });
+// ---------------------------------------------------------------------------
+// Tab 2: Monthly history
+// ---------------------------------------------------------------------------
 
-  final String title;
-  final List<CategoryTotal> items;
-  final Color color;
+class _HistoryTab extends StatelessWidget {
+  const _HistoryTab({required this.data});
+
+  final ReportData data;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    if (data.monthlyHistory.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.calendar_month_outlined,
+        message: 'Belum ada riwayat bulanan.',
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenH,
+        AppSpacing.sm,
+        AppSpacing.screenH,
+        AppSpacing.xxl,
+      ),
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        if (items.isEmpty)
-          const Text('Belum ada data pada periode ini.')
-        else
-          Card(
-            margin: EdgeInsets.zero,
-            child: Column(
-              children: [
-                for (var index = 0; index < items.length; index++) ...[
-                  ListTile(
-                    leading: CircleAvatar(child: Text('${index + 1}')),
-                    title: Text(items[index].categoryName),
-                    trailing: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 130),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          formatIdr(items[index].amount),
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (index != items.length - 1) const Divider(height: 1),
-                ],
+        Card(
+          child: Column(
+            children: [
+              for (var i = 0; i < data.monthlyHistory.length; i++) ...[
+                _MonthlyRow(month: data.monthlyHistory[i]),
+                if (i < data.monthlyHistory.length - 1)
+                  const Divider(indent: 16, endIndent: 16),
               ],
-            ),
+            ],
           ),
+        ),
       ],
     );
   }
 }
 
-class _MonthlyTile extends StatelessWidget {
-  const _MonthlyTile({required this.month});
+class _MonthlyRow extends StatelessWidget {
+  const _MonthlyRow({required this.month});
 
   final MonthlyTotal month;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _formatMonth(month.month),
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(child: Text('+${formatIdr(month.income)}')),
-                Expanded(child: Text('-${formatIdr(month.expense)}')),
-                Text(
-                  formatIdr(month.netBalance),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-          ],
-        ),
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isPositive = month.netBalance >= 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
       ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.summarize_outlined,
-            size: 44,
-            color: Theme.of(context).colorScheme.outline,
+          Text(
+            _formatMonth(month.month),
+            style: textTheme.titleMedium,
           ),
-          const SizedBox(height: 12),
-          const Text('Belum ada data pada periode ini.'),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Text(
+                '+${formatIdr(month.income)}',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.incomeColor,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Text(
+                '-${formatIdr(month.expense)}',
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.expenseColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                formatIdr(month.netBalance),
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isPositive
+                      ? colors.positiveBalance
+                      : colors.negativeBalance,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Laporan belum dapat dimuat.'),
-          const SizedBox(height: 8),
-          TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
-        ],
-      ),
-    );
-  }
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 ReportRange _reportRange(
   _ReportPeriod period,
