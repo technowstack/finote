@@ -13,9 +13,10 @@
 - [x] Phase 4D.1 — Receipt Review & Itemized Transaction Fix
 - [x] Phase 4D.2 — Receipt Review Completion & AI-Ready OCR Pipeline
 - [x] Phase 4E — Receipt Category Suggestion
+- [x] Phase 4F — Receipt Safety & Duplicate Detection
 
 ## Current
 
 ## Next
 
-- [ ] Phase 4F — Receipt Safety & Duplicate Detection
+- [ ] Phase 4G — Receipt Scanner Polish & Real-World Testing

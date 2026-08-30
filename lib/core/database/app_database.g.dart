@@ -592,6 +592,17 @@ class $TransactionsTable extends Transactions
     requiredDuringInsert: true,
     $customConstraints: 'NOT NULL CHECK (source IN (\'manual\', \'legacy_import\', \'receipt_scan\', \'recurring\'))',
   ).withConverter<TransactionSource>($TransactionsTable.$convertersource);
+  static const VerificationMeta _receiptFingerprintMeta =
+      const VerificationMeta('receiptFingerprint');
+  @override
+  late final GeneratedColumn<String> receiptFingerprint =
+      GeneratedColumn<String>(
+        'receipt_fingerprint',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _legacySourceMeta = const VerificationMeta(
     'legacySource',
   );
@@ -660,6 +671,7 @@ class $TransactionsTable extends Transactions
     note,
     transactionDate,
     source,
+    receiptFingerprint,
     legacySource,
     legacyId,
     createdAt,
@@ -713,6 +725,15 @@ class $TransactionsTable extends Transactions
       context.handle(
         _noteMeta,
         note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('receipt_fingerprint')) {
+      context.handle(
+        _receiptFingerprintMeta,
+        receiptFingerprint.isAcceptableOrUnknown(
+          data['receipt_fingerprint']!,
+          _receiptFingerprintMeta,
+        ),
       );
     }
     if (data.containsKey('legacy_source')) {
@@ -799,6 +820,10 @@ class $TransactionsTable extends Transactions
           data['${effectivePrefix}source'],
         )!,
       ),
+      receiptFingerprint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}receipt_fingerprint'],
+      ),
       legacySource: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}legacy_source'],
@@ -846,6 +871,7 @@ class TransactionRecord extends DataClass
   final String? note;
   final DateTime transactionDate;
   final TransactionSource source;
+  final String? receiptFingerprint;
   final String? legacySource;
   final int? legacyId;
   final DateTime createdAt;
@@ -861,6 +887,7 @@ class TransactionRecord extends DataClass
     this.note,
     required this.transactionDate,
     required this.source,
+    this.receiptFingerprint,
     this.legacySource,
     this.legacyId,
     required this.createdAt,
@@ -893,6 +920,9 @@ class TransactionRecord extends DataClass
         $TransactionsTable.$convertersource.toSql(source),
       );
     }
+    if (!nullToAbsent || receiptFingerprint != null) {
+      map['receipt_fingerprint'] = Variable<String>(receiptFingerprint);
+    }
     if (!nullToAbsent || legacySource != null) {
       map['legacy_source'] = Variable<String>(legacySource);
     }
@@ -918,6 +948,9 @@ class TransactionRecord extends DataClass
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       transactionDate: Value(transactionDate),
       source: Value(source),
+      receiptFingerprint: receiptFingerprint == null && nullToAbsent
+          ? const Value.absent()
+          : Value(receiptFingerprint),
       legacySource: legacySource == null && nullToAbsent
           ? const Value.absent()
           : Value(legacySource),
@@ -947,6 +980,9 @@ class TransactionRecord extends DataClass
       note: serializer.fromJson<String?>(json['note']),
       transactionDate: serializer.fromJson<DateTime>(json['transactionDate']),
       source: serializer.fromJson<TransactionSource>(json['source']),
+      receiptFingerprint: serializer.fromJson<String?>(
+        json['receiptFingerprint'],
+      ),
       legacySource: serializer.fromJson<String?>(json['legacySource']),
       legacyId: serializer.fromJson<int?>(json['legacyId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
@@ -967,6 +1003,7 @@ class TransactionRecord extends DataClass
       'note': serializer.toJson<String?>(note),
       'transactionDate': serializer.toJson<DateTime>(transactionDate),
       'source': serializer.toJson<TransactionSource>(source),
+      'receiptFingerprint': serializer.toJson<String?>(receiptFingerprint),
       'legacySource': serializer.toJson<String?>(legacySource),
       'legacyId': serializer.toJson<int?>(legacyId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -985,6 +1022,7 @@ class TransactionRecord extends DataClass
     Value<String?> note = const Value.absent(),
     DateTime? transactionDate,
     TransactionSource? source,
+    Value<String?> receiptFingerprint = const Value.absent(),
     Value<String?> legacySource = const Value.absent(),
     Value<int?> legacyId = const Value.absent(),
     DateTime? createdAt,
@@ -1000,6 +1038,9 @@ class TransactionRecord extends DataClass
     note: note.present ? note.value : this.note,
     transactionDate: transactionDate ?? this.transactionDate,
     source: source ?? this.source,
+    receiptFingerprint: receiptFingerprint.present
+        ? receiptFingerprint.value
+        : this.receiptFingerprint,
     legacySource: legacySource.present ? legacySource.value : this.legacySource,
     legacyId: legacyId.present ? legacyId.value : this.legacyId,
     createdAt: createdAt ?? this.createdAt,
@@ -1021,6 +1062,9 @@ class TransactionRecord extends DataClass
           ? data.transactionDate.value
           : this.transactionDate,
       source: data.source.present ? data.source.value : this.source,
+      receiptFingerprint: data.receiptFingerprint.present
+          ? data.receiptFingerprint.value
+          : this.receiptFingerprint,
       legacySource: data.legacySource.present
           ? data.legacySource.value
           : this.legacySource,
@@ -1043,6 +1087,7 @@ class TransactionRecord extends DataClass
           ..write('note: $note, ')
           ..write('transactionDate: $transactionDate, ')
           ..write('source: $source, ')
+          ..write('receiptFingerprint: $receiptFingerprint, ')
           ..write('legacySource: $legacySource, ')
           ..write('legacyId: $legacyId, ')
           ..write('createdAt: $createdAt, ')
@@ -1063,6 +1108,7 @@ class TransactionRecord extends DataClass
     note,
     transactionDate,
     source,
+    receiptFingerprint,
     legacySource,
     legacyId,
     createdAt,
@@ -1082,6 +1128,7 @@ class TransactionRecord extends DataClass
           other.note == this.note &&
           other.transactionDate == this.transactionDate &&
           other.source == this.source &&
+          other.receiptFingerprint == this.receiptFingerprint &&
           other.legacySource == this.legacySource &&
           other.legacyId == this.legacyId &&
           other.createdAt == this.createdAt &&
@@ -1099,6 +1146,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<String?> note;
   final Value<DateTime> transactionDate;
   final Value<TransactionSource> source;
+  final Value<String?> receiptFingerprint;
   final Value<String?> legacySource;
   final Value<int?> legacyId;
   final Value<DateTime> createdAt;
@@ -1114,6 +1162,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.note = const Value.absent(),
     this.transactionDate = const Value.absent(),
     this.source = const Value.absent(),
+    this.receiptFingerprint = const Value.absent(),
     this.legacySource = const Value.absent(),
     this.legacyId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1130,6 +1179,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.note = const Value.absent(),
     required DateTime transactionDate,
     required TransactionSource source,
+    this.receiptFingerprint = const Value.absent(),
     this.legacySource = const Value.absent(),
     this.legacyId = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1150,6 +1200,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<String>? note,
     Expression<String>? transactionDate,
     Expression<String>? source,
+    Expression<String>? receiptFingerprint,
     Expression<String>? legacySource,
     Expression<int>? legacyId,
     Expression<DateTime>? createdAt,
@@ -1166,6 +1217,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (note != null) 'note': note,
       if (transactionDate != null) 'transaction_date': transactionDate,
       if (source != null) 'source': source,
+      if (receiptFingerprint != null) 'receipt_fingerprint': receiptFingerprint,
       if (legacySource != null) 'legacy_source': legacySource,
       if (legacyId != null) 'legacy_id': legacyId,
       if (createdAt != null) 'created_at': createdAt,
@@ -1184,6 +1236,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<String?>? note,
     Value<DateTime>? transactionDate,
     Value<TransactionSource>? source,
+    Value<String?>? receiptFingerprint,
     Value<String?>? legacySource,
     Value<int?>? legacyId,
     Value<DateTime>? createdAt,
@@ -1200,6 +1253,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       note: note ?? this.note,
       transactionDate: transactionDate ?? this.transactionDate,
       source: source ?? this.source,
+      receiptFingerprint: receiptFingerprint ?? this.receiptFingerprint,
       legacySource: legacySource ?? this.legacySource,
       legacyId: legacyId ?? this.legacyId,
       createdAt: createdAt ?? this.createdAt,
@@ -1246,6 +1300,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
         $TransactionsTable.$convertersource.toSql(source.value),
       );
     }
+    if (receiptFingerprint.present) {
+      map['receipt_fingerprint'] = Variable<String>(receiptFingerprint.value);
+    }
     if (legacySource.present) {
       map['legacy_source'] = Variable<String>(legacySource.value);
     }
@@ -1276,6 +1333,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('note: $note, ')
           ..write('transactionDate: $transactionDate, ')
           ..write('source: $source, ')
+          ..write('receiptFingerprint: $receiptFingerprint, ')
           ..write('legacySource: $legacySource, ')
           ..write('legacyId: $legacyId, ')
           ..write('createdAt: $createdAt, ')
@@ -1575,6 +1633,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'transactions_deleted_at',
     'CREATE INDEX transactions_deleted_at ON transactions (deleted_at)',
   );
+  late final Index transactionsReceiptFingerprint = Index(
+    'transactions_receipt_fingerprint',
+    'CREATE INDEX transactions_receipt_fingerprint ON transactions (receipt_fingerprint)',
+  );
   late final Index transactionsLegacySourceId = Index(
     'transactions_legacy_source_id',
     'CREATE UNIQUE INDEX transactions_legacy_source_id ON transactions (legacy_source, legacy_id)',
@@ -1593,6 +1655,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactionsCategoryId,
     transactionsType,
     transactionsDeletedAt,
+    transactionsReceiptFingerprint,
     transactionsLegacySourceId,
   ];
 }

@@ -20,16 +20,25 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => migrator.createAll(),
     onUpgrade: (migrator, from, to) async {
-      if (from != 1 || to != 2) {
-        throw StateError('Unsupported database migration: $from -> $to');
+      if (from < 2) await migrator.createAll();
+      if (from < 3) {
+        final columns = await customSelect('PRAGMA table_info(transactions)')
+            .get();
+        if (!columns.any(
+          (row) => row.read<String>('name') == 'receipt_fingerprint',
+        )) {
+          await migrator.addColumn(
+            transactions,
+            transactions.receiptFingerprint,
+          );
+        }
       }
-      await migrator.createAll();
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

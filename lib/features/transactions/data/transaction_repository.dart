@@ -10,6 +10,7 @@ class TransactionRepository {
   TransactionRepository(this._database);
 
   final AppDatabase _database;
+  final _receiptSavesInFlight = <String>{};
 
   Stream<List<TransactionListItem>> watchAll() {
     return watchHistory(const TransactionHistoryQuery());
@@ -88,28 +89,33 @@ class TransactionRepository {
     TransactionSource source = TransactionSource.manual,
     String? legacySource,
     int? legacyId,
+    String? receiptFingerprint,
   }) {
     _validateAmount(amount);
     _validateLegacyIdentity(legacySource, legacyId);
 
-    return _database.transaction(() async {
-      await _requireMatchingCategory(categoryId, type);
-      return _database
-          .into(_database.transactions)
-          .insertReturning(
-            TransactionsCompanion.insert(
-              type: type,
-              categoryId: categoryId,
-              amount: amount,
-              title: Value(title.trim()),
-              note: Value(note?.trim()),
-              transactionDate: transactionDate,
-              source: source,
-              legacySource: Value(legacySource),
-              legacyId: Value(legacyId),
-            ),
-          );
-    });
+    return _runReceiptSave(
+      receiptFingerprint,
+      () => _database.transaction(() async {
+        await _requireMatchingCategory(categoryId, type);
+        return _database
+            .into(_database.transactions)
+            .insertReturning(
+              TransactionsCompanion.insert(
+                type: type,
+                categoryId: categoryId,
+                amount: amount,
+                title: Value(title.trim()),
+                note: Value(note?.trim()),
+                transactionDate: transactionDate,
+                source: source,
+                legacySource: Value(legacySource),
+                legacyId: Value(legacyId),
+                receiptFingerprint: Value(receiptFingerprint),
+              ),
+            );
+      }),
+    );
   }
 
   Future<List<TransactionRecord>> createMany({
@@ -154,33 +160,53 @@ class TransactionRepository {
     >
     entries,
     TransactionSource source = TransactionSource.manual,
+    String? receiptFingerprint,
   }) async {
     if (entries.isEmpty) throw ArgumentError('At least one entry is required');
     for (final entry in entries) {
       _validateAmount(entry.amount);
     }
 
-    return _database.transaction(() async {
-      final result = <TransactionRecord>[];
-      for (final entry in entries) {
-        await _requireMatchingCategory(entry.categoryId, type);
-        result.add(
-          await _database
-              .into(_database.transactions)
-              .insertReturning(
-                TransactionsCompanion.insert(
-                  type: type,
-                  categoryId: entry.categoryId,
-                  amount: entry.amount,
-                  title: Value(entry.title.trim()),
-                  transactionDate: entry.transactionDate,
-                  source: source,
+    return _runReceiptSave(
+      receiptFingerprint,
+      () => _database.transaction(() async {
+        final result = <TransactionRecord>[];
+        for (final entry in entries) {
+          await _requireMatchingCategory(entry.categoryId, type);
+          result.add(
+            await _database
+                .into(_database.transactions)
+                .insertReturning(
+                  TransactionsCompanion.insert(
+                    type: type,
+                    categoryId: entry.categoryId,
+                    amount: entry.amount,
+                    title: Value(entry.title.trim()),
+                    transactionDate: entry.transactionDate,
+                    source: source,
+                    receiptFingerprint: Value(receiptFingerprint),
+                  ),
                 ),
-              ),
-        );
-      }
-      return result;
-    });
+          );
+        }
+        return result;
+      }),
+    );
+  }
+
+  Future<T> _runReceiptSave<T>(
+    String? fingerprint,
+    Future<T> Function() action,
+  ) async {
+    if (fingerprint == null) return action();
+    if (!_receiptSavesInFlight.add(fingerprint)) {
+      throw StateError('Receipt save already in progress');
+    }
+    try {
+      return await action();
+    } finally {
+      _receiptSavesInFlight.remove(fingerprint);
+    }
   }
 
   Future<bool> update(TransactionRecord transaction) {

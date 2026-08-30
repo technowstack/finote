@@ -12,6 +12,8 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
 import '../../receipt_scanner/data/local_receipt_category_suggestion_service.dart';
+import '../../receipt_scanner/data/receipt_duplicate_detector.dart';
+import '../../receipt_scanner/domain/receipt_duplicate.dart';
 import '../../receipt_scanner/domain/receipt_data.dart';
 import '../../receipt_scanner/domain/receipt_category_suggestion.dart';
 import '../data/transaction_repository.dart';
@@ -239,6 +241,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                   item.categoryManuallySelected = true;
                 }),
                 categories: categories.value ?? const [],
+                defaultCategoryId: _categoryId,
               ),
               const SizedBox(height: AppSpacing.lg),
             ],
@@ -368,6 +371,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 
   Future<void> _save() async {
     final router = GoRouter.of(context);
+    final isItemized =
+        widget.draft?.receiptReview != null &&
+        _saveMode == ReceiptSaveMode.itemized;
     final itemEntries = [
       for (final item in _receiptItems)
         if (item.amount > 0 &&
@@ -380,10 +386,14 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             categoryId: (item.categoryId ?? _categoryId)!,
           ),
     ];
-    final isItemized =
-        widget.draft?.receiptReview != null &&
-        _saveMode == ReceiptSaveMode.itemized;
+    final hasInvalidItem = _receiptItems.any(
+      (item) =>
+          item.name.trim().isEmpty ||
+          item.amount <= 0 ||
+          (item.categoryId ?? _categoryId) == null,
+    );
     if ((!isItemized && !_formKey.currentState!.validate()) ||
+        (isItemized && hasInvalidItem) ||
         (isItemized && itemEntries.isEmpty) ||
         (!isItemized && _categoryId == null)) {
       // Force rebuild to show category error
@@ -393,6 +403,42 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     final categoryId = _categoryId;
 
     setState(() => _saving = true);
+    final review = widget.draft?.receiptReview;
+    final identity = review == null
+        ? null
+        : ReceiptIdentity(
+            merchant: review.merchant ?? _titleController.text,
+            date: _date,
+            total: isItemized
+                ? review.total ?? 0
+                : _parseAmount(_amountController.text),
+            receiptNumber: review.receiptNumber,
+            items: [
+              for (final item in _receiptItems)
+                ReceiptItem(name: item.name, lineTotal: item.amount),
+            ],
+          );
+    final fingerprint = identity == null ? null : await identity.fingerprint();
+    if (identity != null && fingerprint != null && identity.total > 0) {
+      final duplicate = await ref
+          .read(receiptDuplicateDetectorProvider)
+          .findDuplicate(identity);
+      if (!mounted) return;
+      if (duplicate != null) {
+        final action = await _confirmDuplicate(duplicate, identity);
+        if (!mounted) return;
+        if (action == _DuplicateAction.view) {
+          setState(() => _saving = false);
+          router.go('/transactions');
+          return;
+        }
+        if (action != _DuplicateAction.save) {
+          setState(() => _saving = false);
+          return;
+        }
+      }
+    }
+
     final repository = ref.read(transactionRepositoryProvider);
     final note = _noteController.text.trim();
 
@@ -404,6 +450,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             type: _type,
             entries: itemEntries,
             source: TransactionSource.receiptScan,
+            receiptFingerprint: fingerprint,
           );
         } else {
           await repository.create(
@@ -414,6 +461,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             note: note.isEmpty ? null : note,
             transactionDate: _date,
             source: widget.draft?.source ?? TransactionSource.manual,
+            receiptFingerprint: fingerprint,
           );
         }
       } else {
@@ -459,7 +507,41 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       }
     }
   }
+
+  Future<_DuplicateAction?> _confirmDuplicate(
+    ReceiptDuplicate duplicate,
+    ReceiptIdentity identity,
+  ) {
+    final title = duplicate.level == ReceiptDuplicateLevel.strong
+        ? 'Struk ini kemungkinan sudah pernah disimpan.'
+        : 'Transaksi serupa sudah ada.';
+    return showDialog<_DuplicateAction>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(
+          '${identity.merchant}\n${formatDate(identity.date)}\n${formatIdr(identity.total)}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, _DuplicateAction.view),
+            child: const Text('Lihat transaksi'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, _DuplicateAction.cancel),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, _DuplicateAction.save),
+            child: const Text('Tetap simpan'),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+enum _DuplicateAction { view, cancel, save }
 
 class TransactionFormDraft {
   const TransactionFormDraft({
@@ -515,6 +597,7 @@ class _ReceiptReviewSection extends StatelessWidget {
     required this.onItemChanged,
     required this.onItemCategoryChanged,
     required this.categories,
+    required this.defaultCategoryId,
   });
 
   final ReceiptReviewData review;
@@ -527,6 +610,7 @@ class _ReceiptReviewSection extends StatelessWidget {
   final void Function(_DraftReceiptItem item, int? categoryId)
   onItemCategoryChanged;
   final List<CategoryRecord> categories;
+  final int? defaultCategoryId;
 
   @override
   Widget build(BuildContext context) {
@@ -625,7 +709,7 @@ class _ReceiptReviewSection extends StatelessWidget {
           Text(
             difference == 0
                 ? 'Status: Cocok'
-                : 'Selisih: ${formatIdr(difference!.abs())}. Periksa pajak, diskon, item yang belum terbaca, atau OCR.',
+                : '${review.reconciliationMessage}\nSelisih: ${formatIdr(difference!.abs())}',
           ),
         ],
         if (review.tax != null)
@@ -639,6 +723,17 @@ class _ReceiptReviewSection extends StatelessWidget {
               warnings.join('\n'),
               style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
+          ),
+        if (saveMode == ReceiptSaveMode.itemized &&
+            items.any(
+              (item) =>
+                  item.name.trim().isEmpty ||
+                  item.amount <= 0 ||
+                  (item.categoryId ?? defaultCategoryId) == null,
+            ))
+          Text(
+            'Periksa nama, nominal, dan kategori setiap item sebelum menyimpan.',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         const SizedBox(height: AppSpacing.md),
         Text('Cara menyimpan', style: textTheme.titleSmall),

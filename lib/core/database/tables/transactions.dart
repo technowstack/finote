@@ -10,6 +10,10 @@ import 'categories.dart';
 @TableIndex(name: 'transactions_type', columns: {#type})
 @TableIndex(name: 'transactions_deleted_at', columns: {#deletedAt})
 @TableIndex(
+  name: 'transactions_receipt_fingerprint',
+  columns: {#receiptFingerprint},
+)
+@TableIndex(
   name: 'transactions_legacy_source_id',
   columns: {#legacySource, #legacyId},
   unique: true,
@@ -33,6 +37,7 @@ class Transactions extends Table {
         "'receipt_scan', 'recurring'))",
       )
       .map(const TransactionSourceConverter())();
+  TextColumn get receiptFingerprint => text().nullable()();
   TextColumn get legacySource => text().nullable()();
   IntColumn get legacyId => integer().nullable()();
   DateTimeColumn get createdAt =>

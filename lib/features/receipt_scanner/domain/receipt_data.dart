@@ -86,12 +86,34 @@ class ReceiptReviewData {
 
   bool get reconciles => total != null && itemTotal == total;
 
+  String? get reconciliationMessage {
+    final receiptTotal = total;
+    if (receiptTotal == null) return null;
+    final difference = itemTotal - receiptTotal;
+    if (difference == 0) return 'Total item sesuai dengan total struk.';
+    if (tax != null && difference == -tax!) {
+      return 'Total item sesuai setelah pajak terdeteksi.';
+    }
+    if (discount != null && difference == discount!) {
+      return 'Total item sesuai setelah diskon terdeteksi.';
+    }
+    if (difference < 0) return 'Ada kemungkinan item belum terbaca.';
+    return 'Total item lebih besar dari total struk.';
+  }
+
   List<String> get warnings => [
     if (total == null)
       'Total struk belum terbaca. Masukkan nominal sebelum menyimpan.',
     if (items.any((item) => item.lineTotal == null || item.lineTotal! <= 0))
       'Beberapa item belum memiliki nominal yang valid.',
-    if (total != null && items.isNotEmpty && !reconciles) 'Jumlah item berbeda dari total struk. Periksa pajak, diskon, item yang belum terbaca, atau OCR.',
+    if (items.isEmpty && total != null && total! > 0)
+      'Ada kemungkinan item belum terbaca. Tambahkan item jika diperlukan.',
+    if (total != null &&
+        items.isNotEmpty &&
+        !reconciles &&
+        !(tax != null && difference == -tax!) &&
+        !(discount != null && difference == discount!))
+      'Periksa pajak, diskon, item yang belum terbaca, atau OCR.',
   ];
 
   ReceiptReviewData copyWith({

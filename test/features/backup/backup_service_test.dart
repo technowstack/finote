@@ -20,7 +20,7 @@ void main() {
   // ---------------------------------------------------------------------------
   Uint8List buildValidZip({
     int backupVersion = BackupManifest.currentBackupVersion,
-    int databaseVersion = 2,
+    int databaseVersion = 3,
     Uint8List? dbBytes,
   }) {
     final manifest = {
