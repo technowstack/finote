@@ -1,6 +1,6 @@
 # PRODUCT REQUIREMENTS DOCUMENT
 
-# Catatan Keuangan
+# Finote
 
 ## Modern Offline-First Personal Finance Tracker
 
@@ -8,74 +8,90 @@
 
 # 1. Product Information
 
-**Working Name:** Catatan Keuangan
-
-**Platform awal:** Android
-
-**Future Platform:**
-
-* Android
-* iOS jika dibutuhkan
-
-**Framework:** Flutter
-
-**Primary Architecture:** Offline-first
-
-**Local Database:** SQLite + Drift
-
-**State Management:** Riverpod
-
-**Routing:** GoRouter
-
-**UI System:** Material Design 3
-
-**Primary Language UI:** Bahasa Indonesia
-
-**Target Distribution:** Google Play Store
-
-**Cloud:** Optional
-
-**Primary User:** Pengguna individu
+**Product Name:** Finote  
+**Platform awal:** Android  
+**Future platform:** iOS jika dibutuhkan  
+**Framework:** Flutter  
+**Primary architecture:** Offline-first  
+**Local database:** SQLite + Drift  
+**State management:** Riverpod  
+**Routing:** GoRouter  
+**UI system:** Material Design 3  
+**Primary language:** Bahasa Indonesia  
+**Target distribution:** Google Play Store  
+**Cloud:** Optional dan bukan kebutuhan inti  
+**Primary user:** Pengguna individu
 
 ---
 
 # 2. Product Background
 
-Aplikasi ini dikembangkan sebagai penerus modern dari aplikasi pencatatan keuangan lama yang sudah tidak aktif dikembangkan.
+Finote dikembangkan sebagai penerus modern dari aplikasi pencatatan keuangan lama yang sudah tidak aktif dikembangkan.
 
-Aplikasi lama memiliki kelebihan utama:
+Kelebihan aplikasi lama yang ingin dipertahankan:
 
-* sederhana;
-* cepat;
-* tidak membutuhkan akun;
-* dapat digunakan offline;
-* pencatatan pemasukan dan pengeluaran mudah;
-* memiliki kategori;
-* memiliki laporan;
-* mendukung backup database.
+- sederhana;
+- cepat;
+- dapat digunakan tanpa akun;
+- dapat digunakan tanpa internet;
+- pencatatan pemasukan dan pengeluaran mudah;
+- memiliki kategori;
+- memiliki laporan;
+- memiliki backup database;
+- data dapat dipindahkan.
 
-Kelemahan yang ingin diperbaiki:
+Finote memperbaiki pengalaman tersebut dengan:
 
-* aplikasi tidak lagi dikembangkan;
-* tampilan sudah tertinggal;
-* kompatibilitas dengan Android masa depan tidak terjamin;
-* tidak memiliki sinkronisasi modern;
-* backup masih manual;
-* tidak memiliki fitur scan struk;
-* pengelolaan data belum fleksibel;
-* tidak memiliki kemampuan multi-device.
+- UI/UX modern;
+- kompatibilitas Android yang lebih baik;
+- database lokal yang terstruktur;
+- backup dan restore yang aman;
+- import database aplikasi lama;
+- pencarian dan filter transaksi;
+- laporan yang lebih matang;
+- ekspor laporan ke **Excel, Text, dan PDF**;
+- tema Light, Dark, dan System;
+- arsitektur yang dapat dikembangkan tanpa mengorbankan core offline-first.
 
-Aplikasi baru mempertahankan kesederhanaan aplikasi lama namun dengan arsitektur modern.
+Receipt Scanner lokal yang sudah dikembangkan dapat dipertahankan selama stabil, tetapi bukan alasan untuk menunda rilis.
 
 ---
 
-# 3. Product Vision
+# 3. Current Product Direction
+
+Fokus Finote saat ini adalah:
+
+> **Membuat core personal finance app yang matang, stabil, cepat, nyaman digunakan secara manual, dan layak dirilis ke Play Store.**
+
+Finote saat ini **tidak berfokus pada AI**.
+
+Fitur berikut ditunda:
+
+- AI Receipt Scan;
+- AI OCR parsing;
+- AI smart categorization;
+- AI financial assistant;
+- AI gateway/backend;
+- integrasi OpenAI/Gemini/Claude atau layanan AI lainnya;
+- AI subscription infrastructure.
+
+Fitur AI hanya akan dipertimbangkan kembali setelah:
+
+1. Finote rilis di Google Play Store;
+2. memiliki pengguna nyata;
+3. kebutuhan AI tervalidasi;
+4. tersedia budget server/API;
+5. strategi premium/langganan sudah jelas.
+
+---
+
+# 4. Product Vision
 
 Membangun aplikasi keuangan pribadi yang:
 
-> sederhana untuk digunakan setiap hari, dapat berjalan tanpa internet, menjaga kepemilikan data pengguna, mampu memigrasikan data aplikasi lama, dan secara bertahap berkembang menjadi personal finance tracker modern.
+> sederhana untuk digunakan setiap hari, cepat untuk mencatat transaksi, dapat berjalan sepenuhnya tanpa internet, menjaga kepemilikan data pengguna, mudah dibackup dan diekspor, serta dapat berkembang secara bertahap tanpa menjadikan cloud atau AI sebagai ketergantungan.
 
-Aplikasi harus terasa seperti:
+Finote harus terasa seperti:
 
 ```text
 Buku Catatan Keuangan
@@ -84,118 +100,128 @@ Kalkulator
 +
 Laporan
 +
-Scanner Struk
+Backup / Restore
 +
-Backup Modern
+Export
 ```
 
-bukan seperti aplikasi accounting kompleks.
+bukan seperti sistem accounting bisnis yang kompleks.
 
 ---
 
-# 4. Product Principles
-
-Prinsip utama:
+# 5. Product Principles
 
 1. Offline-first.
-2. Cepat digunakan.
-3. Tidak wajib login.
-4. Data milik pengguna.
-5. Data mudah dibackup.
-6. Data mudah dipindahkan.
-7. Cloud optional.
-8. Fitur tidak boleh membuat aplikasi terasa rumit.
-9. Data integrity lebih penting daripada jumlah fitur.
-10. Pengguna harus tetap bisa menggunakan aplikasi meskipun layanan cloud tidak tersedia.
+2. Manual finance workflow harus selalu menjadi first-class feature.
+3. Cepat digunakan.
+4. Tidak wajib login.
+5. Data milik pengguna.
+6. Data mudah dibackup.
+7. Data mudah direstore.
+8. Data mudah diekspor.
+9. Cloud bersifat optional.
+10. Data integrity lebih penting daripada jumlah fitur.
+11. Fitur baru tidak boleh membuat aplikasi terasa rumit.
+12. Core finance harus tetap bekerja meskipun layanan eksternal tidak tersedia.
+13. Jangan mengorbankan kestabilan demi fitur eksperimental.
+14. Jangan menambahkan AI sebelum ada kebutuhan nyata yang tervalidasi.
 
 ---
 
-# 5. Primary Goals
+# 6. Primary Goals
 
-Aplikasi harus memungkinkan pengguna:
+Finote harus memungkinkan pengguna:
 
-* mencatat pengeluaran;
-* mencatat pemasukan;
-* melihat saldo;
-* melihat histori transaksi;
-* mengelola kategori;
-* melihat laporan;
-* mencari transaksi;
-* backup data;
-* restore data;
-* import database aplikasi lama;
-* scan struk belanja;
-* menghasilkan draft transaksi dari struk;
-* menggunakan aplikasi tanpa internet.
+- mencatat pengeluaran;
+- mencatat pemasukan;
+- mengedit transaksi;
+- menghapus transaksi dengan aman;
+- melihat saldo;
+- melihat histori transaksi;
+- mengelola kategori;
+- mencari transaksi;
+- memfilter transaksi;
+- melihat laporan;
+- backup data;
+- restore data;
+- import database aplikasi lama;
+- **export data/laporan ke Excel (.xlsx);**
+- **export data/laporan ke Text (.txt);**
+- **export data/laporan ke PDF (.pdf);**
+- memilih tema Light, Dark, atau System;
+- menggunakan aplikasi sepenuhnya tanpa internet.
 
----
-
-# 6. Secondary Goals
-
-Setelah fitur inti stabil:
-
-* multiple wallet;
-* budgeting;
-* recurring transaction;
-* Google Drive backup;
-* advanced reports;
-* optional account;
-* multi-device sync;
-* attachment struk;
-* OCR yang semakin pintar.
+Receipt Scanner lokal dapat tersedia apabila kualitasnya cukup aman untuk pengguna.
 
 ---
 
-# 7. Non Goals
+# 7. Secondary Goals
 
-Versi awal bukan:
+Setelah versi publik stabil dan kebutuhan pengguna tervalidasi:
 
-* aplikasi accounting perusahaan;
-* ERP;
-* aplikasi invoice;
-* aplikasi perpajakan;
-* aplikasi kasir;
-* aplikasi pembayaran;
-* aplikasi perbankan;
-* aplikasi investasi;
-* aplikasi cryptocurrency;
-* aplikasi pembukuan double-entry.
+- multiple wallet/account;
+- budgeting;
+- recurring transaction;
+- Google Drive/cloud backup;
+- advanced reports;
+- optional account;
+- multi-device sync;
+- attachment struk;
+- receipt archive.
 
----
-
-# 8. Target Users
-
-Target utama:
-
-Pengguna Android yang ingin mencatat aktivitas finansial pribadi.
-
-Contoh kebutuhan:
-
-```text
-Makan
-Bensin
-Belanja
-Gaji
-Bonus
-Tagihan
-Internet
-Transportasi
-Hiburan
-```
-
-Karakteristik:
-
-* ingin aplikasi sederhana;
-* tidak ingin banyak menu;
-* ingin bisa offline;
-* ingin data aman;
-* ingin backup;
-* ingin laporan mudah dipahami;
-* terkadang malas mengetik struk satu per satu.
+AI tetap masuk kategori **deferred/future validated features**.
 
 ---
 
-# 9. Main Navigation
+# 8. Non-Goals Saat Ini
+
+Finote versi awal bukan:
+
+- aplikasi accounting perusahaan;
+- ERP;
+- aplikasi invoice;
+- aplikasi perpajakan;
+- aplikasi kasir;
+- aplikasi pembayaran;
+- aplikasi perbankan;
+- aplikasi investasi;
+- aplikasi cryptocurrency;
+- sistem pembukuan double-entry;
+- AI financial assistant;
+- AI expense advisor;
+- AI-first finance app.
+
+---
+
+# 9. Target Users
+
+Target utama adalah pengguna Android yang ingin mencatat keuangan pribadi dengan cepat.
+
+Contoh transaksi:
+
+- makan;
+- bensin;
+- belanja;
+- gaji;
+- bonus;
+- tagihan;
+- internet;
+- transportasi;
+- hiburan.
+
+Karakteristik target user:
+
+- menginginkan aplikasi sederhana;
+- tidak ingin banyak langkah;
+- ingin bekerja offline;
+- ingin data aman;
+- ingin backup;
+- ingin laporan yang mudah dipahami;
+- ingin dapat membawa datanya keluar melalui format umum seperti Excel, Text, dan PDF.
+
+---
+
+# 10. Main Navigation
 
 Bottom navigation:
 
@@ -206,36 +232,28 @@ Reports
 Settings
 ```
 
-Floating button:
+Primary action:
 
 ```text
-+
++ Tambah Transaksi
 ```
 
-Default action:
-
-```text
-Tambah Transaksi
-```
-
-Tambahkan shortcut:
+Jika Receipt Scanner tetap diaktifkan:
 
 ```text
 Scan Struk
 ```
 
-setelah Receipt Scanner tersedia.
+harus menjadi fitur tambahan dan tidak menggantikan transaksi manual.
 
 ---
 
-# 10. Main User Flow
-
-## Manual transaction
+# 11. Core Manual Transaction Flow
 
 ```text
 Buka aplikasi
 ↓
-+
+Tambah Transaksi
 ↓
 Pilih Pengeluaran / Pemasukan
 ↓
@@ -246,31 +264,13 @@ Pilih kategori
 Simpan
 ```
 
----
+Target UX:
 
-## Receipt transaction
-
-```text
-Buka aplikasi
-↓
-Scan Struk
-↓
-Foto / pilih gambar
-↓
-OCR
-↓
-Parsing
-↓
-Draft transaksi
-↓
-User review
-↓
-Simpan
-```
+> transaksi umum harus dapat dicatat hanya dalam beberapa detik.
 
 ---
 
-# 11. Technical Stack
+# 12. Technical Stack
 
 Gunakan:
 
@@ -284,7 +284,9 @@ SQLite
 Material 3
 ```
 
-Recommended supporting packages:
+Supporting packages dipilih hanya bila diperlukan dan maintained.
+
+Contoh:
 
 ```text
 uuid
@@ -293,198 +295,45 @@ freezed
 json_serializable
 path_provider
 file_picker
-image_picker
+share_plus
 ```
 
-Untuk OCR dipilih ketika fitur Receipt Scanner dikerjakan.
-
-Prioritas:
-
-```text
-on-device OCR
-```
-
-jika kualitas mencukupi.
+Library Excel/PDF dipilih berdasarkan kompatibilitas dan maintenance pada saat implementasi.
 
 ---
 
-# 12. Project Architecture
+# 13. Architecture
 
-Gunakan:
-
-```text
-Feature First Architecture
-```
-
-Struktur:
+Gunakan Feature-First Architecture.
 
 ```text
 lib/
-
-app/
-  app.dart
-  router.dart
-
-core/
-  database/
-  errors/
-  extensions/
-  services/
-  theme/
-  utils/
-
-features/
-
-  dashboard/
-  transactions/
-  categories/
-  reports/
-  settings/
-  backup/
-  legacy_import/
-  receipt_scanner/
-  accounts/
-  budgets/
-  recurring/
-  sync/
+├── app/
+├── core/
+│   ├── database/
+│   ├── errors/
+│   ├── services/
+│   ├── theme/
+│   └── utils/
+└── features/
+    ├── dashboard/
+    ├── transactions/
+    ├── categories/
+    ├── reports/
+    ├── export/
+    ├── settings/
+    ├── backup/
+    ├── legacy_import/
+    └── receipt_scanner/
 ```
 
-Setiap feature dapat memiliki:
-
-```text
-data/
-domain/
-presentation/
-```
-
-Tidak perlu membuat Clean Architecture terlalu kompleks.
+Future features tidak perlu dibuat sebelum dibutuhkan.
 
 ---
 
-# 13. Development Roadmap
+# 14. Core Database Rules
 
-Urutan utama:
-
-```text
-PHASE 0
-Foundation
-
-PHASE 1
-Core Finance
-
-PHASE 2
-Backup / Restore / Legacy Import
-
-PHASE 3
-Personal-Use Ready
-
-PHASE 4
-Receipt Scanner & Auto Transaction
-
-PHASE 5
-Play Store Ready
-
-PHASE 6
-Wallet
-
-PHASE 7
-Budget
-
-PHASE 8
-Recurring Transactions
-
-PHASE 9
-Cloud Backup
-
-PHASE 10
-Advanced Reports
-
-PHASE 11
-Cloud Sync
-```
-
----
-
-# PHASE 0 — FOUNDATION
-
-## Goal
-
-Membangun pondasi project.
-
-Tidak ada business feature besar.
-
----
-
-# 14. Flutter Setup
-
-Setup:
-
-```text
-Flutter stable
-Material 3
-Riverpod
-GoRouter
-Drift
-SQLite
-```
-
----
-
-# 15. Project Structure
-
-Buat struktur feature-first.
-
----
-
-# 16. Theme
-
-Support:
-
-```text
-Light
-Dark
-System
-```
-
----
-
-# 17. Localization Foundation
-
-Initial:
-
-```text
-Bahasa Indonesia
-```
-
-Arsitektur tidak boleh menghalangi penambahan bahasa lain.
-
----
-
-# 18. Utility
-
-Siapkan:
-
-* IDR formatter;
-* date formatter;
-* UUID generator;
-* logging wrapper;
-* error mapper.
-
----
-
-# PHASE 1 — CORE FINANCE
-
-## Goal
-
-Menghasilkan aplikasi pencatatan keuangan yang benar-benar bisa digunakan.
-
-Ini prioritas tertinggi.
-
----
-
-# 19. Database Tables
-
-Minimum:
+Minimum tables:
 
 ```text
 transactions
@@ -492,46 +341,42 @@ categories
 settings
 ```
 
----
-
-# 20. Transaction Schema
+Transaction entity minimal:
 
 ```text
-transactions
-
 id
 uuid
-
 type
-
 category_id
-
 amount
-
 title
 note
-
 transaction_date
-
 source
-
 legacy_source
 legacy_id
-
 created_at
 updated_at
 deleted_at
 ```
 
----
-
-# 21. Transaction Source
-
-Tambahkan:
+Financial values:
 
 ```text
-source
+INTEGER
 ```
+
+Contoh:
+
+```text
+Rp25.000 → 25000
+```
+
+Jangan gunakan float/double untuk nominal IDR.
+
+---
+
+# 15. Transaction Source
 
 Possible values:
 
@@ -542,58 +387,13 @@ receipt_scan
 recurring
 ```
 
-Ini akan berguna di kemudian hari.
+Nilai future boleh dipertahankan untuk kompatibilitas arsitektur.
 
 ---
 
-# 22. Amount
+# 16. Categories
 
-Uang harus disimpan sebagai:
-
-```text
-INTEGER
-```
-
-Contoh:
-
-```text
-Rp25.000
-```
-
-disimpan:
-
-```text
-25000
-```
-
-Jangan menggunakan:
-
-```text
-double
-float
-```
-
----
-
-# 23. UUID
-
-Setiap transaction dan category memiliki UUID.
-
----
-
-# 24. Soft Delete
-
-Gunakan:
-
-```text
-deleted_at
-```
-
----
-
-# 25. Categories
-
-Category schema:
+Category minimal:
 
 ```text
 id
@@ -613,55 +413,38 @@ income
 expense
 ```
 
----
+Default Expense:
 
-# 26. Default Categories
+- Makanan & Minuman
+- Transportasi
+- Belanja
+- Tagihan
+- Hiburan
+- Kesehatan
+- Pendidikan
+- Rumah
+- Keluarga
+- Lainnya
 
-Expense:
+Default Income:
 
-```text
-Makanan & Minuman
-Transportasi
-Belanja
-Tagihan
-Hiburan
-Kesehatan
-Pendidikan
-Rumah
-Keluarga
-Lainnya
-```
-
-Income:
-
-```text
-Gaji
-Bonus
-Bisnis
-Hadiah
-Investasi
-Lainnya
-```
+- Gaji
+- Bonus
+- Bisnis
+- Hadiah
+- Investasi
+- Lainnya
 
 ---
 
-# 27. Add Transaction
+# 17. Transaction CRUD
 
-Form:
+User harus dapat:
 
-```text
-Pengeluaran | Pemasukan
-
-Nominal
-
-Kategori
-
-Judul
-
-Tanggal
-
-Catatan
-```
+- menambah transaksi;
+- mengedit transaksi;
+- melakukan soft delete;
+- membuka detail transaksi.
 
 Default:
 
@@ -670,85 +453,42 @@ type = expense
 date = today
 ```
 
-Note optional.
+Prioritas form:
+
+1. nominal;
+2. kategori;
+3. simpan;
+4. judul;
+5. tanggal;
+6. catatan.
 
 ---
 
-# 28. Transaction UX
-
-Prioritaskan:
-
-```text
-Cepat
-Sedikit input
-Minim tap
-```
-
-Ideal:
-
-```text
-+
-↓
-Nominal
-↓
-Kategori
-↓
-Simpan
-```
-
----
-
-# 29. Edit Transaction
-
-Semua field dapat diedit.
-
----
-
-# 30. Delete Transaction
-
-Gunakan soft delete.
-
-Confirmation:
-
-```text
-Hapus transaksi?
-```
-
----
-
-# 31. Transaction List
-
-Group berdasarkan tanggal.
-
-Contoh:
-
-```text
-29 Agustus 2026
-
-Bensin
-Transportasi
--Rp50.000
-
-Gaji
-Gaji
-+Rp8.500.000
-```
-
----
-
-# 32. Filters
+# 18. Transaction History
 
 Support:
+
+- grouping berdasarkan tanggal;
+- income/expense indicator;
+- edit;
+- delete;
+- search;
+- filter.
+
+Search:
+
+```text
+title
+note
+category
+```
+
+Filter:
 
 ```text
 Semua
 Pemasukan
 Pengeluaran
-```
-
-Period:
-
-```text
 Hari Ini
 Minggu Ini
 Bulan Ini
@@ -757,118 +497,378 @@ Custom
 
 ---
 
-# 33. Search
+# 19. Dashboard
 
-Cari menggunakan:
+Dashboard minimum menampilkan:
 
-```text
-title
-note
-category
-```
+- saldo;
+- pemasukan bulan berjalan;
+- pengeluaran bulan berjalan;
+- transaksi hari ini;
+- transaksi terbaru.
 
----
-
-# 34. Dashboard
-
-Tampilkan:
-
-```text
-Saldo
-
-Pemasukan
-
-Pengeluaran
-```
-
-Default:
-
-```text
-bulan berjalan
-```
-
----
-
-# 35. Balance
-
-Formula:
+Balance:
 
 ```text
 Total Income - Total Expense
 ```
 
-Saldo tidak disimpan secara terpisah.
+Saldo tidak disimpan sebagai state finansial terpisah.
 
 ---
 
-# 36. Recent Transactions
-
-Tampilkan 5–10 transaksi terbaru.
-
----
-
-# 37. Reports
+# 20. Reports
 
 Minimum:
 
+- total pemasukan;
+- total pengeluaran;
+- saldo periode;
+- top expense categories;
+- top income categories;
+- monthly history.
+
+Periods:
+
+- hari;
+- minggu;
+- bulan;
+- custom.
+
+Dashboard, reports, dan transaction history harus menghasilkan angka konsisten untuk periode yang sama.
+
+---
+
+# 21. EXPORT — CORE FEATURE
+
+Export merupakan **fitur utama Finote**, bukan fitur tambahan opsional.
+
+Export harus tersedia sebelum first public release.
+
+Entry point utama:
+
 ```text
+Reports
+→ Export
+```
+
+Dapat juga tersedia dari:
+
+```text
+Settings
+→ Data
+→ Export Data
+```
+
+## 21.1 Supported Formats
+
+Wajib:
+
+```text
+Excel (.xlsx)
+Text (.txt)
+PDF (.pdf)
+```
+
+Future optional:
+
+```text
+CSV
+JSON
+```
+
+## 21.2 Export Scope
+
+User dapat memilih:
+
+```text
+Semua transaksi
+Hari ini
+Minggu ini
+Bulan ini
+Custom date range
+```
+
+Jika filter laporan sedang aktif, opsi export dapat menggunakan filter tersebut.
+
+## 21.3 Export Filters
+
+Support bila relevan:
+
+- semua transaksi;
+- hanya pemasukan;
+- hanya pengeluaran;
+- kategori;
+- rentang tanggal.
+
+## 21.4 Export Preview
+
+Sebelum membuat file, tampilkan ringkasan:
+
+```text
+Periode
+Jumlah transaksi
 Total pemasukan
 Total pengeluaran
 Saldo periode
-Top expense category
-Top income category
-Monthly history
+Format
 ```
 
----
-
-# 38. Period Reports
-
-Support:
+Contoh:
 
 ```text
-Hari
-Minggu
-Bulan
-Custom
+Export Laporan
+
+Periode:
+1–31 Agustus 2026
+
+128 transaksi
+
+Pemasukan      Rp8.500.000
+Pengeluaran    Rp4.350.000
+Saldo          Rp4.150.000
+
+Format:
+Excel
+
+[Export]
 ```
 
----
+## 21.5 Excel Export
 
-# 39. Settings
-
-Minimum:
+File:
 
 ```text
+finote_report_YYYY-MM-DD.xlsx
+```
+
+Minimum worksheet:
+
+### Ringkasan
+
+```text
+Periode
+Total pemasukan
+Total pengeluaran
+Saldo
+Jumlah transaksi
+Generated at
+```
+
+### Transaksi
+
+Columns:
+
+```text
+No
+Tanggal
+Tipe
 Kategori
-Mata Uang
-Tema
-Data
-Keamanan
-Tentang
+Judul
+Catatan
+Nominal
 ```
 
----
+Requirements:
 
-# PHASE 2 — BACKUP / RESTORE / LEGACY IMPORT
+- nominal disimpan sebagai numeric cell;
+- header jelas;
+- date cell benar;
+- file dapat dibuka di Microsoft Excel/LibreOffice/Google Sheets;
+- tidak menggunakan formatted currency string sebagai sumber angka.
 
-## Goal
+Optional:
 
-Menjamin data pengguna dapat dipindahkan dan dipulihkan.
+### Kategori
 
----
+Summary per kategori.
 
-# 40. Local Backup
+## 21.6 Text Export
 
-User dapat membuat:
+File:
 
 ```text
-finance_backup_YYYY-MM-DD.zip
+finote_report_YYYY-MM-DD.txt
 ```
+
+Harus human-readable.
+
+Contoh:
+
+```text
+FINOTE - LAPORAN KEUANGAN
+
+Periode:
+1 - 31 Agustus 2026
+
+RINGKASAN
+
+Pemasukan   : Rp8.500.000
+Pengeluaran : Rp4.350.000
+Saldo       : Rp4.150.000
+
+TRANSAKSI
+
+01/08/2026
+Pengeluaran | Makanan & Minuman
+Makan Siang
+Rp25.000
+
+02/08/2026
+Pengeluaran | Transportasi
+Bensin
+Rp50.000
+```
+
+Gunakan UTF-8.
+
+## 21.7 PDF Export
+
+File:
+
+```text
+finote_report_YYYY-MM-DD.pdf
+```
+
+PDF minimum berisi:
+
+```text
+Finote
+Laporan Keuangan
+
+Periode
+
+Ringkasan:
+- Total pemasukan
+- Total pengeluaran
+- Saldo
+- Jumlah transaksi
+
+Detail transaksi
+```
+
+Detail table minimum:
+
+```text
+Tanggal
+Tipe
+Kategori
+Keterangan
+Nominal
+```
+
+Requirements:
+
+- layout tidak terpotong;
+- mendukung multi-page;
+- nominal rata kanan bila memungkinkan;
+- header dapat diulang pada halaman berikutnya jika library mendukung;
+- nyaman dicetak/dibaca;
+- Bahasa Indonesia tampil benar;
+- tidak bergantung internet.
+
+## 21.8 Export Destination
+
+Gunakan Android system file/document APIs.
+
+User harus dapat:
+
+- memilih lokasi penyimpanan;
+- membuka file;
+- membagikan file jika share action tersedia.
+
+Jangan meminta broad storage permission.
+
+Hindari:
+
+```text
+MANAGE_EXTERNAL_STORAGE
+```
+
+## 21.9 Export Safety
+
+Export tidak boleh:
+
+- mengubah transaksi;
+- mengubah database;
+- menghapus data;
+- membutuhkan internet.
+
+Jika export gagal:
+
+```text
+Gagal membuat laporan.
+Silakan coba lagi.
+```
+
+Jangan tampilkan stack trace.
+
+## 21.10 Export Architecture
+
+Preferred flow:
+
+```text
+ReportFilter
+↓
+ExportDataRepository / Query
+↓
+ExportDocumentModel
+↓
+Exporter
+   ├── ExcelExporter
+   ├── TextExporter
+   └── PdfExporter
+```
+
+Business/query logic jangan diduplikasi di setiap exporter.
+
+Semua format harus menggunakan dataset/filter yang sama.
+
+## 21.11 Export Accuracy
+
+Jika laporan menunjukkan:
+
+```text
+Pemasukan: Rp8.500.000
+Pengeluaran: Rp4.350.000
+```
+
+Excel, Text, dan PDF harus menghasilkan total yang sama.
+
+Export harus mengabaikan soft-deleted transactions.
+
+## 21.12 Export Acceptance Criteria
+
+Export dianggap release-ready jika:
+
+- Excel berhasil dibuat;
+- Text berhasil dibuat;
+- PDF berhasil dibuat;
+- user dapat memilih periode;
+- user dapat menggunakan custom range;
+- total export sama dengan reports;
+- soft deleted records tidak muncul;
+- file kosong ditangani dengan baik;
+- ribuan transaksi dapat diekspor tanpa crash;
+- export tetap bekerja offline;
+- user dapat menyimpan/membagikan hasil;
+- tidak membutuhkan storage permission berlebihan.
 
 ---
 
-# 41. Backup Structure
+# 22. Backup
+
+Backup berbeda dengan Export.
+
+**Backup** digunakan untuk pemulihan aplikasi.
+
+**Export** digunakan untuk membaca, membagikan, mencetak, atau mengolah laporan.
+
+Backup:
+
+```text
+finote_backup_YYYY-MM-DD_HH-mm.zip
+```
 
 Isi:
 
@@ -879,23 +879,7 @@ manifest.json
 
 ---
 
-# 42. Backup Manifest
-
-Contoh:
-
-```json
-{
-  "application": "Catatan Keuangan",
-  "backupVersion": 1,
-  "databaseVersion": 1,
-  "createdAt": "...",
-  "appVersion": "..."
-}
-```
-
----
-
-# 43. Restore
+# 23. Restore
 
 Flow:
 
@@ -908,30 +892,22 @@ Preview
 ↓
 Create Safety Backup
 ↓
+Confirm
+↓
 Restore
 ↓
 Verify
 ```
 
----
-
-# 44. Safety Backup
-
-Sebelum restore:
-
-```text
-pre_restore_backup
-```
-
-wajib dibuat.
+Sebelum destructive restore, safety backup wajib dibuat.
 
 ---
 
-# 45. Legacy Import
+# 24. Legacy Import
 
-Support database aplikasi lama.
+Finote mendukung import database aplikasi Catatan Keuangan lama.
 
-Legacy tables diketahui antara lain:
+Known legacy tables:
 
 ```text
 Transaction
@@ -941,1369 +917,184 @@ TransactionSubType
 AppSetting
 ```
 
----
-
-# 46. Legacy Transaction Mapping
+Mapping utama:
 
 ```text
-Transaction.title
-→ transactions.title
+Transaction.title → transactions.title
+Transaction.amount → transactions.amount
+Transaction.date → transactions.transaction_date
 ```
+
+Legacy type:
 
 ```text
-Transaction.amount
-→ transactions.amount
+0 → expense
+1 → income
 ```
 
-```text
-Transaction.date
-→ transaction_date
-```
+`TransactionDay` tidak menjadi source of truth.
 
----
+Import harus:
 
-# 47. Legacy Type
-
-```text
-0 = expense
-1 = income
-```
-
-Convert ke internal enum.
+- read-only terhadap database legacy;
+- preview sebelum import;
+- menggunakan transaction;
+- rollback ketika gagal;
+- mencegah duplicate import;
+- preserve existing Finote data.
 
 ---
 
-# 48. Legacy Categories
-
-Gunakan:
-
-```text
-Transaction.subType
-```
-
-dan:
-
-```text
-TransactionSubType
-```
-
----
-
-# 49. TransactionDay
-
-Jangan jadikan:
-
-```text
-TransactionDay
-```
-
-sebagai source of truth.
-
-Report harus dihitung ulang dari transactions.
-
----
-
-# 50. Legacy Import Preview
-
-Tampilkan sebelum import:
-
-```text
-Jumlah transaksi
-
-Jumlah kategori
-
-Rentang tanggal
-
-Total pemasukan
-
-Total pengeluaran
-```
-
----
-
-# 51. Duplicate Protection
-
-Gunakan:
-
-```text
-legacy_source
-legacy_id
-```
-
-Combination harus dapat mencegah duplicate import.
-
----
-
-# 52. Legacy Import Transaction
-
-Import harus menggunakan SQLite database transaction.
-
-Jika gagal:
-
-```text
-rollback
-```
-
----
-
-# PHASE 3 — PERSONAL-USE READY
-
-## Goal
-
-Pada fase ini aplikasi harus sudah nyaman digunakan sehari-hari secara pribadi.
-
-Ini adalah milestone penting.
-
-Target:
-
-> Jika cloud, budget dan wallet belum ada sekalipun, aplikasi sudah layak menggantikan aplikasi lama.
-
----
-
-# 53. Personal-Use Acceptance Criteria
-
-Wajib sudah tersedia:
-
-```text
-Transaction CRUD
-Categories
-Dashboard
-Reports
-Search
-Filter
-Backup
-Restore
-Legacy Import
-Theme
-Basic Security
-```
-
----
-
-# 54. PIN
+# 25. Theme
 
 Support:
 
 ```text
+Ikuti Sistem
+Terang
+Gelap
+```
+
+Default:
+
+```text
+System
+```
+
+Theme preference harus persist.
+
+---
+
+# 26. Basic Security
+
+Optional PIN:
+
+```text
 4 digit
-atau
 6 digit
 ```
 
 PIN tidak boleh disimpan plaintext.
 
+Biometric optional selama tidak mengganggu core release.
+
 ---
 
-# 55. Biometric
+# 27. Receipt Scanner Current Status
 
-Optional pada tahap ini.
+Receipt Scanner lokal yang sudah dibuat dapat tetap dipertahankan.
 
-Support jika mudah:
+Current local pipeline:
 
 ```text
-Fingerprint
-Face authentication
-```
-
----
-
-# 56. UX Polish
-
-Perbaiki:
-
-* keyboard flow;
-* input nominal;
-* empty state;
-* loading state;
-* error state;
-* confirmation;
-* snackbar;
-* responsive layout.
-
----
-
-# 57. Performance Target
-
-Aplikasi harus nyaman dengan:
-
-```text
-10.000+ transaksi
-```
-
----
-
-# 58. Internal Personal Test
-
-Gunakan aplikasi secara nyata minimal beberapa hari.
-
-Catat:
-
-```text
-makan
-bensin
-belanja
-gaji
-tagihan
-```
-
-Perbaiki UX sebelum masuk scanner.
-
----
-
-# PHASE 4 — RECEIPT SCANNER & AUTO TRANSACTION
-
-## Goal
-
-Memungkinkan pengguna membuat transaksi pengeluaran dengan memfoto struk.
-
-Fase ini dilakukan setelah aplikasi dasar sudah nyaman digunakan secara pribadi.
-
-Bukan fitur paling akhir.
-
----
-
-# 59. Scanner Entry Point
-
-Tambahkan:
-
-```text
-Scan Struk
-```
-
-pada:
-
-* dashboard;
-* add transaction menu;
-* transaction page.
-
----
-
-# 60. Receipt Flow
-
-```text
-Scan Struk
-↓
 Camera / Gallery
 ↓
-Image preprocessing
-↓
-OCR
-↓
-Receipt parsing
-↓
-Transaction draft
-↓
-User review
-↓
-Save
-```
-
----
-
-# 61. Mandatory Safety Rule
-
-JANGAN langsung menyimpan hasil OCR.
-
-Selalu:
-
-```text
-OCR
-↓
-Draft
-↓
-User Confirmation
-↓
-Save
-```
-
----
-
-# 62. Supported Input
-
-Support:
-
-```text
-Camera
-Gallery
-```
-
----
-
-# 63. Camera Screen
-
-Berikan guidance:
-
-```text
-Pastikan seluruh struk terlihat
-
-Gunakan pencahayaan yang cukup
-
-Hindari gambar blur
-
-Letakkan struk di permukaan datar
-```
-
----
-
-# 64. Image Preprocessing
-
-Future support:
-
-```text
-Auto crop
-Perspective correction
-Rotate
-Contrast enhancement
-Noise reduction
-```
-
-Minimum implementation tidak harus semuanya sekaligus.
-
----
-
-# 65. OCR Service
-
-Gunakan abstraction.
-
-Contoh:
-
-```dart
-abstract class ReceiptOcrService {
-  Future<ReceiptOcrResult> recognize(...);
-}
-```
-
-Tujuan:
-
-OCR provider mudah diganti.
-
----
-
-# 66. OCR Preference
-
-Prioritas:
-
-```text
 On-device OCR
-```
-
-karena:
-
-* offline;
-* privacy;
-* tidak ada API cost;
-* lebih cepat;
-* lebih cocok dengan product principle.
-
----
-
-# 67. Future OCR Providers
-
-Architecture harus memungkinkan:
-
-```text
-Google ML Kit
-Cloud Vision
-AI Vision API
-Other OCR engines
-```
-
-tanpa mengubah transaction module.
-
----
-
-# 68. OCR Result
-
-OCR layer menghasilkan:
-
-```text
-raw text
-text blocks
-confidence
-bounding data jika tersedia
-```
-
----
-
-# 69. Receipt Parser
-
-Pisahkan OCR dengan parser.
-
-OCR:
-
-```text
-gambar → text
-```
-
-Parser:
-
-```text
-text → receipt data
-```
-
----
-
-# 70. Receipt Data Model
-
-Contoh:
-
-```text
-merchant
-
-transaction_date
-
-subtotal
-
-tax
-
-discount
-
-total
-
-payment_method
-
-receipt_number
-
-items
-
-raw_text
-```
-
----
-
-# 71. Minimum Detection
-
-Versi pertama scanner minimal mencoba mendeteksi:
-
-```text
-Merchant
-Tanggal
-Total
-```
-
-Jika memungkinkan:
-
-```text
-Subtotal
-Pajak
-Diskon
-```
-
----
-
-# 72. Receipt Items
-
-Optional pada scanner versi pertama.
-
-Jika berhasil:
-
-```text
-Air Mineral Rp8.000
-Roti Rp15.500
-Sabun Rp22.000
-```
-
-Tetapi transaksi utama tetap menggunakan:
-
-```text
-total receipt
-```
-
----
-
-# 73. Auto Transaction Draft
-
-Contoh:
-
-```text
-Type:
-Expense
-
-Amount:
-87500
-
-Title:
-Indomaret
-
-Date:
-29 Aug 2026
-
-Category:
-Belanja
-
-Source:
-receipt_scan
-```
-
----
-
-# 74. Category Suggestion
-
-Aplikasi mencoba memberikan kategori otomatis.
-
-Urutan:
-
-```text
-Merchant mapping
 ↓
-Keyword matching
+Local parser
 ↓
-Previous user history
+Receipt review
 ↓
-Fallback category
-```
-
----
-
-# 75. Merchant Mapping
-
-Contoh:
-
-```text
-PERTAMINA
-→ Transportasi
-```
-
-```text
-INDOMARET
-→ Belanja
-```
-
-```text
-KFC
-→ Makanan & Minuman
-```
-
----
-
-# 76. Local Merchant Learning
-
-Jika user mengubah:
-
-```text
-Merchant: Indomaret
-
-Suggested:
-Belanja
-
-User:
-Makanan & Minuman
-```
-
-Aplikasi dapat menyimpan preferensi lokal:
-
-```text
-Indomaret
-→ Makanan & Minuman
-```
-
-untuk scan selanjutnya.
-
----
-
-# 77. Merchant Mapping Schema
-
-Future:
-
-```text
-merchant_mappings
-
-id
-merchant_pattern
-category_id
-usage_count
-created_at
-updated_at
-```
-
----
-
-# 78. Confidence
-
-Jika OCR mendukung confidence, gunakan.
-
-Contoh:
-
-```text
-Merchant 98%
-
-Date 91%
-
-Total 99%
-```
-
-Field confidence rendah diberi indicator.
-
----
-
-# 79. User Review Screen
-
-Screen wajib memperlihatkan:
-
-```text
-Foto struk
-
-Merchant
-
-Total
-
-Tanggal
-
-Kategori
-
-Catatan
-
-Detected items jika tersedia
-```
-
-Semua editable.
-
----
-
-# 80. Total Safety
-
-Nominal merupakan field paling kritis.
-
-Jika confidence rendah:
-
-```text
-Periksa nominal transaksi
-```
-
-harus terlihat jelas.
-
----
-
-# 81. Duplicate Receipt Detection
-
-Gunakan kombinasi:
-
-```text
-merchant
-date
-amount
-receipt_number
-```
-
-jika tersedia.
-
-Jika kemungkinan duplicate:
-
-```text
-Transaksi serupa sudah tersedia.
-```
-
-User dapat:
-
-```text
-Batal
-
-Tetap Simpan
-```
-
----
-
-# 82. Receipt Image Storage
-
-Default:
-
-```text
-Tidak disimpan permanen
-```
-
-Setelah transaksi disimpan, temporary image dibersihkan.
-
----
-
-# 83. Save Receipt Optional
-
-User dapat mengaktifkan:
-
-```text
-Simpan foto struk
-```
-
----
-
-# 84. Attachments Schema
-
-Jika image disimpan:
-
-```text
-attachments
-
-id
-uuid
-transaction_id
-
-type
-
-local_path
-
-mime_type
-
-created_at
-updated_at
-deleted_at
-```
-
-Type:
-
-```text
-receipt
-```
-
----
-
-# 85. Receipt Privacy
-
-Receipt dapat mengandung:
-
-```text
-nama
-alamat
-nomor transaksi
-nomor kartu parsial
-detail pembelian
-```
-
-Karena itu:
-
-* jangan upload otomatis;
-* jangan analytics raw text;
-* jangan log OCR result;
-* jangan simpan image tanpa persetujuan;
-* cloud OCR harus membutuhkan informed consent.
-
----
-
-# 86. Offline Scanner
-
-Target utama:
-
-```text
-scanner dapat bekerja offline
-```
-
-jika OCR provider memungkinkan.
-
----
-
-# 87. Scanner Failure
-
-Jika gagal membaca:
-
-```text
-Struk belum berhasil dibaca.
-```
-
-Berikan:
-
-```text
-Coba Lagi
-
-Isi Manual
-```
-
----
-
-# 88. Scanner Acceptance Criteria
-
-Scanner dianggap versi pertama selesai ketika:
-
-* camera dapat mengambil struk;
-* gallery dapat memilih gambar;
-* OCR berjalan;
-* merchant dicoba dideteksi;
-* tanggal dicoba dideteksi;
-* total dicoba dideteksi;
-* draft transaction dibuat;
-* category suggestion tersedia;
-* semua field editable;
-* user confirmation wajib;
-* transaction tersimpan sebagai `receipt_scan`;
-* kegagalan tidak menyebabkan crash.
-
----
-
-# 89. Scanner V2
-
-Setelah versi pertama:
-
-```text
-item extraction
-smart category
-multi category
-receipt archive
-search receipt
-warranty tracking
-AI parsing
-```
-
----
-
-# PHASE 5 — PLAY STORE READY
-
-## Goal
-
-Menyiapkan aplikasi untuk distribusi publik.
-
----
-
-# 90. Android App Identity
-
-Siapkan:
-
-```text
-App Name
-Application ID
-Adaptive icon
-Splash screen
-Version
-```
-
----
-
-# 91. Production Package
-
-Gunakan:
-
-```text
-.aab
-```
-
----
-
-# 92. App Signing
-
-Gunakan:
-
-```text
-Google Play App Signing
-```
-
----
-
-# 93. Permissions
-
-Gunakan minimum permission.
-
-Receipt camera meminta:
-
-```text
-camera
-```
-
-hanya ketika diperlukan.
-
-File selection menggunakan system picker.
-
----
-
-# 94. Privacy Policy
-
-Privacy Policy harus menjelaskan:
-
-* local financial data;
-* receipt scanning;
-* camera usage;
-* backup;
-* optional cloud;
-* analytics jika ada;
-* crash reporting jika ada.
-
----
-
-# 95. Play Store Data Safety
-
-Data Safety harus sesuai implementasi sebenarnya.
-
-Tidak boleh mengatakan:
-
-```text
-Data tidak dikirim
-```
-
-jika nanti cloud OCR memang digunakan.
-
----
-
-# 96. Crash Reporting
-
-Optional:
-
-```text
-Firebase Crashlytics
-```
-
-Jangan kirim:
-
-```text
-transaction amount
-title
-receipt text
-receipt image
-balance
-```
-
-ke crash logs.
-
----
-
-# 97. Analytics
-
-Jika digunakan, batasi:
-
-```text
-screen_open
-feature_used
-scan_started
-scan_completed
-```
-
-Jangan kirim financial values.
-
----
-
-# 98. Testing
-
-Sebelum production:
-
-```text
-Unit Test
-Database Test
-Widget Test
-Importer Test
-Scanner Test
-Migration Test
-```
-
----
-
-# 99. Play Store Testing Flow
-
-```text
-Internal Testing
+User correction
 ↓
-Closed Testing
-↓
-Production
+Explicit save
 ```
 
+Rules:
+
+- tidak boleh autosave;
+- semua hasil dapat diedit;
+- manual correction selalu authoritative;
+- scanner harus tetap lokal;
+- tidak boleh mengirim data ke AI/cloud;
+- jika tidak cukup stabil untuk release, boleh disembunyikan melalui feature flag tanpa menghapus code yang sudah bekerja.
+
+Receipt Scanner **bukan release blocker** untuk v1.0.
+
 ---
 
-# PHASE 6 — WALLET / ACCOUNT
+# 28. AI FEATURE FREEZE
 
----
-
-# 100. Accounts
-
-User dapat membuat:
+Saat ini jangan implementasikan atau mengembangkan:
 
 ```text
-Cash
-BCA
-Mandiri
-BRI
-GoPay
-DANA
-OVO
+AI receipt interpretation
+AI receipt parsing
+AI categorization
+AI finance assistant
+AI recommendations
+OpenAI integration
+Gemini integration
+Claude integration
+AI gateway/backend
+AI subscription backend
 ```
+
+Existing AI-ready abstraction boleh tetap ada hanya jika tidak menambah maintenance burden.
 
 ---
 
-# 101. Account Schema
+# 29. Performance Targets
+
+Finote harus nyaman digunakan dengan:
 
 ```text
-accounts
-
-id
-uuid
-name
-type
-initial_balance
-icon
-created_at
-updated_at
-deleted_at
+10,000+ transactions
 ```
-
----
-
-# 102. Transaction Account
-
-Tambahkan:
-
-```text
-account_id
-```
-
-ke transaction.
-
----
-
-# 103. Transfer
-
-Type:
-
-```text
-transfer
-```
-
-Contoh:
-
-```text
-BCA
-→
-GoPay
-```
-
-Transfer tidak dihitung sebagai expense.
-
----
-
-# PHASE 7 — BUDGET
-
----
-
-# 104. Budget
-
-Contoh:
-
-```text
-Makanan
-
-Rp1.500.000 / bulan
-```
-
----
-
-# 105. Budget Progress
-
-Contoh:
-
-```text
-Rp1.200.000 / Rp1.500.000
-
-80%
-```
-
----
-
-# 106. Budget Alert
-
-Optional.
-
-Contoh:
-
-```text
-Pengeluaran makanan sudah mencapai 80%.
-```
-
----
-
-# PHASE 8 — RECURRING TRANSACTIONS
-
----
-
-# 107. Recurring Income
-
-Contoh:
-
-```text
-Gaji
-
-Rp8.500.000
-
-Tanggal 1
-```
-
----
-
-# 108. Recurring Expense
-
-Contoh:
-
-```text
-Internet
-
-Rp350.000
-
-Tanggal 10
-```
-
----
-
-# 109. Default Behavior
-
-Default:
-
-```text
-Reminder only
-```
-
-Jangan otomatis membuat transaksi tanpa user setting.
-
----
-
-# PHASE 9 — CLOUD BACKUP
-
----
-
-# 110. Google Drive Backup
-
-Flow:
-
-```text
-SQLite
-↓
-Backup
-↓
-Encrypt
-↓
-Google Drive
-```
-
----
-
-# 111. Cloud Backup vs Sync
-
-Cloud backup:
-
-```text
-backup file
-```
-
-Cloud sync:
-
-```text
-record synchronization
-```
-
-Jangan mencampurkan kedua konsep.
-
----
-
-# 112. Backup Encryption
 
 Target:
 
-```text
-AES-256
-```
+- startup cepat;
+- query transaksi efisien;
+- report tidak memuat semua transaksi ke memory jika bisa diaggregate di database;
+- export ribuan transaksi tidak membuat UI freeze;
+- operasi berat menggunakan asynchronous processing bila sesuai.
 
 ---
 
-# 113. Automatic Backup
+# 30. Data Integrity Rules
 
-Options:
-
-```text
-Off
-Daily
-Weekly
-Monthly
-```
-
----
-
-# PHASE 10 — ADVANCED REPORTS
+1. Jangan gunakan float untuk uang.
+2. Soft delete untuk transaction.
+3. Database migrations harus preserve data.
+4. Backup/restore harus fail safely.
+5. Legacy import harus transactional.
+6. Itemized receipt save harus atomic bila digunakan.
+7. Export tidak boleh memodifikasi database.
+8. Manual transaction tetap source utama penggunaan harian.
 
 ---
 
-# 114. Cash Flow Chart
+# 31. Error Handling
 
-Income vs Expense.
-
----
-
-# 115. Expense Trend
-
-Monthly trend.
-
----
-
-# 116. Category Chart
-
-Breakdown berdasarkan kategori.
-
----
-
-# 117. Comparison
-
-Contoh:
-
-```text
-Agustus vs Juli
-```
-
----
-
-# 118. Merchant Analytics
-
-Setelah receipt scanner cukup banyak digunakan:
-
-```text
-Pengeluaran Indomaret
-
-Pengeluaran Pertamina
-
-Pengeluaran restoran
-```
-
----
-
-# PHASE 11 — CLOUD SYNC & MULTI DEVICE
-
----
-
-# 119. Optional User Account
-
-Core app tetap bisa digunakan tanpa login.
-
-Optional:
-
-```text
-Email
-
-Google
-```
-
----
-
-# 120. Cloud Architecture
-
-Future:
-
-```text
-Flutter
-↓
-SQLite / Drift
-↕
-Sync Engine
-↕
-Supabase
-↓
-PostgreSQL
-```
-
----
-
-# 121. Sync Metadata
-
-Records memiliki:
-
-```text
-uuid
-created_at
-updated_at
-deleted_at
-sync_status
-```
-
----
-
-# 122. Sync Status
-
-```text
-pending
-synced
-failed
-```
-
----
-
-# 123. Conflict
-
-Initial strategy:
-
-```text
-Last Modified Wins
-```
-
-Dapat diperbaiki setelah kebutuhan nyata ditemukan.
-
----
-
-# 124. Multi Device
-
-Support future:
-
-```text
-Phone
-Tablet
-Second Phone
-```
-
----
-
-# 125. Database Migration
-
-Setiap perubahan schema setelah aplikasi digunakan harus:
-
-```text
-increase schema version
-+
-provide migration
-```
-
-Jangan menghancurkan data lama.
-
----
-
-# 126. Database Indexes
-
-Minimal:
-
-```text
-transaction_date
-
-category_id
-
-type
-
-deleted_at
-
-legacy_source + legacy_id
-```
-
----
-
-# 127. Error Handling
-
-Jangan tampilkan technical error.
-
-Contoh buruk:
+Jangan tampilkan error teknis seperti:
 
 ```text
 SQLiteException
+PlatformException
+StackTrace
 ```
 
-Contoh benar:
-
-```text
-Gagal menyimpan transaksi.
-Silakan coba lagi.
-```
+Gunakan pesan Bahasa Indonesia yang mudah dipahami.
 
 ---
 
-# 128. Logging
+# 32. Logging
 
 Jangan log:
 
-```text
-nominal
-saldo
-receipt raw text
-receipt image
-transaction note
-access token
-```
+- nominal transaksi;
+- saldo;
+- note;
+- raw receipt OCR;
+- receipt image;
+- PIN;
+- token;
+- private backup content.
 
 ---
 
-# 129. Security
+# 33. Security
 
 Jangan commit:
 
@@ -2313,13 +1104,15 @@ keystore
 key.properties
 API secrets
 OAuth secrets
+private backup
+real receipt images
 ```
 
 ---
 
-# 130. Automated Testing
+# 34. Testing Minimum
 
-Minimum:
+Core tests:
 
 ```text
 currency formatter
@@ -2329,480 +1122,447 @@ expense
 transaction CRUD
 category CRUD
 soft delete
+search/filter
+report calculations
 database migration
 backup
 restore
-legacy mapping
+legacy import
 duplicate import
-receipt parser
-receipt amount detection
-receipt date detection
-receipt duplicate detection
+theme persistence
 ```
 
----
-
-# 131. Receipt Parser Tests
-
-Siapkan sample dummy receipt texts.
-
-Contoh:
+Export tests:
 
 ```text
-INDOMARET
-
-29/08/2026
-
-AIR MINERAL 8.000
-
-ROTI 15.500
-
-TOTAL 23.500
+export query consistency
+date range
+income/expense filtering
+Excel generation
+Text generation
+PDF generation
+empty dataset
+large dataset
+soft deleted exclusion
+report/export total consistency
 ```
 
-Expected:
+Receipt tests dipertahankan hanya jika scanner tetap aktif.
+
+---
+
+# 35. Revised Development Roadmap
+
+## Completed / Existing Foundation
 
 ```text
-merchant = Indomaret
-
-date = 29 Aug 2026
-
-total = 23500
+Phase 0   Foundation
+Phase 1   Core Finance
+Phase 2   Backup / Restore / Legacy Import
+Phase 3   Personal-Use Ready
+Phase 3.5 UI/UX + Theme Polish
+Phase 4A-G Local Receipt Scanner Development
 ```
 
----
-
-# 132. Real Receipt Privacy Testing
-
-Jangan commit struk asli yang mengandung data pribadi ke public repository.
-
-Gunakan:
+## Current Release-Focused Roadmap
 
 ```text
-dummy receipt
-synthetic receipt
-redacted receipt
+Phase 5A  Export Excel / Text / PDF
+Phase 5B  Core Finance Audit & Stabilization
+Phase 5C  Transaction UX & Workflow Hardening
+Phase 5D  Reports & Financial Accuracy
+Phase 5E  Backup / Restore / Legacy Migration Hardening
+Phase 5F  Performance & Reliability
+Phase 5G  Play Store Preparation
+Phase 5H  Closed Testing
+Phase 5I  Production Release v1.0
 ```
 
-untuk automated tests.
+No AI development during these phases.
 
 ---
 
-# 133. Performance
+# 36. PHASE 5A — EXPORT EXCEL / TEXT / PDF
 
-Target penggunaan:
+## Goal
+
+Menjadikan export sebagai salah satu fitur utama Finote sebelum release.
+
+Deliverables:
+
+- Export screen/action;
+- filter period;
+- Excel exporter;
+- Text exporter;
+- PDF exporter;
+- save/share;
+- automated tests;
+- large-data validation;
+- report/export consistency.
+
+Definition of Done:
+
+- ketiga format berfungsi offline;
+- angka konsisten dengan Reports;
+- analyzer/tests pass;
+- tidak ada broad storage permission.
+
+---
+
+# 37. PHASE 5B — CORE FINANCE AUDIT & STABILIZATION
+
+Audit:
+
+- CRUD;
+- categories;
+- dashboard;
+- search;
+- filters;
+- reports;
+- theme;
+- PIN;
+- startup;
+- database;
+- error handling.
+
+Tidak menambah major feature.
+
+---
+
+# 38. PHASE 5C — TRANSACTION UX & WORKFLOW HARDENING
+
+Pastikan common flow:
 
 ```text
-10.000+
-transactions
+Add
+→ Amount
+→ Category
+→ Save
 ```
 
-Scanner tidak boleh membekukan UI.
+cepat dan stabil.
 
-OCR dilakukan asynchronously.
+Audit:
 
----
-
-# 134. Version Roadmap
-
-## v0.1.0
-
-Foundation.
-
----
-
-## v0.2.0
-
-Category + transaction database.
+- keyboard;
+- autofocus;
+- IDR formatting;
+- category picker;
+- edit mode;
+- save state;
+- double-submit;
+- small Android screens.
 
 ---
 
-## v0.3.0
+# 39. PHASE 5D — REPORTS & FINANCIAL ACCURACY
 
-Transaction CRUD.
-
----
-
-## v0.4.0
-
-Dashboard + history.
-
----
-
-## v0.5.0
-
-Reports + search/filter.
-
-Pada titik ini aplikasi sudah dapat digunakan dasar.
-
----
-
-## v0.6.0
-
-Backup + restore.
-
----
-
-## v0.7.0
-
-Legacy database import.
-
----
-
-## v0.8.0
-
-Security + UX polish.
-
-Pada titik ini:
-
-> aplikasi sudah layak digunakan pribadi.
-
----
-
-## v0.9.0
-
-Receipt Scanner V1.
-
-Support:
+Pastikan:
 
 ```text
-camera
-gallery
-OCR
-merchant
-date
-total
-category suggestion
-transaction draft
-```
-
----
-
-## v0.10.0
-
-Receipt scanner polish + testing.
-
----
-
-## v0.11.0
-
-Play Store preparation.
-
----
-
-## v1.0.0
-
-First Play Store release.
-
-Fitur:
-
-```text
-Transaction CRUD
-
-Categories
-
 Dashboard
-
+=
+Transactions
+=
 Reports
-
-Search
-
-Filter
-
-Backup
-
-Restore
-
-Legacy Import
-
-PIN
-
-Theme
-
-Receipt Scanner
-
-Auto Transaction Draft
+=
+Exports
 ```
 
----
+untuk filter/periode yang sama.
 
-## v1.1.0
+Audit:
 
-Wallet.
-
----
-
-## v1.2.0
-
-Budget.
-
----
-
-## v1.3.0
-
-Recurring.
+- day;
+- week;
+- month;
+- custom;
+- income;
+- expense;
+- category breakdown;
+- soft delete.
 
 ---
 
-## v1.4.0
+# 40. PHASE 5E — BACKUP / RESTORE / LEGACY HARDENING
 
-Google Drive backup.
+Audit failure paths:
 
----
+- corrupt backup;
+- incompatible version;
+- failed restore;
+- safety backup;
+- invalid legacy DB;
+- duplicate import;
+- partial failure;
+- rollback.
 
-## v1.5.0
-
-Advanced reports.
-
----
-
-## v2.0.0
-
-Cloud sync / multi device.
-
----
-
-# 135. Personal-Use Milestone
-
-Milestone pertama yang benar-benar penting adalah:
-
-```text
-v0.8.0
-```
-
-Di sini aplikasi sudah bisa menggantikan aplikasi lama untuk penggunaan sehari-hari.
+Data loss adalah blocker release.
 
 ---
 
-# 136. Intelligent-Input Milestone
-
-Milestone berikutnya:
-
-```text
-v0.9.0
-```
-
-Di sini user tidak hanya dapat mengetik transaksi manual, tetapi sudah bisa:
-
-```text
-Foto struk
-↓
-Auto baca
-↓
-Review
-↓
-Save
-```
-
-Ini menjadi salah satu fitur unggulan aplikasi.
-
----
-
-# 137. First Public Release
+# 41. PHASE 5F — PERFORMANCE & RELIABILITY
 
 Target:
 
 ```text
-v1.0.0
+10,000+ transactions
 ```
 
-Receipt Scanner sudah termasuk.
+Test:
 
-Artinya versi pertama yang masuk Play Store bukan hanya clone sederhana, tetapi sudah memiliki differentiator nyata.
+- scrolling;
+- search;
+- filter;
+- report;
+- export;
+- backup;
+- startup.
 
----
-
-# 138. MVP Acceptance Criteria
-
-Core MVP selesai ketika:
-
-* transaksi dapat dibuat;
-* transaksi dapat diedit;
-* transaksi dapat dihapus;
-* kategori dapat dikelola;
-* dashboard benar;
-* laporan benar;
-* search bekerja;
-* filter bekerja;
-* data tetap tersimpan;
-* aplikasi bisa offline.
+Optimasi berdasarkan measurement, bukan asumsi.
 
 ---
 
-# 139. Personal-Use Acceptance Criteria
+# 42. PHASE 5G — PLAY STORE PREPARATION
 
-Layak digunakan pribadi ketika:
+Siapkan:
 
-* semua MVP selesai;
-* backup bekerja;
-* restore bekerja;
-* legacy import bekerja;
-* duplicate import aman;
-* PIN tersedia;
-* UX nyaman;
-* tidak ada data-loss bug.
+- final product name;
+- application ID;
+- version;
+- adaptive icon;
+- splash;
+- Android App Bundle;
+- signing;
+- privacy policy;
+- Data Safety;
+- permission audit;
+- release configuration.
 
----
-
-# 140. Receipt Scanner Acceptance Criteria
-
-Receipt Scanner V1 selesai ketika:
-
-* kamera bekerja;
-* gallery bekerja;
-* OCR berjalan;
-* merchant terdeteksi jika memungkinkan;
-* tanggal terdeteksi jika memungkinkan;
-* total terdeteksi;
-* transaction draft terbentuk;
-* category suggestion tersedia;
-* user dapat mengedit;
-* user wajib mengonfirmasi;
-* transaksi tersimpan;
-* source tercatat sebagai receipt_scan;
-* scanner tetap aman ketika OCR gagal.
-
----
-
-# 141. Play Store Acceptance Criteria
-
-Ready production ketika:
-
-* personal-use milestone stabil;
-* receipt scanner stabil;
-* migration diuji;
-* backup/restore diuji;
-* crash blocker tidak ada;
-* permission minimal;
-* privacy policy tersedia;
-* Data Safety akurat;
-* production signing siap;
-* `.aab` dapat dibangun;
-* closed testing dilakukan.
-
----
-
-# 142. Feature Priority
-
-Urutan implementasi:
+Build:
 
 ```text
-1. Database
-2. Categories
-3. Transaction CRUD
-4. Transaction History
+.aab
+```
+
+Gunakan Google Play App Signing.
+
+---
+
+# 43. PHASE 5H — CLOSED TESTING
+
+Flow:
+
+```text
+Internal Testing
+↓
+Closed Testing
+↓
+Collect Feedback
+↓
+Fix Blockers
+```
+
+Tidak menambah fitur baru selama closed testing kecuali benar-benar diperlukan.
+
+---
+
+# 44. PHASE 5I — PRODUCTION RELEASE v1.0
+
+First public release.
+
+Required core features:
+
+```text
+Transaction CRUD
+Categories
+Dashboard
+Transaction History
+Search
+Filter
+Reports
+Excel Export
+Text Export
+PDF Export
+Backup
+Restore
+Legacy Import
+Theme System
+Basic Security
+Offline Usage
+```
+
+Receipt Scanner:
+
+```text
+Optional for v1.0 depending on stability
+```
+
+AI:
+
+```text
+NOT INCLUDED
+```
+
+---
+
+# 45. v1.0 Acceptance Criteria
+
+Finote siap `v1.0.0` jika:
+
+- transaksi manual stabil;
+- financial totals akurat;
+- category management stabil;
+- dashboard konsisten;
+- search/filter benar;
+- reports benar;
+- **Excel export benar;**
+- **Text export benar;**
+- **PDF export benar;**
+- export sama dengan report;
+- backup bekerja;
+- restore bekerja;
+- legacy import bekerja;
+- duplicate import aman;
+- migrations aman;
+- theme Light/Dark/System bekerja;
+- tidak ada critical data-loss bug;
+- tidak ada blocker crash;
+- permission minimal;
+- privacy policy tersedia;
+- Data Safety akurat;
+- `.aab` berhasil dibuat;
+- closed testing selesai.
+
+---
+
+# 46. Feature Priority
+
+Prioritas produk saat ini:
+
+```text
+1. Data Integrity
+2. Transaction CRUD
+3. Categories
+4. Transaction Entry UX
 5. Dashboard
-6. Reports
-7. Search / Filter
-8. Backup
-9. Restore
-10. Legacy Import
-11. Security
-12. UX Polish
-13. Receipt Scanner
-14. Receipt Parser
-15. Auto Transaction Draft
-16. Play Store Preparation
-17. Wallet
-18. Budget
-19. Recurring
-20. Cloud Backup
-21. Cloud Sync
+6. Search / Filter
+7. Reports
+8. Export Excel
+9. Export Text
+10. Export PDF
+11. Backup
+12. Restore
+13. Legacy Import
+14. Theme / Basic Security
+15. Performance
+16. Play Store Release
+17. Real User Feedback
+```
+
+Receipt Scanner berada di luar release-critical core.
+
+AI tidak termasuk prioritas saat ini.
+
+---
+
+# 47. Post-v1 Roadmap
+
+Setelah aplikasi memiliki pengguna nyata, evaluasi berdasarkan feedback.
+
+Possible features:
+
+```text
+Wallet / Accounts
+Budget
+Recurring Transactions
+Cloud Backup
+Advanced Reports
+Cloud Sync
+```
+
+Jangan otomatis membangun semuanya.
+
+Setiap feature harus divalidasi.
+
+---
+
+# 48. AI Reconsideration Gate
+
+AI hanya boleh dibuka kembali jika:
+
+```text
+Play Store release ✓
+Real users ✓
+Validated AI demand ✓
+API/server budget ✓
+Privacy design ✓
+Premium/subscription strategy ✓
+```
+
+Baru pertimbangkan:
+
+```text
+AI Receipt Interpretation
+AI Categorization
+AI Financial Assistant
 ```
 
 ---
 
-# 143. Do Not Implement Too Early
-
-Jangan prioritaskan:
-
-```text
-Supabase
-
-Cloud sync
-
-Multi-device
-
-Advanced budget
-
-Complex analytics
-```
-
-sebelum:
-
-```text
-manual transaction
-
-backup
-
-legacy migration
-
-receipt scanner
-```
-
-stabil.
-
----
-
-# 144. Core Product Differentiators
-
-Aplikasi nantinya memiliki empat keunggulan utama:
+# 49. Core Product Differentiators
 
 ## Simple
 
-Cepat mencatat transaksi.
+Cepat mencatat transaksi manual.
 
 ## Offline First
 
-Tidak tergantung internet.
+Core finance tidak bergantung internet.
+
+## Data Ownership
+
+Backup, restore, legacy migration.
 
 ## Data Portability
 
-Backup, restore, import legacy.
+Excel, Text, dan PDF export menjadi fitur utama.
 
-## Smart Input
+## Reliable
 
-Scan struk menjadi draft transaksi otomatis.
+Kebenaran data lebih penting daripada banyak fitur.
 
 ---
 
-# 145. Long-Term Architecture
+# 50. Long-Term Architecture
 
 ```text
-                         Optional Cloud
-                              │
-             ┌────────────────┴────────────────┐
-             │                                 │
-      Google Drive                        Supabase
-         Backup                              Sync
-             ▲                                 ▲
-             │                                 │
-             │                                 │
-      ┌──────┴─────────────────────────────────┴─────┐
-      │                                            │
-      │               SQLite / Drift               │
-      │                                            │
-      └──────────────▲──────────────────▲───────────┘
-                     │                  │
-                     │                  │
-               Manual Input       Receipt Scanner
-                                        │
-                                        ▼
-                                      OCR
-                                        │
-                                        ▼
-                                Receipt Parser
-                                        │
-                                        ▼
-                               Transaction Draft
-                                        │
-                                        ▼
-                                  User Confirm
+                    OPTIONAL FUTURE SERVICES
+                           │
+                  ┌────────┴────────┐
+                  │                 │
+            Cloud Backup      Cloud Sync
+                  ▲                 ▲
+                  │                 │
+                  └────────┬────────┘
+                           │
+                    SQLite / Drift
+                           ▲
+          ┌────────────────┼────────────────┐
+          │                │                │
+     Manual Input        Reports          Export
+          │                │         ┌──────┼──────┐
+          │                │         │      │      │
+          │                │       Excel   Text    PDF
+          │                │
+          └──────────── Core Finance ───────┘
 ```
+
+Receipt Scanner tetap modul optional dan local-only jika dipertahankan.
 
 ---
 
-# 146. Golden Rules
+# 51. Golden Rules
 
 ## Rule 1
 
@@ -2810,48 +1570,56 @@ Never risk financial data.
 
 ## Rule 2
 
-Receipt OCR must never silently create a final transaction.
+Manual transaction workflow must always work offline.
 
 ## Rule 3
 
-Always let user review detected amount.
+Derived totals must come from source transactions.
 
 ## Rule 4
 
-Core functionality must remain available offline.
+Backup is for recovery; export is for portability/reporting. Do not mix them.
 
 ## Rule 5
 
-Cloud must stay optional.
+Excel, Text, dan PDF harus menghasilkan data yang konsisten.
 
 ## Rule 6
 
-Do not make the application complicated simply because more features become available.
+Cloud remains optional.
+
+## Rule 7
+
+AI remains deferred until validated.
+
+## Rule 8
+
+Do not make Finote complicated simply because more features are technically possible.
 
 ---
 
-# 147. Final Product Direction
+# 52. Final Product Direction
 
-Aplikasi bukan hanya pengganti aplikasi Catatan Keuangan lama.
+Target Finote sekarang adalah:
 
-Target produknya adalah:
+> **Modern Offline-First Personal Finance Tracker focused on reliable manual finance management and strong data portability.**
 
-> **Modern Offline-First Personal Finance Tracker with Smart Receipt Scanning**
-
-Dengan pengalaman utama:
+Pengalaman utama:
 
 ```text
-Catat manual dalam beberapa detik
-
-atau
-
-Foto struk
+Catat transaksi
 ↓
-Aplikasi membaca
+Lihat kondisi keuangan
 ↓
-Periksa
+Cari / filter
 ↓
-Simpan
+Lihat laporan
+↓
+Export Excel / Text / PDF
+↓
+Backup data dengan aman
 ```
 
-Pengguna tetap memiliki kendali penuh terhadap data dan aplikasi tetap dapat digunakan tanpa layanan cloud.
+Finote harus terlebih dahulu menjadi aplikasi keuangan manual yang matang dan dapat dipercaya.
+
+AI, cloud sync, dan fitur kompleks hanya dikembangkan setelah kebutuhan nyata pengguna membuktikannya.

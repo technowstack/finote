@@ -1,22 +1,25 @@
 # AGENTS.md
 
-# Project: Catatan Keuangan
+## Project: Finote
 
-## 1. Purpose
+Finote is a modern, offline-first personal finance application built with Flutter.
 
-This repository contains a modern, offline-first personal finance application built with Flutter.
+The application is intended to replace an older discontinued **Catatan Keuangan** application while preserving the ability to import its legacy SQLite database.
 
-The application is designed to replace an older discontinued "Catatan Keuangan" application while preserving the ability to import the legacy SQLite database.
+---
+
+# 1. Purpose
 
 Primary goals:
 
-* fast personal finance tracking;
-* offline-first usage;
-* reliable local data storage;
-* legacy database migration;
-* backup and restore;
-* Play Store readiness;
-* maintainable architecture for future cloud synchronization.
+- fast personal finance tracking;
+- offline-first usage;
+- reliable local financial data storage;
+- legacy database migration;
+- backup and restore;
+- Excel, Text, and PDF export;
+- Play Store readiness;
+- maintainable architecture for future optional features.
 
 The main product requirements are defined in:
 
@@ -24,84 +27,124 @@ The main product requirements are defined in:
 PRD.md
 ```
 
-Always read `PRD.md` before implementing a new feature.
+Development progress is tracked in:
+
+```text
+STATUS.md
+```
+
+Always read `PRD.md`, `STATUS.md`, and the relevant files under `.agents/skill/` before implementing a task.
 
 ---
 
-# 2. Development Rule
+# 2. Source of Truth
 
-Do NOT implement the entire PRD at once.
+Requirement priority:
 
-Development must be completed incrementally by phase and task.
+```text
+1. Latest explicit user instruction
+2. PRD.md
+3. AGENTS.md
+4. Relevant .agents/skill/ instructions
+5. Existing project architecture and conventions
+6. Reasonable engineering practices
+```
 
-Only implement the phase/task explicitly requested by the user.
+`STATUS.md` is a progress tracker, not a requirements document.
+
+If an older requirement conflicts with a newer explicit user decision, follow the newest instruction unless doing so would create a serious security or data-integrity risk.
+
+Do not modify `PRD.md` during normal feature implementation unless explicitly requested.
+
+---
+
+# 3. Development Rule
+
+Do **not** implement the entire PRD at once.
+
+Development must be incremental.
+
+Only implement the phase or task explicitly requested.
 
 If the current task is:
 
 ```text
-PHASE 1C
+Phase 5A — Export Excel / Text / PDF
 ```
 
 do not automatically implement:
 
 ```text
-PHASE 1D
-PHASE 2
-PHASE 3
+Phase 5B
+Phase 5C
+Phase 5D
 ```
 
-even if those features are described in `PRD.md`.
+even when those phases are already documented.
+
+Before coding:
+
+1. read `AGENTS.md`;
+2. read `PRD.md`;
+3. read `STATUS.md`;
+4. inspect relevant `.agents/skill/`;
+5. inspect the existing implementation;
+6. reuse working code where reasonable;
+7. implement only the requested scope.
 
 ---
 
-# 3. Priority
+# 4. Current Product Direction
 
-Development priority:
+Finote is currently focused on becoming a mature, reliable, fast, offline-first personal finance app suitable for public release.
 
-```text
-1. Stability
-2. Data integrity
-3. Simplicity
-4. User experience
-5. Performance
-6. New features
-```
+Current priorities:
 
-Never sacrifice data integrity just to simplify implementation.
+1. data integrity;
+2. financial correctness;
+3. stability;
+4. transaction entry speed;
+5. usability;
+6. offline reliability;
+7. export and data portability;
+8. backup and restore reliability;
+9. performance;
+10. Play Store readiness;
+11. real user feedback;
+12. new features.
 
-This application stores financial records.
+Never sacrifice financial correctness or user data for convenience.
 
-Data loss is considered a critical bug.
+Data loss is a **critical bug**.
 
 ---
 
-# 4. Core Product Principle
+# 5. Core Product Principle
 
-The application must remain simple.
+Finote must remain simple.
 
 Before adding complexity, ask:
 
-> Does this make recording personal finances easier?
+> Does this make personal finance tracking easier, safer, or more useful?
 
-Avoid turning the application into a complex accounting system.
-
-The application is primarily a:
+Finote is primarily a:
 
 ```text
 Personal Finance Tracker
 ```
 
-not:
+not a:
 
 ```text
-Accounting ERP
 Business Accounting System
+ERP
 Banking Application
+Investment Platform
 ```
 
 ---
 
-# 5. Technology Stack
+# 6. Technology Stack
 
 Use Flutter stable.
 
@@ -114,7 +157,7 @@ Riverpod
 GoRouter
 Drift
 SQLite
-Material 3
+Material Design 3
 ```
 
 Supporting packages may include:
@@ -125,53 +168,49 @@ json_serializable
 uuid
 intl
 path_provider
+file_picker
+share_plus
 ```
 
-Prefer stable and actively maintained packages.
+For Excel and PDF generation, select maintained packages that are compatible with the project's current Flutter/Dart versions.
 
-Do not add dependencies unless they provide clear value.
+Do not add dependencies without clear value.
 
 Avoid large dependencies for trivial functionality.
 
 ---
 
-# 6. Architecture
+# 7. Architecture
 
-Use:
+Use **Feature-First Architecture**.
 
-```text
-Feature-First Architecture
-```
-
-Preferred project structure:
+Preferred structure:
 
 ```text
 lib/
-
-app/
-  app.dart
-  router.dart
-
-core/
-  database/
-  errors/
-  extensions/
-  services/
-  theme/
-  utils/
-
-features/
-
-  dashboard/
-  transactions/
-  categories/
-  reports/
-  settings/
-  backup/
-  import/
+├── app/
+│   ├── app.dart
+│   └── router.dart
+├── core/
+│   ├── database/
+│   ├── errors/
+│   ├── extensions/
+│   ├── services/
+│   ├── theme/
+│   └── utils/
+└── features/
+    ├── dashboard/
+    ├── transactions/
+    ├── categories/
+    ├── reports/
+    ├── export/
+    ├── settings/
+    ├── backup/
+    ├── legacy_import/
+    └── receipt_scanner/
 ```
 
-Feature modules may contain:
+A feature may contain:
 
 ```text
 data/
@@ -179,26 +218,23 @@ domain/
 presentation/
 ```
 
-Avoid excessive architecture abstraction.
+Do not force unnecessary layers.
 
-Prefer:
+Prefer architecture that is:
 
-```text
-maintainable
-readable
-testable
-simple
-```
-
-over unnecessary architectural complexity.
+- readable;
+- maintainable;
+- testable;
+- consistent;
+- simple.
 
 ---
 
-# 7. Offline-First Requirement
+# 8. Offline-First Requirement
 
-The application must work without an internet connection.
+Core functionality must work without internet.
 
-Core features must NEVER require:
+Core features must never require:
 
 ```text
 Supabase
@@ -207,25 +243,30 @@ Google Drive
 Dropbox
 Internet connection
 User account
+AI service
 ```
 
-Core local functionality includes:
+Core offline functionality includes:
 
 ```text
 transactions
 categories
 dashboard
 reports
+search
+filters
+export
 settings
 backup
 restore
+legacy import
 ```
 
-Cloud functionality will be optional and implemented in future phases.
+Cloud functionality is optional and belongs to future phases.
 
 ---
 
-# 8. Local Database
+# 9. Local Database
 
 Use:
 
@@ -233,29 +274,28 @@ Use:
 Drift + SQLite
 ```
 
-SQLite is the source of truth for local application data.
+SQLite is the local source of truth.
 
-Do not use shared preferences as transaction storage.
+Do not use SharedPreferences as financial-record storage.
 
-Shared preferences may only be used for simple non-critical preferences where appropriate.
+SharedPreferences or equivalent may only be used for simple non-critical preferences when appropriate.
 
 ---
 
-# 9. Database Design Rules
+# 10. Money Rules
 
-Financial values must NEVER use floating point types.
+Financial values must never use floating-point storage.
 
 Incorrect:
 
-```text
-double amount
-float amount
+```dart
+double amount;
 ```
 
-Correct:
+Correct conceptually:
 
-```text
-int amount
+```dart
+int amount;
 ```
 
 Example:
@@ -270,54 +310,13 @@ stored as:
 25000
 ```
 
----
+Never store formatted currency strings as the source value.
 
-# 10. UUID
-
-Entities intended for future synchronization must have UUIDs.
-
-Example:
-
-```text
-id
-uuid
-```
-
-`id` may be the local SQLite primary key.
-
-`uuid` is the globally unique identifier.
-
-Generate UUID when a record is created.
+Format money only in the presentation/export layer as appropriate.
 
 ---
 
-# 11. Soft Delete
-
-Important entities should support soft delete.
-
-Use:
-
-```text
-deleted_at
-```
-
-Do not immediately physically delete transaction records.
-
-Example:
-
-```text
-deleted_at = null
-```
-
-means active.
-
-A timestamp means deleted.
-
-This is required because future cloud synchronization needs to know which records were deleted.
-
----
-
-# 12. Transaction Schema
+# 11. Transaction Schema Rules
 
 Core transaction entity should support at least:
 
@@ -330,6 +329,7 @@ amount
 title
 note
 transaction_date
+source
 legacy_source
 legacy_id
 created_at
@@ -337,37 +337,55 @@ updated_at
 deleted_at
 ```
 
-Do not add wallet/account dependencies during the initial transaction phase unless the PRD phase explicitly requires them.
-
----
-
-# 13. Transaction Types
-
-Use clear domain values:
+Transaction types:
 
 ```text
 income
 expense
 ```
 
-Do not expose legacy numeric values such as:
+Do not expose legacy numeric values such as `0` and `1` in application business logic.
+
+---
+
+# 12. UUID
+
+Entities intended to survive migrations or future synchronization should use UUIDs.
 
 ```text
-0
-1
+id   = local SQLite primary key
+uuid = globally unique identifier
 ```
 
-inside application business logic.
+Generate UUID when the record is created.
 
-Legacy values should only exist inside the legacy import adapter.
+---
+
+# 13. Soft Delete
+
+Important financial records should use:
+
+```text
+deleted_at
+```
+
+`deleted_at = null` means active.
+
+Do not physically delete transactions during normal delete operations unless explicitly required by a later product decision.
+
+Soft-deleted transactions must not appear in:
+
+- dashboard totals;
+- reports;
+- search results;
+- exports;
+- active transaction history.
 
 ---
 
 # 14. Balance Calculation
 
-Never store the primary application balance manually.
-
-Balance must be calculated from transactions.
+Never store the application's primary balance as an independently edited value.
 
 Formula:
 
@@ -375,15 +393,13 @@ Formula:
 balance = total income - total expense
 ```
 
-This avoids inconsistent duplicated financial state.
+Derived totals must come from active transactions.
 
 ---
 
 # 15. Reports
 
-Reports must derive data directly from transaction records.
-
-Do not create unnecessary summary tables during the MVP.
+Reports must derive data from transaction records.
 
 Examples:
 
@@ -392,35 +408,39 @@ daily total
 weekly total
 monthly total
 category total
+custom-period total
 ```
 
-should be calculated using queries.
+Avoid summary tables unless measurements later prove they are necessary.
 
-Optimization may be introduced later only if measurements show that it is necessary.
+For the same filter and period:
+
+```text
+Dashboard
+Reports
+Transaction History
+Exports
+```
+
+must reconcile.
+
+A mismatch in financial totals is a release-critical bug.
 
 ---
 
 # 16. Date Handling
 
-Be careful with financial transaction dates.
+Transaction dates are financial calendar dates.
 
-Timestamp metadata may use UTC.
-
-However, a local transaction date must not unexpectedly shift days because of timezone conversion.
-
-Example:
+A transaction entered as:
 
 ```text
-27 Aug 2026
+30 Aug 2026
 ```
 
-must remain:
+must not unexpectedly shift to another day because of timezone conversion.
 
-```text
-27 Aug 2026
-```
-
-when the timezone changes.
+Metadata timestamps may use UTC where appropriate, but transaction-date semantics must remain stable.
 
 ---
 
@@ -432,16 +452,14 @@ Initial currency:
 IDR
 ```
 
-Display examples:
+Examples:
 
 ```text
 Rp10.000
 Rp1.250.000
 ```
 
-Never store formatted currency strings in the database.
-
-Store numeric values and format them only in presentation code.
+Store numeric values and format only for display/export.
 
 ---
 
@@ -453,9 +471,9 @@ Use:
 Riverpod
 ```
 
-State should react automatically to database changes when practical.
+Prefer reactive updates using Drift streams/providers where appropriate.
 
-Avoid manually refreshing entire screens after each CRUD operation if Drift streams/providers can update the UI reactively.
+Avoid manually refreshing whole screens when reactive state can update them safely.
 
 ---
 
@@ -467,71 +485,30 @@ Use:
 GoRouter
 ```
 
-Keep route definitions centralized.
+Keep routing centralized.
 
-Avoid navigation logic scattered throughout business logic.
-
----
-
-# 20. UI
-
-Use:
-
-```text
-Material Design 3
-```
-
-The design should feel:
-
-```text
-modern
-simple
-clean
-comfortable
-fast
-```
-
-Do not copy the exact visual appearance of the legacy application.
-
-The legacy application is only a UX/functionality reference.
+Do not mix navigation logic deeply into repositories or domain services.
 
 ---
 
-# 21. Main Navigation
+# 20. UI and UX
 
-Initial navigation should remain simple.
+Use Material Design 3.
 
-Recommended:
+The UI should feel:
 
-```text
-Home
-Transactions
-Reports
-Settings
-```
+- modern;
+- simple;
+- clean;
+- comfortable;
+- fast.
 
-Use a Floating Action Button for:
-
-```text
-Add Transaction
-```
-
-where appropriate.
-
----
-
-# 22. Transaction UX
-
-Creating a transaction is the most important interaction in the application.
-
-Prioritize speed.
-
-Ideal flow:
+Primary manual transaction flow:
 
 ```text
 Open app
 ↓
-Tap +
+Tap Add Transaction
 ↓
 Enter amount
 ↓
@@ -547,54 +524,84 @@ type = expense
 date = today
 ```
 
-Optional fields should not prevent saving.
+Optional fields must not make common transaction entry unnecessarily slow.
+
+Support:
+
+```text
+ThemeMode.system
+ThemeMode.light
+ThemeMode.dark
+```
+
+Theme preference must persist.
 
 ---
 
-# 23. Error Handling
+# 21. Error Handling
 
-Never show technical errors directly to the user.
+Never show raw technical errors to users.
 
-Incorrect:
+Bad:
 
 ```text
 SQLiteException: constraint failed
 ```
 
-Correct:
+Good:
 
 ```text
 Gagal menyimpan transaksi.
 Silakan coba lagi.
 ```
 
-Technical information may be written to developer logs.
-
-Never log sensitive financial information unnecessarily.
+Technical information may be logged in development, but sensitive financial information must not be included.
 
 ---
 
-# 24. Data Integrity
+# 22. Logging
 
-Operations involving multiple dependent database changes must use transactions.
-
-Example:
+Do not log:
 
 ```text
-create financial record
-create sync queue record
-update related metadata
+transaction title
+transaction note
+amount
+balance
+receipt OCR text
+receipt image
+backup contents
+PIN
+access token
+API key
 ```
 
-must succeed or fail atomically when applicable.
+Use privacy-safe structural logs where necessary.
 
 ---
 
-# 25. Legacy Database Import
+# 23. Data Integrity
 
-The application must eventually support importing the legacy Catatan Keuangan SQLite database.
+Operations involving multiple dependent database changes should be atomic.
 
-Legacy database examples may contain tables:
+Use database transactions where appropriate.
+
+Examples:
+
+- legacy import;
+- multi-record receipt saves;
+- migrations;
+- operations that must succeed or fail together.
+
+When uncertain, fail safely rather than performing destructive recovery.
+
+---
+
+# 24. Legacy Database Import
+
+The application supports importing the legacy Catatan Keuangan SQLite database.
+
+Known legacy tables include:
 
 ```text
 Transaction
@@ -604,102 +611,46 @@ TransactionSubType
 AppSetting
 ```
 
-Do not modify legacy databases.
-
-Legacy database files must be treated as:
+Legacy databases must be treated as:
 
 ```text
 READ ONLY
 ```
 
----
+Never modify the selected legacy database.
 
-# 26. Legacy Mapping
-
-Legacy transaction type:
+Legacy type mapping:
 
 ```text
 0 = expense
 1 = income
 ```
 
-Convert immediately into the application's internal enum/domain representation.
+Convert these values immediately into Finote's internal domain representation.
 
-Example:
+`TransactionDay` must not be used as the source of truth.
 
-```text
-0
-↓
-TransactionType.expense
-```
+Reports must be recalculated from imported transactions.
 
 ---
 
-# 27. Legacy Categories
+# 25. Legacy Import Safety
 
-Legacy categories may be stored through:
-
-```text
-Transaction.subType
-```
-
-with category definitions from:
-
-```text
-TransactionSubType
-```
-
-Importer must map legacy categories into the new category table.
-
----
-
-# 28. Legacy TransactionDay
-
-Do NOT depend on:
-
-```text
-TransactionDay
-```
-
-as the source of truth.
-
-Reports should be recalculated using imported transactions.
-
-Legacy summary/cache tables may contain inconsistencies.
-
----
-
-# 29. Legacy Dates
-
-Legacy timestamps may use Unix timestamp milliseconds.
-
-Example:
-
-```text
-1625500800000
-```
-
-Importer must correctly detect/convert legacy dates.
-
-Do not assume seconds when the schema clearly stores milliseconds.
-
----
-
-# 30. Legacy Import Safety
-
-Import process must include:
+Flow:
 
 ```text
 Validate
+↓
 Preview
+↓
 Confirm
+↓
 Import
+↓
 Verify
 ```
 
-Do not immediately import after a file is selected.
-
-User should first see information such as:
+Preview should include, where available:
 
 ```text
 transaction count
@@ -709,160 +660,402 @@ income total
 expense total
 ```
 
----
-
-# 31. Duplicate Protection
-
-Legacy imports must be repeat-safe.
-
-Recommended metadata:
+Use:
 
 ```text
 legacy_source
 legacy_id
 ```
 
-Example:
+to make import repeat-safe.
+
+Run import inside a SQLite transaction.
+
+If an unrecoverable error occurs:
 
 ```text
-legacy_source = catatan_keuangan_old
-legacy_id = 12345
+ROLLBACK
 ```
 
-Prevent importing the same legacy record twice.
+Do not leave a partially imported dataset.
 
 ---
 
-# 32. Import Transaction Safety
+# 26. Backup
 
-Run legacy import inside a database transaction.
+Backup is for **recovery**, not reporting.
 
-If an unrecoverable import error occurs:
+Preferred structure:
 
 ```text
-rollback
+finote_backup_YYYY-MM-DD_HH-mm.zip
+├── database.sqlite
+└── manifest.json
 ```
 
-Do not leave the application's database partially migrated.
+Backup format must include version metadata.
 
 ---
 
-# 33. Legacy Test Files
-
-Real user backup databases must NEVER be committed into a public repository.
-
-Recommended:
-
-```text
-dev_assets/legacy/
-```
-
-and `.gitignore`:
-
-```gitignore
-dev_assets/legacy/*.db
-dev_assets/legacy/*.sqlite
-dev_assets/legacy/*.sqlite3
-```
-
-Test databases containing fabricated/dummy data may be committed when safe.
-
----
-
-# 34. Backup
-
-Local backup is more important than cloud sync.
-
-Backup implementation should eventually support:
-
-```text
-database.sqlite
-manifest.json
-```
-
-inside a versioned backup format.
-
-Never create a backup format without version metadata.
-
----
-
-# 35. Restore
+# 27. Restore
 
 Before destructive restore:
 
 1. validate backup;
-2. validate version compatibility;
+2. validate compatibility;
 3. create safety backup of current data;
-4. ask for confirmation;
-5. restore;
-6. verify.
+4. show preview;
+5. ask for confirmation;
+6. restore;
+7. verify.
 
-Avoid destructive database replacement without recovery options.
+Never replace the current database destructively without a recovery path.
 
 ---
 
-# 36. Cloud
+# 28. Export Is a Core Release Feature
 
-Do not implement cloud synchronization during MVP unless explicitly requested.
+Export is required before Finote v1.0.
 
-Future architecture may use:
+Required formats:
 
 ```text
-SQLite
-↕
-Sync Engine
-↕
-Supabase/PostgreSQL
+Excel (.xlsx)
+Text (.txt)
+PDF (.pdf)
 ```
 
-SQLite remains the offline local database.
-
----
-
-# 37. Google Drive / Dropbox
-
-Cloud file providers should initially be considered for:
+Export is separate from backup:
 
 ```text
-backup
-restore
+Backup = recovery / restoration
+Export = reporting / portability / sharing
 ```
 
-not realtime database synchronization.
-
-Do not confuse cloud backup with multi-device sync.
+Do not use backup archives as report exports.
 
 ---
 
-# 38. Authentication
+# 29. Export Scope
 
-Core application must not require authentication.
-
-Future cloud features may introduce optional accounts.
-
-Users must still be able to use the application locally without creating an account.
-
----
-
-# 39. Security
-
-Never store:
+Export should support:
 
 ```text
-passwords
-PIN
-tokens
-OAuth secrets
-API keys
+All transactions
+Today
+This week
+This month
+Custom date range
 ```
 
-as plaintext in source code or ordinary SQLite tables.
+When supported by the current Reports filters:
 
-Use secure platform storage where appropriate.
+```text
+Income only
+Expense only
+Category
+```
+
+If export is launched from a filtered Reports screen, reuse the active filter where reasonable.
 
 ---
 
-# 40. Secrets
+# 30. Export Architecture
+
+Prefer a shared pipeline:
+
+```text
+ReportFilter
+↓
+Export Query / Repository
+↓
+ExportDocumentModel
+↓
+Exporter
+   ├── ExcelExporter
+   ├── TextExporter
+   └── PdfExporter
+```
+
+Exact naming may follow existing conventions.
+
+Rules:
+
+- all formats must use the same resolved financial dataset;
+- do not duplicate report calculations in each exporter;
+- export must ignore soft-deleted transactions;
+- export must not mutate database records;
+- export must work offline.
+
+---
+
+# 31. Excel Export Rules
+
+Preferred file name:
+
+```text
+finote_report_YYYY-MM-DD.xlsx
+```
+
+Minimum workbook:
+
+```text
+Ringkasan
+Transaksi
+```
+
+`Ringkasan`:
+
+```text
+Periode
+Total pemasukan
+Total pengeluaran
+Saldo
+Jumlah transaksi
+Generated at
+```
+
+`Transaksi`:
+
+```text
+No
+Tanggal
+Tipe
+Kategori
+Judul
+Catatan
+Nominal
+```
+
+Rules:
+
+- monetary cells should be numeric when supported;
+- transaction dates must be valid spreadsheet dates where practical;
+- output must open correctly in common spreadsheet applications;
+- do not export soft-deleted records.
+
+---
+
+# 32. Text Export Rules
+
+Preferred file name:
+
+```text
+finote_report_YYYY-MM-DD.txt
+```
+
+Use UTF-8.
+
+Output must be human-readable.
+
+Minimum content:
+
+```text
+Periode
+Total pemasukan
+Total pengeluaran
+Saldo
+Transaction details
+```
+
+Do not make Text export a raw database dump.
+
+---
+
+# 33. PDF Export Rules
+
+Preferred file name:
+
+```text
+finote_report_YYYY-MM-DD.pdf
+```
+
+Minimum content:
+
+```text
+Finote
+Laporan Keuangan
+Periode
+Total pemasukan
+Total pengeluaran
+Saldo
+Jumlah transaksi
+Detail transaksi
+```
+
+Requirements:
+
+- support multi-page output;
+- avoid clipped values;
+- use readable layout;
+- work offline;
+- remain print-friendly.
+
+---
+
+# 34. Export Storage Rules
+
+Use modern Android system file/document APIs.
+
+Users should be able to:
+
+- save exported files;
+- choose destination where supported;
+- open files;
+- share files where appropriate.
+
+Follow least privilege.
+
+Do not add:
+
+```text
+MANAGE_EXTERNAL_STORAGE
+```
+
+solely for export.
+
+---
+
+# 35. Export Accuracy
+
+For the same period/filter, these must match:
+
+```text
+Reports
+Excel
+Text
+PDF
+```
+
+Example:
+
+```text
+Income  = Rp8.500.000
+Expense = Rp4.350.000
+Balance = Rp4.150.000
+```
+
+The same values must appear across all supported export formats.
+
+Any inconsistency is a release-critical bug.
+
+---
+
+# 36. Export Testing
+
+Meaningful tests should cover:
+
+- date range;
+- income-only filter;
+- expense-only filter;
+- category filter where supported;
+- soft-delete exclusion;
+- empty dataset;
+- large dataset;
+- Excel generation;
+- Text generation;
+- PDF generation;
+- Reports/export consistency.
+
+Do not add brittle pixel-perfect tests unless there is a clear need.
+
+---
+
+# 37. Export Definition of Done
+
+Phase 5A is complete only when:
+
+- Excel export works;
+- Text export works;
+- PDF export works;
+- period filters work;
+- export totals match Reports;
+- soft-deleted records are excluded;
+- empty data is handled safely;
+- large datasets do not crash the app;
+- export works offline;
+- output can be saved/shared using appropriate Android APIs;
+- broad storage permission is not introduced;
+- relevant tests pass;
+- `flutter analyze` passes.
+
+---
+
+# 38. Receipt Scanner Status
+
+Receipt Scanner has already been developed locally through Phase 4G.
+
+Current rules:
+
+- scanner remains local-only;
+- OCR creates a draft, never a final automatic transaction;
+- explicit user confirmation is mandatory;
+- parsed financial values remain editable;
+- manual corrections are authoritative;
+- do not upload receipt images or OCR text;
+- do not log receipt contents;
+- do not expand scanner scope during the release-focused roadmap.
+
+Receipt Scanner is **not release-critical for v1.0**.
+
+If real-device testing shows that it is not sufficiently reliable:
+
+- keep the working implementation;
+- stop expanding it;
+- hide it behind a feature flag or experimental setting if necessary;
+- do not delay Finote v1.0 because of OCR accuracy.
+
+---
+
+# 39. AI Feature Freeze
+
+AI-related functionality is currently out of scope.
+
+Do **not** implement or expand:
+
+```text
+AI Receipt Scan
+AI OCR Interpretation
+AI Receipt Parsing
+AI Categorization
+AI Financial Assistant
+AI Financial Recommendations
+LLM Integration
+OpenAI Integration
+Gemini Integration
+Claude Integration
+AI Gateway / Backend
+AI Subscription Infrastructure
+```
+
+AI may only be reconsidered after Finote:
+
+- is released publicly on Google Play;
+- has real active users;
+- has validated user demand;
+- has sufficient server/API budget;
+- has an appropriate privacy design;
+- has a defined monetization or premium strategy.
+
+Existing AI-ready abstractions may remain only if they do not create unnecessary maintenance complexity.
+
+Do not expand them without explicit user instruction.
+
+---
+
+# 40. Cloud
+
+Do not implement cloud synchronization during the release-focused roadmap unless explicitly requested.
+
+Core Finote must remain fully usable without an account.
+
+Cloud backup and multi-device sync are separate concepts and must not be conflated.
+
+---
+
+# 41. Security
+
+Never store secrets in source code or ordinary SQLite tables.
 
 Never commit:
 
@@ -873,28 +1066,11 @@ key.properties
 service account keys
 API secrets
 OAuth credentials
+private backup files
+real receipt images containing private data
 ```
 
-Ensure relevant files are included in `.gitignore`.
-
----
-
-# 41. Logging
-
-Do not log sensitive transaction contents.
-
-Avoid logging:
-
-```text
-transaction title
-notes
-amount
-account balance
-backup contents
-access tokens
-```
-
-unless strictly required for local debugging and explicitly protected.
+Use secure platform storage where appropriate.
 
 ---
 
@@ -902,34 +1078,27 @@ unless strictly required for local debugging and explicitly protected.
 
 Follow least privilege.
 
-Do not request broad storage permissions unnecessarily.
+Prefer Android Storage Access Framework/system picker for user-selected files.
 
-Prefer Android Storage Access Framework for user-selected files.
+Avoid broad storage permissions.
 
-Avoid:
-
-```text
-MANAGE_EXTERNAL_STORAGE
-```
-
-unless there is an unavoidable and justified requirement.
+Request camera permission only when the user actually chooses camera functionality.
 
 ---
 
 # 43. Play Store Compatibility
 
-All features must be designed with Play Store distribution in mind.
-
-Avoid libraries or APIs likely to violate Play Store policies.
+All features must be compatible with Play Store distribution.
 
 Before release, verify current requirements for:
 
 ```text
 targetSdk
-privacy
 permissions
-data safety
-background services
+privacy policy
+Data Safety
+background behavior
+production signing
 ```
 
 Do not assume old Play Store requirements are still valid.
@@ -938,61 +1107,62 @@ Do not assume old Play Store requirements are still valid.
 
 # 44. Testing
 
-Every critical feature should be testable.
-
-Minimum important tests:
+Important tests include:
 
 ```text
 currency formatting
 balance calculation
 income calculation
 expense calculation
-category operations
+category CRUD
 transaction CRUD
+soft delete
+search
+filters
+report calculations
+Excel export
+Text export
+PDF export
+export/report consistency
 database migrations
 legacy mapping
 duplicate import prevention
 backup validation
 restore validation
+theme persistence
 ```
+
+Only keep receipt-specific tests required by the scanner implementation that remains active.
 
 ---
 
 # 45. Code Quality
 
-Before considering a task complete, run:
-
-```bash
-flutter analyze
-```
-
-and:
-
-```bash
-flutter test
-```
-
-Fix errors introduced by the implementation.
-
-Do not suppress analyzer rules merely to hide legitimate errors.
-
----
-
-# 46. Formatting
-
-Run:
+Before considering a significant task complete:
 
 ```bash
 dart format .
+flutter analyze
+flutter test
 ```
 
-before completing significant code changes.
+If generated code is involved:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
+
+Then rerun analyze/tests when appropriate.
+
+Do not claim a command passed unless it was actually executed.
+
+Do not suppress analyzer rules just to hide legitimate problems.
 
 ---
 
-# 47. Generated Code
+# 46. Generated Code
 
-If using packages such as:
+Do not manually modify generated files produced by packages such as:
 
 ```text
 freezed
@@ -1000,74 +1170,67 @@ json_serializable
 drift
 ```
 
-regenerate code when required.
-
-Example:
-
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-
-Do not manually modify generated source files.
+Regenerate instead.
 
 ---
 
-# 48. Database Migration
+# 47. Database Migration
 
-Never modify an already released database schema without increasing the schema version and providing a migration.
+Never make an incompatible schema change without:
+
+```text
+schema version increment
++
+migration
+```
 
 Database updates must preserve existing user data.
 
-A Play Store application may be upgraded over years.
-
-Database migration is therefore a first-class requirement.
-
----
-
-# 49. Migration Testing
-
-When changing database schema, test:
+When changing schema, test:
 
 ```text
 fresh install
 previous version → new version
-database with existing transactions
+database containing existing transactions
 ```
 
 Never assume only fresh installations exist.
 
 ---
 
-# 50. Performance
+# 48. Performance
 
-Do not prematurely optimize.
-
-However, database queries should be designed to support at least:
+Design for at least:
 
 ```text
 10,000+ transactions
 ```
 
-without obvious UI slowdown.
+Do not load the entire transaction database into memory when a filtered/aggregated query can do the work efficiently.
 
-Index commonly queried columns such as:
+Index frequently queried columns when justified.
+
+Potential examples:
 
 ```text
 transaction_date
 category_id
 type
 deleted_at
+legacy_source + legacy_id
 ```
 
-when appropriate.
+Do not add indexes blindly.
+
+Measure first where practical.
 
 ---
 
-# 51. Repository Pattern
+# 49. Repository Pattern
 
-Repositories may be used to isolate application features from database implementation.
+Repositories may be used to isolate features from persistence implementation.
 
-Example:
+Examples:
 
 ```text
 TransactionRepository
@@ -1076,23 +1239,24 @@ CategoryRepository
 
 Keep repositories focused.
 
-Do not create unnecessary layers that simply forward every method without adding abstraction value.
+Do not create unnecessary pass-through layers.
 
 ---
 
-# 52. Naming
+# 50. Naming
 
 Use English for:
 
 ```text
-source code
 class names
 methods
 variables
+source files
 database tables
+domain models
 ```
 
-Use Indonesian for user-facing text in the initial application.
+Use Bahasa Indonesia for initial user-facing text.
 
 Example:
 
@@ -1110,40 +1274,34 @@ Tambah Transaksi
 
 ---
 
-# 53. Comments
+# 51. Comments
 
 Do not add comments that merely repeat the code.
 
-Add comments only for:
+Comments are useful for:
 
-```text
-non-obvious business rules
-migration decisions
-legacy compatibility
-complex calculations
-platform-specific workarounds
-```
+- non-obvious financial rules;
+- migration decisions;
+- legacy compatibility;
+- complex calculations;
+- platform-specific workarounds.
 
 ---
 
-# 54. Git Changes
+# 52. Git Changes
 
-Keep each implementation focused.
+Keep implementation changes focused.
 
-Avoid mixing:
+Avoid mixing unrelated:
 
 ```text
-feature implementation
+feature work
 massive refactoring
 dependency upgrades
-formatting unrelated files
+formatting of unrelated files
 ```
 
-in the same change unless required.
-
----
-
-# 55. Commit Convention
+unless genuinely required.
 
 Recommended Conventional Commits:
 
@@ -1159,62 +1317,40 @@ chore:
 Examples:
 
 ```text
-chore: initialize Flutter project foundation
-feat: add local transaction database
-feat: implement category management
-feat: implement transaction CRUD
-feat: add financial dashboard
-feat: add monthly reports
-feat: add legacy database importer
-fix: prevent duplicate legacy transactions
+feat: add Excel report export
+feat: add PDF and text exports
+fix: keep report and export totals consistent
+test: add export regression coverage
 ```
 
 ---
 
-# 56. Task Completion Response
+# 53. Do Not Rewrite Working Code Without Reason
 
-After completing a requested implementation, report:
+Before replacing an existing implementation:
 
-1. what was implemented;
-2. important files created/changed;
-3. database/schema changes;
-4. tests added;
-5. commands executed;
-6. whether `flutter analyze` passed;
-7. whether `flutter test` passed;
-8. any remaining limitation;
-9. recommended next task from `PRD.md`.
-
-Do not claim commands passed unless they were actually executed.
-
----
-
-# 57. Do Not Rewrite Existing Working Code Without Reason
-
-Before replacing existing architecture or implementation:
-
-1. inspect existing code;
+1. inspect it;
 2. understand why it exists;
-3. reuse it if reasonable;
+3. reuse it when reasonable;
 4. refactor only when necessary.
 
-Avoid recreating services, repositories, providers, utilities, or widgets that already solve the problem.
+Do not recreate repositories, services, providers, utilities, or widgets that already solve the problem adequately.
 
 ---
 
-# 58. Preserve User Data
+# 54. Preserve User Data
 
-Any operation touching:
+Any operation involving:
 
 ```text
-database migrations
+database migration
 restore
 legacy import
 delete
 backup
 ```
 
-must prioritize preserving user data.
+must prioritize data preservation.
 
 When uncertain:
 
@@ -1226,39 +1362,220 @@ rather than performing destructive recovery automatically.
 
 ---
 
-# 59. Phase Boundaries
+# 55. Current Release Roadmap
 
-Follow the development roadmap in `PRD.md`.
-
-Recommended order:
+Completed/existing foundation:
 
 ```text
-PHASE 0
-Foundation
-
-PHASE 1
-Core MVP
-
-PHASE 2
-Backup / Restore / Legacy Import
-
-PHASE 3
-Play Store readiness
-
-PHASE 4+
-Optional advanced features
+Phase 0   Foundation
+Phase 1   Core Finance
+Phase 2   Backup / Restore / Legacy Import
+Phase 3   Personal Use Ready
+Phase 3.5 UI/UX + Theme Polish
+Phase 4A-G Local Receipt Scanner Development
 ```
 
-Do not skip directly into cloud synchronization while core transaction functionality remains unstable.
+Current release-focused roadmap:
+
+```text
+Phase 5A  Export Excel / Text / PDF
+Phase 5B  Core Finance Audit & Stabilization
+Phase 5C  Transaction UX & Workflow Hardening
+Phase 5D  Reports & Financial Accuracy
+Phase 5E  Backup / Restore / Legacy Migration Hardening
+Phase 5F  Performance & Reliability
+Phase 5G  Play Store Preparation
+Phase 5H  Closed Testing
+Phase 5I  Production Release v1.0
+```
+
+During Phase 5A–5I, do not add major unrelated features.
 
 ---
 
-# 60. Current Development Philosophy
+# 56. Release-Focused Feature Freeze
+
+Do not implement unless explicitly requested:
+
+```text
+AI features
+Wallet / Accounts
+Budgeting
+Recurring Transactions
+Cloud Backup
+Cloud Sync
+Optional User Accounts
+Advanced Analytics
+Major Receipt Scanner Expansion
+```
+
+Current sequence:
+
+```text
+Export
+↓
+Stabilize
+↓
+Validate Financial Accuracy
+↓
+Harden Backup / Restore / Migration
+↓
+Validate Performance
+↓
+Prepare Play Store Release
+↓
+Closed Testing
+↓
+v1.0 Production Release
+```
+
+---
+
+# 57. Release-Critical Core
+
+Treat these as release-critical for Finote v1.0:
+
+```text
+Manual income creation
+Manual expense creation
+Transaction editing
+Transaction deletion
+Category management
+Transaction history
+Search
+Filters
+Dashboard
+Reports
+Excel Export
+Text Export
+PDF Export
+Backup
+Restore
+Legacy Import
+Light / Dark / System Theme
+Basic Security
+Offline Usage
+Database Migrations
+Financial Accuracy
+```
+
+Receipt Scanner:
+
+```text
+Optional for v1.0 depending on stability
+```
+
+AI:
+
+```text
+Not included in v1.0
+```
+
+---
+
+# 58. STATUS.md Rules
+
+Before implementation:
+
+1. read `STATUS.md`;
+2. confirm what is completed;
+3. confirm current phase;
+4. inspect existing code;
+5. do not rebuild completed features.
+
+After implementation:
+
+- update only the relevant status;
+- do not rewrite unrelated historical progress;
+- do not mark future phases complete;
+- keep blockers visible;
+- mark a phase complete only after required validation succeeds.
+
+---
+
+# 59. .agents/skill Rules
+
+Before implementation, inspect:
+
+```text
+.agents/skill/
+```
+
+Read only skills relevant to the task.
+
+Examples for export:
+
+```text
+Flutter
+Dart
+PDF
+Excel
+file handling
+Android storage
+testing
+```
+
+Examples for database work:
+
+```text
+Flutter
+Drift
+SQLite
+migrations
+testing
+```
+
+Do not expand task scope merely because additional skills exist.
+
+---
+
+# 60. Task Completion Response
+
+After completing a requested implementation, report:
+
+1. what was implemented;
+2. important files created/changed;
+3. database/schema changes;
+4. dependencies added/removed;
+5. tests added;
+6. commands executed;
+7. `flutter analyze` result;
+8. `flutter test` result;
+9. known limitations;
+10. next task from the current roadmap.
+
+Do not claim success for commands that were not executed.
+
+Do not start the next phase automatically.
+
+---
+
+# 61. Definition of Done
+
+A task is complete only when:
+
+- the requested functionality works;
+- existing functionality remains intact;
+- architecture remains consistent;
+- financial data integrity is preserved;
+- code is formatted;
+- analyzer issues introduced by the task are resolved;
+- relevant tests pass;
+- unrelated future phases were not implemented;
+- `STATUS.md` is updated appropriately.
+
+---
+
+# 62. Current Development Philosophy
 
 For every coding task:
 
 ```text
-Read PRD
+Read PRD.md
+↓
+Read STATUS.md
+↓
+Read relevant .agents/skill/
 ↓
 Inspect existing code
 ↓
@@ -1271,6 +1588,10 @@ Format
 Analyze
 ↓
 Test
+↓
+Inspect git diff
+↓
+Update STATUS.md
 ↓
 Report
 ```
@@ -1285,59 +1606,70 @@ Implement everything
 
 ---
 
-# 61. Definition of Done
+# 63. Golden Rules
 
-A task is complete only when:
+## Rule 1
 
-* requested functionality works;
-* existing functionality remains intact;
-* architecture is consistent with this document;
-* financial data integrity is maintained;
-* code is formatted;
-* analyzer errors introduced by the task are resolved;
-* relevant tests pass;
-* no unrelated future phase was implemented.
+Never risk a user's financial history for convenience.
+
+## Rule 2
+
+Manual finance workflows must remain first-class.
+
+## Rule 3
+
+Core functionality must work offline.
+
+## Rule 4
+
+Derived totals must come from source transactions.
+
+## Rule 5
+
+Backup is for recovery; export is for portability/reporting.
+
+## Rule 6
+
+Excel, Text, and PDF exports must remain financially consistent.
+
+## Rule 7
+
+Cloud remains optional.
+
+## Rule 8
+
+AI remains deferred until real demand is validated.
+
+## Rule 9
+
+Do not make Finote complicated simply because more features are technically possible.
 
 ---
 
-# 62. Source of Truth
+# 64. Current Finote Product Goal
 
-Requirement priority:
+The current goal is not to maximize feature count.
+
+The goal is:
+
+> Make Finote a mature, trustworthy, fast, offline-first personal finance application with strong data portability and a safe path to Google Play release.
+
+Current product focus:
 
 ```text
-1. Explicit current user instruction
-2. PRD.md
-3. AGENTS.md
-4. Existing project architecture
-5. Reasonable engineering conventions
+Manual Finance Core
++
+Reports
++
+Excel / Text / PDF Export
++
+Backup / Restore
++
+Legacy Import
++
+Reliable Offline Operation
++
+Play Store Readiness
 ```
 
-If an explicit user instruction conflicts with an older PRD requirement, follow the latest user instruction unless it creates a significant security or data-integrity risk.
-
-When requirements are ambiguous, prefer the smallest implementation consistent with the current phase.
-
----
-
-# 63. Golden Rule
-
-The most important rule of this project:
-
-> Never risk a user's financial history for convenience.
-
-Build incrementally, preserve compatibility, keep the application simple, and treat local financial data as critical user data.
-
-# Receipt Scanner Rules
-
-Receipt scanning is a future feature and must not be implemented before the core roadmap unless explicitly requested.
-
-When implemented:
-
-- OCR output must create a draft, never an automatic final transaction.
-- User confirmation is mandatory.
-- Financial amounts detected through OCR must be editable.
-- Prefer on-device OCR when practical.
-- Separate OCR engine from receipt parsing.
-- Do not permanently store receipt images by default.
-- Do not upload receipt images without explicit user consent.
-- Do not log receipt contents or detected financial values.
-- Design OCR providers behind an abstraction so they can be replaced later.
+AI, cloud, and advanced finance features come later only when there is validated demand.
