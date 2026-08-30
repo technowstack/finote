@@ -87,6 +87,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               ),
               data: (data) => _Summary(summary: data),
             ),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/receipt-scan'),
+              icon: const Icon(Icons.document_scanner_outlined),
+              label: const Text('Scan struk'),
+            ),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(
               title: 'Transaksi terbaru',

@@ -7,6 +7,7 @@ import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/legacy_import/presentation/legacy_import_page.dart';
 import '../features/reports/presentation/reports_page.dart';
+import '../features/receipt_scanner/presentation/receipt_scanner_page.dart';
 import '../features/settings/presentation/settings_page.dart';
 import '../features/transactions/presentation/transaction_form_page.dart';
 import '../features/transactions/presentation/transactions_page.dart';
@@ -86,6 +87,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/legacy-import',
         builder: (context, state) => const LegacyImportPage(),
+      ),
+      GoRoute(
+        path: '/receipt-scan',
+        builder: (context, state) => const ReceiptScannerPage(),
       ),
     ],
   );

@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Kamera digunakan hanya saat Anda memilih untuk memfoto struk.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeri digunakan hanya saat Anda memilih foto struk.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -1,6 +1,3 @@
-## Current
-
-- [ ] Phase 3.5 — UI/UX Redesign & Usability Polish
 
 ## Completed
 
@@ -9,7 +6,12 @@
 - [x] Phase 2 — Backup / Restore / Legacy Import
 - [x] Phase 3 — Personal Use Ready
 - [x] Phase 3.5H — Theme Mode & Color System
+- [x] Phase 4A — Receipt Scanner Foundation
+
+## Current
 
 ## Next
 
-- [ ] Phase 4 — Receipt Scanner & Auto Transaction
+- [ ] Phase 4B — On-device OCR
+- [ ] Phase 4C — Receipt Parser
+- [ ] Phase 4D — Auto Transaction Draft

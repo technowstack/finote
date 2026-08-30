@@ -14,7 +14,7 @@ class MainScaffold extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/transactions/new'),
+        onPressed: () => _showAddMenu(context),
         tooltip: 'Tambah transaksi',
         child: const Icon(Icons.add),
       ),
@@ -50,5 +50,34 @@ class MainScaffold extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showAddMenu(BuildContext context) async {
+    final route = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline),
+                title: const Text('Tambah transaksi manual'),
+                subtitle: const Text('Cara utama yang cepat dan andal'),
+                onTap: () => Navigator.pop(context, '/transactions/new'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.document_scanner_outlined),
+                title: const Text('Scan struk'),
+                subtitle: const Text('Ambil atau pilih foto struk'),
+                onTap: () => Navigator.pop(context, '/receipt-scan'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (route != null && context.mounted) context.push(route);
   }
 }

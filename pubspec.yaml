@@ -47,6 +47,8 @@ dependencies:
   flutter_secure_storage: ^11.0.0
   cryptography: ^2.9.0
   shared_preferences: ^2.5.5
+  image_picker: ^1.2.3
+  permission_handler: ^13.0.1
 
 dev_dependencies:
   flutter_test:
