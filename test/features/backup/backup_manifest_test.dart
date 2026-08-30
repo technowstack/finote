@@ -45,8 +45,7 @@ void main() {
   // RestoreError — toUserMessage()
   // ---------------------------------------------------------------------------
   group('RestoreError.toUserMessage', () {
-    test('setiap variant menghasilkan pesan non-kosong dalam Bahasa Indonesia',
-        () {
+    test('setiap variant menghasilkan pesan non-kosong dalam Bahasa Indonesia', () {
       final errors = <RestoreError>[
         const RestoreError.invalidZip(),
         const RestoreError.invalidManifest(),

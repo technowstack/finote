@@ -46,6 +46,7 @@ dependencies:
   path: ^1.9.1
   flutter_secure_storage: ^11.0.0
   cryptography: ^2.9.0
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

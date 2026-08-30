@@ -7,10 +7,7 @@ import 'backup_manifest.dart';
 /// Berisi manifest yang sudah divalidasi dan byte-byte arsip ZIP agar
 /// proses restore dapat dilanjutkan tanpa membaca ulang file dari disk.
 class RestorePreview {
-  const RestorePreview({
-    required this.manifest,
-    required this.archiveBytes,
-  });
+  const RestorePreview({required this.manifest, required this.archiveBytes});
 
   /// Manifest yang telah divalidasi dari file backup.
   final BackupManifest manifest;

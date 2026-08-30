@@ -24,12 +24,15 @@ class FinoteApp extends ConsumerWidget {
       );
     });
 
+    final themeMode =
+        ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
+
     return MaterialApp.router(
       title: 'Catatan Keuangan',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ref.watch(themeModeProvider),
+      themeMode: themeMode,
       locale: const Locale('id'),
       supportedLocales: const [Locale('id')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,

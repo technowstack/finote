@@ -79,10 +79,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
           ),
           children: [
             summary.when(
-              loading: () => const SizedBox(
-                height: 160,
-                child: AppLoadingState(),
-              ),
+              loading: () =>
+                  const SizedBox(height: 160, child: AppLoadingState()),
               error: (error, stackTrace) => AppErrorState(
                 message: 'Ringkasan belum dapat dimuat.',
                 onRetry: () => ref.invalidate(dashboardSummaryProvider),
@@ -230,10 +228,7 @@ class _MetricTile extends StatelessWidget {
               children: [
                 Icon(icon, size: 16, color: color),
                 const SizedBox(width: AppSpacing.xs),
-                Text(
-                  label,
-                  style: textTheme.labelMedium,
-                ),
+                Text(label, style: textTheme.labelMedium),
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -301,9 +296,8 @@ class _RecentTransactionRow extends StatelessWidget {
       trailing: CurrencyText(
         amount: transaction.amount,
         type: transaction.type,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: colors.amountColor(isExpense: isExpense),
-        ),
+        style: Theme.of(context).textTheme.titleMedium
+            ?.copyWith(color: colors.amountColor(isExpense: isExpense)),
       ),
     );
   }

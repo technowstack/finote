@@ -66,11 +66,7 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 44,
-              color: Theme.of(context).colorScheme.outline,
-            ),
+            Icon(icon, size: 44, color: Theme.of(context).colorScheme.outline),
             const SizedBox(height: AppSpacing.md),
             Text(message, textAlign: TextAlign.center),
             if (subtitle != null) ...[
@@ -113,12 +109,7 @@ class AppLoadingState extends StatelessWidget {
 ///
 /// Wraps itself in a [FittedBox] so long amounts shrink gracefully.
 class CurrencyText extends StatelessWidget {
-  const CurrencyText({
-    super.key,
-    required this.amount,
-    this.type,
-    this.style,
-  });
+  const CurrencyText({super.key, required this.amount, this.type, this.style});
 
   final int amount;
   final TransactionType? type;

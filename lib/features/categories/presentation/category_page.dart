@@ -160,10 +160,12 @@ class _CategoryTile extends ConsumerWidget {
     return ListTile(
       leading: CircleAvatar(
         radius: 16,
-        backgroundColor:
-            isExpense ? colors.errorContainer : colors.primaryContainer,
-        foregroundColor:
-            isExpense ? colors.onErrorContainer : colors.onPrimaryContainer,
+        backgroundColor: isExpense
+            ? colors.errorContainer
+            : colors.primaryContainer,
+        foregroundColor: isExpense
+            ? colors.onErrorContainer
+            : colors.onPrimaryContainer,
         child: Icon(
           isExpense ? Icons.arrow_upward : Icons.arrow_downward,
           size: 16,

@@ -185,10 +185,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                       expense += item.transaction.amount;
                     }
                   }
-                  return _PeriodSummaryStrip(
-                    income: income,
-                    expense: expense,
-                  );
+                  return _PeriodSummaryStrip(income: income, expense: expense);
                 },
               ) ??
               const SizedBox.shrink(),
@@ -298,16 +295,14 @@ class _PeriodSummaryStrip extends StatelessWidget {
           const SizedBox(width: AppSpacing.xs),
           Text(
             formatIdr(income),
-            style:
-                textTheme.labelMedium?.copyWith(color: colors.incomeColor),
+            style: textTheme.labelMedium?.copyWith(color: colors.incomeColor),
           ),
           const SizedBox(width: AppSpacing.lg),
           Icon(Icons.north_east, size: 14, color: colors.expenseColor),
           const SizedBox(width: AppSpacing.xs),
           Text(
             formatIdr(expense),
-            style:
-                textTheme.labelMedium?.copyWith(color: colors.expenseColor),
+            style: textTheme.labelMedium?.copyWith(color: colors.expenseColor),
           ),
         ],
       ),
@@ -336,7 +331,8 @@ class _GroupedTransactionList extends StatelessWidget {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        final showDate = index == 0 ||
+        final showDate =
+            index == 0 ||
             !_isSameDate(
               item.transaction.transactionDate,
               items[index - 1].transaction.transactionDate,
@@ -400,14 +396,11 @@ class _TransactionRow extends ConsumerWidget {
             ),
           ),
           title: Text(
-            transaction.title.isEmpty
-                ? item.category.name
-                : transaction.title,
+            transaction.title.isEmpty ? item.category.name : transaction.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle:
-              transaction.title.isEmpty ? null : Text(item.category.name),
+          subtitle: transaction.title.isEmpty ? null : Text(item.category.name),
           trailing: CurrencyText(
             amount: transaction.amount,
             type: transaction.type,

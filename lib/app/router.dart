@@ -68,8 +68,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/transactions/:id/edit',
         redirect: (context, state) =>
             int.tryParse(state.pathParameters['id'] ?? '') == null
-                ? '/transactions'
-                : null,
+            ? '/transactions'
+            : null,
         builder: (context, state) => TransactionFormPage(
           transactionId: int.tryParse(state.pathParameters['id'] ?? ''),
         ),
@@ -78,10 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/categories',
         builder: (context, state) => const CategoryPage(),
       ),
-      GoRoute(
-        path: '/backup',
-        builder: (context, state) => const BackupPage(),
-      ),
+      GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
       GoRoute(
         path: '/security',
         builder: (context, state) => const SecurityPage(),
@@ -95,4 +92,3 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
-

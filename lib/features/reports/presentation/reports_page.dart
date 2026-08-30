@@ -326,10 +326,7 @@ class _CategoryRow extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  item.categoryName,
-                  style: textTheme.bodyLarge,
-                ),
+                child: Text(item.categoryName, style: textTheme.bodyLarge),
               ),
               const SizedBox(width: AppSpacing.sm),
               Text(
@@ -430,10 +427,7 @@ class _MonthlyRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _formatMonth(month.month),
-            style: textTheme.titleMedium,
-          ),
+          Text(_formatMonth(month.month), style: textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [

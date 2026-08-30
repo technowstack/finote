@@ -8,6 +8,7 @@
 - [x] Phase 1 — Core Finance
 - [x] Phase 2 — Backup / Restore / Legacy Import
 - [x] Phase 3 — Personal Use Ready
+- [x] Phase 3.5H — Theme Mode & Color System
 
 ## Next
 

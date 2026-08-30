@@ -185,8 +185,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               loading: () => const LinearProgressIndicator(),
               error: (error, stackTrace) => AppErrorState(
                 message: 'Kategori belum dapat dimuat.',
-                onRetry: () =>
-                    ref.invalidate(categoriesByTypeProvider(_type)),
+                onRetry: () => ref.invalidate(categoriesByTypeProvider(_type)),
               ),
               data: (items) => _CategoryGrid(
                 categories: items,
@@ -207,17 +206,15 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: AppSpacing.lg),
 
             // ----- Date chip -----
-            _DateChip(
-              date: _date,
-              onTap: _selectDate,
-            ),
+            _DateChip(date: _date, onTap: _selectDate),
             const SizedBox(height: AppSpacing.md),
 
             // ----- Optional title & note -----
             _OptionalFieldsSection(
               titleController: _titleController,
               noteController: _noteController,
-              initiallyExpanded: isEditing &&
+              initiallyExpanded:
+                  isEditing &&
                   (_titleController.text.isNotEmpty ||
                       _noteController.text.isNotEmpty),
             ),
@@ -321,9 +318,7 @@ class _TypeToggle extends StatelessWidget {
           icon: Icon(
             Icons.arrow_downward,
             size: 18,
-            color: value == TransactionType.income
-                ? colors.incomeColor
-                : null,
+            color: value == TransactionType.income ? colors.incomeColor : null,
           ),
           label: const Text('Pemasukan'),
         ),
@@ -391,9 +386,8 @@ class _DateChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final isToday = date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
+    final isToday =
+        date.year == now.year && date.month == now.month && date.day == now.day;
 
     return Align(
       alignment: Alignment.centerLeft,
@@ -438,9 +432,7 @@ class _OptionalFieldsSection extends StatelessWidget {
         TextFormField(
           controller: titleController,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-            labelText: 'Judul',
-          ),
+          decoration: const InputDecoration(labelText: 'Judul'),
         ),
         const SizedBox(height: AppSpacing.md),
         TextFormField(
@@ -448,9 +440,7 @@ class _OptionalFieldsSection extends StatelessWidget {
           textCapitalization: TextCapitalization.sentences,
           minLines: 2,
           maxLines: 4,
-          decoration: const InputDecoration(
-            labelText: 'Catatan',
-          ),
+          decoration: const InputDecoration(labelText: 'Catatan'),
         ),
       ],
     );
