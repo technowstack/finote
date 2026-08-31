@@ -8,6 +8,8 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../accounts/data/account_repository.dart';
+import '../../accounts/domain/account_summary.dart';
 import '../../export/data/export_repository.dart';
 import '../../export/data/export_service.dart';
 import '../../export/domain/export_document.dart';
@@ -43,6 +45,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   Widget build(BuildContext context) {
     final range = _reportRange(_period, _customRange, DateTime.now());
     final report = ref.watch(reportProvider(range));
+    final accounts = ref.watch(accountSummariesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -114,7 +117,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
               data: (data) => TabBarView(
                 controller: _tabController,
                 children: [
-                  _SummaryTab(data: data),
+                  _SummaryTab(data: data, accounts: accounts),
                   _HistoryTab(data: data),
                 ],
               ),
@@ -321,19 +324,13 @@ String _periodLabel(ExportDocument document) {
 // ---------------------------------------------------------------------------
 
 class _SummaryTab extends StatelessWidget {
-  const _SummaryTab({required this.data});
+  const _SummaryTab({required this.data, required this.accounts});
 
   final ReportData data;
+  final AsyncValue<List<AccountSummary>> accounts;
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.summarize_outlined,
-        message: 'Belum ada data pada periode ini.',
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenH,
@@ -342,7 +339,15 @@ class _SummaryTab extends StatelessWidget {
         AppSpacing.xxl,
       ),
       children: [
-        _CompactSummary(data: data),
+        if (data.isEmpty)
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.summarize_outlined),
+              title: Text('Belum ada transaksi pada periode ini.'),
+            ),
+          )
+        else
+          _CompactSummary(data: data),
         const SizedBox(height: AppSpacing.xl),
         if (data.topExpenseCategories.isNotEmpty) ...[
           _CategoryBreakdown(
@@ -353,14 +358,147 @@ class _SummaryTab extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        if (data.topIncomeCategories.isNotEmpty)
+        if (data.topIncomeCategories.isNotEmpty) ...[
           _CategoryBreakdown(
             title: 'Pemasukan per kategori',
             items: data.topIncomeCategories,
             total: data.totalIncome,
             isExpense: false,
           ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
+        _AccountBalancesSection(accounts: accounts),
+        const SizedBox(height: AppSpacing.lg),
+        _TransferSummarySection(summary: data.transferSummary),
       ],
+    );
+  }
+}
+
+class _AccountBalancesSection extends StatelessWidget {
+  const _AccountBalancesSection({required this.accounts});
+
+  final AsyncValue<List<AccountSummary>> accounts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Saldo akun saat ini',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Card(
+          child: accounts.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.lg),
+              child: LinearProgressIndicator(),
+            ),
+            error: (_, _) =>
+                const ListTile(title: Text('Saldo akun belum dapat dimuat.')),
+            data: (items) {
+              final active = items
+                  .where((item) => item.account.isActive)
+                  .toList(growable: false);
+              final archivedCount = items.length - active.length;
+              final totalAssets = items.fold<int>(
+                0,
+                (total, item) => total + item.balance,
+              );
+              return Column(
+                children: [
+                  if (active.isEmpty)
+                    const ListTile(title: Text('Belum ada akun aktif.')),
+                  for (final item in active)
+                    ListTile(
+                      leading: const Icon(
+                        Icons.account_balance_wallet_outlined,
+                      ),
+                      title: Text(item.account.name),
+                      trailing: _ReportAmount(
+                        amount: item.balance,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                  const Divider(indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Total aset'),
+                    subtitle: archivedCount == 0
+                        ? const Text('Saldo seluruh akun saat ini')
+                        : Text(
+                            'Saldo seluruh akun, termasuk $archivedCount akun diarsipkan',
+                          ),
+                    trailing: _ReportAmount(
+                      amount: totalAssets,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TransferSummarySection extends StatelessWidget {
+  const _TransferSummarySection({required this.summary});
+
+  final TransferReportSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Transfer antar akun',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Card(
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: colors.tertiaryContainer,
+              foregroundColor: colors.onTertiaryContainer,
+              child: const Icon(Icons.swap_horiz),
+            ),
+            title: Text('${summary.count} transfer'),
+            subtitle: const Text(
+              'Informasi periode ini, tidak memengaruhi pemasukan atau pengeluaran',
+            ),
+            trailing: _ReportAmount(
+              amount: summary.volume,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ReportAmount extends StatelessWidget {
+  const _ReportAmount({required this.amount, this.style});
+
+  final int amount;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 140),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Text(formatIdr(amount), style: style),
+      ),
     );
   }
 }

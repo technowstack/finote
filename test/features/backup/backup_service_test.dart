@@ -11,6 +11,7 @@ import 'package:finote/features/backup/domain/restore_error.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/reports/data/report_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/data/financial_activity_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
@@ -385,6 +386,17 @@ void main() {
             .balance,
         -11000,
       );
+      final restoredReport = await ReportRepository(live)
+          .watchReport(
+            ReportRange(
+              start: DateTime(2026, 8, 1),
+              end: DateTime(2026, 8, 31),
+            ),
+          )
+          .first;
+      expect(restoredReport.totalExpense, 10000);
+      expect(restoredReport.transferSummary.count, 1);
+      expect(restoredReport.transferSummary.volume, 1000);
       expect(
         tempDir.listSync().where((entry) => entry.path.contains('.rollback-')),
         isEmpty,

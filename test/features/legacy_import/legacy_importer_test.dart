@@ -6,6 +6,7 @@ import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/legacy_import/data/legacy_importer.dart';
 import 'package:finote/features/legacy_import/domain/legacy_schema.dart';
+import 'package:finote/features/reports/data/report_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
@@ -121,6 +122,14 @@ void main() {
         .first;
     expect(history, hasLength(2));
     expect(await database.select(database.transfers).get(), isEmpty);
+    final report = await ReportRepository(database)
+        .watchReport(
+          ReportRange(start: DateTime(2023), end: DateTime(2023, 12, 31)),
+        )
+        .first;
+    expect(report.totalIncome, 500000);
+    expect(report.totalExpense, 25000);
+    expect(report.transferSummary.count, 0);
   });
 
   test('second import of the same database skips every transaction', () async {

@@ -30,11 +30,12 @@
 - [x] Phase 6A.3 — Account Balance Calculation
 - [x] Phase 6A.4 — Account-to-Account Transfer
 - [x] Phase 6A.5 — Transaction History Integration
+- [x] Phase 6A.6 — Reports Integration
 
 ## Current
 
 Finote v1.0.0 has completed **Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY**.
-Finote v1.1.0 development completed **Phase 6A.5 — Transaction History Integration**.
+Finote v1.1.0 development completed **Phase 6A.6 — Reports Integration**.
 
 Current focus:
 
@@ -42,7 +43,8 @@ Current focus:
 - [x] Complete Phase 6A.3 account balance calculation
 - [x] Complete Phase 6A.4 account-to-account transfer
 - [x] Complete Phase 6A.5 transaction history integration
-- [ ] Phase 6A.6 reports integration
+- [x] Complete Phase 6A.6 reports integration
+- [ ] Phase 6A.7 export integration
 - [ ] Preserve financial accuracy and data integrity
 - [ ] Keep release configuration healthy
 - [ ] Perform external Play Store activities only when the user is ready
@@ -51,7 +53,7 @@ Current focus:
 
 ```text
 Finote v1.0.0 foundation remains local production final.
-Finote v1.1.0 Phase 6A.5 is complete; Phase 6A.6 is next.
+Finote v1.1.0 Phase 6A.6 is complete; Phase 6A.7 is next.
 ```
 
 Local production final means the v1.0.0 codebase is considered finalized locally. It does **not** mean the app has already been uploaded, externally closed-tested through Play Console, or published to production.
@@ -80,7 +82,8 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] Phase 6A.3 — Account Balance Calculation
 - [x] Phase 6A.4 — Account-to-Account Transfer
 - [x] Phase 6A.5 — Transaction History Integration
-- [ ] Phase 6A.6 — Reports Integration
+- [x] Phase 6A.6 — Reports Integration
+- [ ] Phase 6A.7 — Export Integration
 
 ---
 
@@ -232,7 +235,7 @@ Existing AI-ready abstractions may remain only if they do not create unnecessary
 - [x] 6A.3 Account Balance Calculation
 - [x] 6A.4 Account-to-Account Transfer
 - [x] 6A.5 Transaction History Integration
-- [ ] 6A.6 Reports Integration
+- [x] 6A.6 Reports Integration
 - [ ] 6A.7 Export Integration
 - [ ] 6A.8 Backup / Restore Migration
 - [ ] 6A.9 Legacy Database Compatibility

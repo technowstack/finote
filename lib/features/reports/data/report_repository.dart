@@ -20,6 +20,11 @@ WITH filtered AS (
   FROM transactions
   WHERE deleted_at IS NULL AND transaction_date BETWEEN ? AND ?
 ),
+filtered_transfers AS (
+  SELECT amount
+  FROM transfers
+  WHERE deleted_at IS NULL AND transfer_date BETWEEN ? AND ?
+),
 expense_categories AS (
   SELECT c.name AS label, SUM(f.amount) AS amount
   FROM filtered f
@@ -63,6 +68,16 @@ FROM (
    SELECT 'income_category', label, 0, 0, amount, 0, 2 FROM income_categories
   UNION ALL
    SELECT 'month', label, income, expense, 0, 0, 3 FROM monthly
+  UNION ALL
+   SELECT
+     'transfer_summary',
+     '',
+     0,
+     0,
+     COALESCE(SUM(amount), 0),
+     COUNT(*),
+     4
+   FROM filtered_transfers
 )
 ORDER BY
   sort_group,
@@ -73,8 +88,14 @@ ORDER BY
           variables: [
             Variable.withString(converter.toSql(range.start)),
             Variable.withString(converter.toSql(range.end)),
+            Variable.withString(converter.toSql(range.start)),
+            Variable.withString(converter.toSql(range.end)),
           ],
-          readsFrom: {_database.transactions, _database.categories},
+          readsFrom: {
+            _database.transactions,
+            _database.categories,
+            _database.transfers,
+          },
         )
         .watch()
         .map(_mapRows);
@@ -87,6 +108,8 @@ ORDER BY
     final expenseCategories = <CategoryTotal>[];
     final incomeCategories = <CategoryTotal>[];
     final monthlyHistory = <MonthlyTotal>[];
+    var transferCount = 0;
+    var transferVolume = 0;
 
     for (final row in rows) {
       switch (row.read<String>('kind')) {
@@ -116,6 +139,9 @@ ORDER BY
               expense: row.read<int>('expense'),
             ),
           );
+        case 'transfer_summary':
+          transferCount = row.read<int>('transaction_count');
+          transferVolume = row.read<int>('amount');
       }
     }
 
@@ -126,6 +152,10 @@ ORDER BY
       topExpenseCategories: expenseCategories,
       topIncomeCategories: incomeCategories,
       monthlyHistory: monthlyHistory,
+      transferSummary: TransferReportSummary(
+        count: transferCount,
+        volume: transferVolume,
+      ),
     );
   }
 }
@@ -138,14 +168,23 @@ class ReportData extends FinancialSummary {
     required this.topExpenseCategories,
     required this.topIncomeCategories,
     required this.monthlyHistory,
+    required this.transferSummary,
   });
 
   final List<CategoryTotal> topExpenseCategories;
   final List<CategoryTotal> topIncomeCategories;
   final List<MonthlyTotal> monthlyHistory;
+  final TransferReportSummary transferSummary;
 
   int get netBalance => balance;
   bool get isEmpty => transactionCount == 0;
+}
+
+class TransferReportSummary {
+  const TransferReportSummary({required this.count, required this.volume});
+
+  final int count;
+  final int volume;
 }
 
 class CategoryTotal {
