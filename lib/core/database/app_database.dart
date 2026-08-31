@@ -22,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -43,6 +43,13 @@ class AppDatabase extends _$AppDatabase {
       if (from < 4) {
         if (from >= 2) await migrator.createTable(accounts);
         await ensureDefaultAccount();
+      }
+      if (from < 5) {
+        if (from >= 2) {
+          await migrator.addColumn(transactions, transactions.accountId);
+        }
+        await ensureDefaultAccount();
+        await _backfillTransactionAccounts();
       }
     },
     onCreate: (migrator) async {
@@ -66,6 +73,25 @@ class AppDatabase extends _$AppDatabase {
         isDefault: const Value(true),
       ),
     );
+  }
+
+  Future<void> _backfillTransactionAccounts() async {
+    final defaultAccount = await (select(
+      accounts,
+    )..where((account) => account.isDefault.equals(true))).getSingleOrNull();
+    if (defaultAccount == null) {
+      throw StateError('Default account is missing');
+    }
+    await customStatement(
+      'UPDATE transactions SET account_id = ? WHERE account_id IS NULL',
+      [defaultAccount.id],
+    );
+    final unassigned = await customSelect(
+      'SELECT COUNT(*) AS count FROM transactions WHERE account_id IS NULL',
+    ).getSingle();
+    if (unassigned.read<int>('count') != 0) {
+      throw StateError('Some transactions have no account');
+    }
   }
 
   /// Mengembalikan path absolut file SQLite yang digunakan oleh database ini.

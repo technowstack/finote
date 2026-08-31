@@ -17,6 +17,7 @@ import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> seedSyntheticDatabase(AppDatabase database, int count) async {
+  final account = await database.select(database.accounts).getSingle();
   final categoryIds = <int>[];
   for (final entry in [
     ('Makanan', TransactionType.expense),
@@ -41,6 +42,7 @@ Future<void> seedSyntheticDatabase(AppDatabase database, int count) async {
         final income = index % 4 >= 2;
         return TransactionsCompanion.insert(
           type: income ? TransactionType.income : TransactionType.expense,
+          accountId: Value(account.id),
           categoryId: categoryIds[index % categoryIds.length],
           amount: 10000 + index,
           title: Value('Transaksi sintetis $index'),

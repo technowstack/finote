@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../utils/uuid_generator.dart';
+import 'accounts.dart';
 import '../converters.dart';
 import 'categories.dart';
 
@@ -24,6 +25,11 @@ class Transactions extends Table {
   TextColumn get type => text()
       .customConstraint("NOT NULL CHECK (type IN ('income', 'expense'))")
       .map(const TransactionTypeConverter())();
+  IntColumn get accountId => integer().nullable().references(
+    Accounts,
+    #id,
+    onDelete: KeyAction.restrict,
+  )();
   IntColumn get categoryId =>
       integer().references(Categories, #id, onDelete: KeyAction.restrict)();
   IntColumn get amount =>

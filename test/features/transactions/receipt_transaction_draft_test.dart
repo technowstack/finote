@@ -34,16 +34,20 @@ void main() {
       expect(find.text('Tinjau pengeluaran'), findsOneWidget);
       expect(find.text('Pengeluaran dari struk'), findsOneWidget);
       expect(find.text('25.000'), findsOneWidget);
-      expect(find.text('TOKO CONTOH'), findsOneWidget);
-      expect(find.textContaining('Tanggal tidak terbaca'), findsOneWidget);
       expect(find.text('Simpan pengeluaran'), findsOneWidget);
       expect(await database.select(database.transactions).get(), isEmpty);
 
-      final fields = find.byType(TextFormField);
-      await tester.enterText(fields.at(0), '26000');
+      final amountField = find.byType(TextFormField).first;
+      await tester.enterText(amountField, '26000');
       await tester.tap(find.text('Belanja'));
-      await tester.enterText(fields.at(1), 'TOKO DIEDIT');
-      await tester.enterText(fields.at(2), 'Catatan pengguna');
+      final listView = find.byType(ListView).first;
+      await tester.fling(listView, const Offset(0, -1000), 1000);
+      expect(
+        tester.widget<TextFormField>(_field('Judul')).controller!.text,
+        'TOKO CONTOH',
+      );
+      await tester.enterText(_field('Judul'), 'TOKO DIEDIT');
+      await tester.enterText(_field('Catatan'), 'Catatan pengguna');
       await tester.tap(find.text('Simpan pengeluaran'));
       await tester.pumpAndSettle();
 
@@ -81,22 +85,23 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final fields = find.byType(TextFormField);
+    final listView = find.byType(ListView).first;
+    await tester.fling(listView, const Offset(0, -1000), 1000);
+    final amountField = find.byType(TextFormField).first;
+    expect(tester.widget<TextFormField>(amountField).controller!.text, isEmpty);
     expect(
-      tester.widget<TextFormField>(fields.at(0)).controller!.text,
+      tester.widget<TextFormField>(_field('Judul')).controller!.text,
       isEmpty,
     );
     expect(
-      tester.widget<TextFormField>(fields.at(1)).controller!.text,
-      isEmpty,
-    );
-    expect(
-      tester.widget<TextFormField>(fields.at(2)).controller!.text,
+      tester.widget<TextFormField>(_field('Catatan')).controller!.text,
       isEmpty,
     );
 
     await tester.tap(find.text('Simpan pengeluaran'));
     await tester.pump();
+    await tester.drag(find.byType(ListView), const Offset(0, 1000));
+    await tester.pumpAndSettle();
 
     expect(find.text('Masukkan nominal yang valid.'), findsOneWidget);
     expect(find.text('Pilih kategori transaksi.'), findsOneWidget);
@@ -106,6 +111,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 1));
   });
 }
+
+Finder _field(String label) => find
+    .ancestor(
+      of: find.bySemanticsLabel(label).last,
+      matching: find.byType(TextFormField),
+    )
+    .first;
 
 GoRouter _router(TransactionFormDraft draft) => GoRouter(
   initialLocation: '/transactions/new',

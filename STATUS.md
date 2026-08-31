@@ -26,27 +26,26 @@
 - [x] Phase 5H — Closed Testing Preparation / Release Candidate Validation (local)
 - [x] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.0
 - [x] Phase 6A.1 — Account / Wallet Management
+- [x] Phase 6A.2 — Assign Transactions to Account
 
 ## Current
 
 Finote v1.0.0 has completed **Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY**.
-Finote v1.1.0 development is active in **Phase 6A.1 — Account / Wallet Management**.
+Finote v1.1.0 development completed **Phase 6A.2 — Assign Transactions to Account**.
 
 Current focus:
 
-- [ ] Daily real usage / dogfooding
-- [ ] Fix real bugs discovered during usage
+- [x] Complete Phase 6A.2 account assignment
+- [ ] Phase 6A.3 account balance calculation
 - [ ] Preserve financial accuracy and data integrity
 - [ ] Keep release configuration healthy
 - [ ] Perform external Play Store activities only when the user is ready
-- [ ] Do not add new v1.0.0 product features
 
 ## Current Product State
 
 ```text
-Finote v1.0.0
-LOCAL PRODUCTION FINAL / PLAY STORE READY (local)
-MAINTENANCE / REAL-USAGE MODE
+Finote v1.0.0 foundation remains local production final.
+Finote v1.1.0 Phase 6A.2 is complete; Phase 6A.3 is next.
 ```
 
 Local production final means the v1.0.0 codebase is considered finalized locally. It does **not** mean the app has already been uploaded, externally closed-tested through Play Console, or published to production.
@@ -71,7 +70,8 @@ These external tasks do not reopen the v1.0 feature scope.
 
 - [ ] Continue real daily usage / bug-fix period
 - [x] v1.1.0 — Phase 6A.1 Account / Wallet Management
-- [ ] Phase 6A.2 — Assign Transactions to Account
+- [x] v1.1.0 — Phase 6A.2 Assign Transactions to Account
+- [ ] Phase 6A.3 — Account Balance Calculation
 
 ---
 
@@ -218,8 +218,8 @@ Existing AI-ready abstractions may remain only if they do not create unnecessary
 
 ### Planned v1.1.0 — Phase 6A Accounts & Transfers
 
-- [ ] 6A.1 Account / Wallet Management
-- [ ] 6A.2 Assign Transactions to Account
+- [x] 6A.1 Account / Wallet Management
+- [x] 6A.2 Assign Transactions to Account
 - [ ] 6A.3 Account Balance Calculation
 - [ ] 6A.4 Account-to-Account Transfer
 - [ ] 6A.5 Transaction History Integration

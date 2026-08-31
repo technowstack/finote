@@ -38,6 +38,16 @@ class LegacyImporter {
           .where((transaction) => !importedIds.contains(transaction.id))
           .toList();
       final categoryIds = <(int, TransactionType), int>{};
+      final defaultAccount =
+          await (_database.select(_database.accounts)..where(
+                (account) =>
+                    account.isDefault.equals(true) &
+                    account.isActive.equals(true),
+              ))
+              .getSingleOrNull();
+      if (defaultAccount == null) {
+        throw StateError('Default account is missing');
+      }
       var categoriesCreated = 0;
 
       for (final transaction in newTransactions) {
@@ -81,6 +91,7 @@ class LegacyImporter {
           for (final transaction in newTransactions)
             TransactionsCompanion.insert(
               type: transaction.type,
+              accountId: Value(defaultAccount.id),
               categoryId: categoryIds[(transaction.subType, transaction.type)]!,
               amount: transaction.amount,
               title: Value(transaction.title.trim()),

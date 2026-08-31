@@ -91,6 +91,11 @@ void main() {
       TransactionType.expense,
       TransactionType.income,
     });
+    final defaultAccount = await database.select(database.accounts).getSingle();
+    expect(
+      transactions.every((item) => item.accountId == defaultAccount.id),
+      isTrue,
+    );
     expect(
       transactions.every(
         (item) =>

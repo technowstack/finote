@@ -133,3 +133,7 @@ final accountsProvider = StreamProvider<List<AccountRecord>>(
 final activeAccountsProvider = StreamProvider<List<AccountRecord>>(
   (ref) => ref.watch(accountRepositoryProvider).watchActive(),
 );
+
+final accountByIdProvider = FutureProvider.family<AccountRecord?, int>(
+  (ref, id) => ref.watch(accountRepositoryProvider).findById(id),
+);

@@ -1076,6 +1076,20 @@ class $TransactionsTable extends Transactions
         $customConstraints:
             'NOT NULL CHECK (type IN (\'income\', \'expense\'))',
       ).withConverter<TransactionType>($TransactionsTable.$convertertype);
+  static const VerificationMeta _accountIdMeta = const VerificationMeta(
+    'accountId',
+  );
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+    'account_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES accounts (id) ON DELETE RESTRICT',
+    ),
+  );
   static const VerificationMeta _categoryIdMeta = const VerificationMeta(
     'categoryId',
   );
@@ -1211,6 +1225,7 @@ class $TransactionsTable extends Transactions
     id,
     uuid,
     type,
+    accountId,
     categoryId,
     amount,
     title,
@@ -1243,6 +1258,12 @@ class $TransactionsTable extends Transactions
       context.handle(
         _uuidMeta,
         uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(
+        _accountIdMeta,
+        accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta),
       );
     }
     if (data.containsKey('category_id')) {
@@ -1338,6 +1359,10 @@ class $TransactionsTable extends Transactions
           data['${effectivePrefix}type'],
         )!,
       ),
+      accountId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}account_id'],
+      ),
       categoryId: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}category_id'],
@@ -1411,6 +1436,7 @@ class TransactionRecord extends DataClass
   final int id;
   final String uuid;
   final TransactionType type;
+  final int? accountId;
   final int categoryId;
   final int amount;
   final String title;
@@ -1427,6 +1453,7 @@ class TransactionRecord extends DataClass
     required this.id,
     required this.uuid,
     required this.type,
+    this.accountId,
     required this.categoryId,
     required this.amount,
     required this.title,
@@ -1449,6 +1476,9 @@ class TransactionRecord extends DataClass
       map['type'] = Variable<String>(
         $TransactionsTable.$convertertype.toSql(type),
       );
+    }
+    if (!nullToAbsent || accountId != null) {
+      map['account_id'] = Variable<int>(accountId);
     }
     map['category_id'] = Variable<int>(categoryId);
     map['amount'] = Variable<int>(amount);
@@ -1488,6 +1518,9 @@ class TransactionRecord extends DataClass
       id: Value(id),
       uuid: Value(uuid),
       type: Value(type),
+      accountId: accountId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(accountId),
       categoryId: Value(categoryId),
       amount: Value(amount),
       title: Value(title),
@@ -1520,6 +1553,7 @@ class TransactionRecord extends DataClass
       id: serializer.fromJson<int>(json['id']),
       uuid: serializer.fromJson<String>(json['uuid']),
       type: serializer.fromJson<TransactionType>(json['type']),
+      accountId: serializer.fromJson<int?>(json['accountId']),
       categoryId: serializer.fromJson<int>(json['categoryId']),
       amount: serializer.fromJson<int>(json['amount']),
       title: serializer.fromJson<String>(json['title']),
@@ -1543,6 +1577,7 @@ class TransactionRecord extends DataClass
       'id': serializer.toJson<int>(id),
       'uuid': serializer.toJson<String>(uuid),
       'type': serializer.toJson<TransactionType>(type),
+      'accountId': serializer.toJson<int?>(accountId),
       'categoryId': serializer.toJson<int>(categoryId),
       'amount': serializer.toJson<int>(amount),
       'title': serializer.toJson<String>(title),
@@ -1562,6 +1597,7 @@ class TransactionRecord extends DataClass
     int? id,
     String? uuid,
     TransactionType? type,
+    Value<int?> accountId = const Value.absent(),
     int? categoryId,
     int? amount,
     String? title,
@@ -1578,6 +1614,7 @@ class TransactionRecord extends DataClass
     id: id ?? this.id,
     uuid: uuid ?? this.uuid,
     type: type ?? this.type,
+    accountId: accountId.present ? accountId.value : this.accountId,
     categoryId: categoryId ?? this.categoryId,
     amount: amount ?? this.amount,
     title: title ?? this.title,
@@ -1598,6 +1635,7 @@ class TransactionRecord extends DataClass
       id: data.id.present ? data.id.value : this.id,
       uuid: data.uuid.present ? data.uuid.value : this.uuid,
       type: data.type.present ? data.type.value : this.type,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
       categoryId: data.categoryId.present
           ? data.categoryId.value
           : this.categoryId,
@@ -1627,6 +1665,7 @@ class TransactionRecord extends DataClass
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
           ..write('type: $type, ')
+          ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('title: $title, ')
@@ -1648,6 +1687,7 @@ class TransactionRecord extends DataClass
     id,
     uuid,
     type,
+    accountId,
     categoryId,
     amount,
     title,
@@ -1668,6 +1708,7 @@ class TransactionRecord extends DataClass
           other.id == this.id &&
           other.uuid == this.uuid &&
           other.type == this.type &&
+          other.accountId == this.accountId &&
           other.categoryId == this.categoryId &&
           other.amount == this.amount &&
           other.title == this.title &&
@@ -1686,6 +1727,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
   final Value<int> id;
   final Value<String> uuid;
   final Value<TransactionType> type;
+  final Value<int?> accountId;
   final Value<int> categoryId;
   final Value<int> amount;
   final Value<String> title;
@@ -1702,6 +1744,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.id = const Value.absent(),
     this.uuid = const Value.absent(),
     this.type = const Value.absent(),
+    this.accountId = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.amount = const Value.absent(),
     this.title = const Value.absent(),
@@ -1719,6 +1762,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     this.id = const Value.absent(),
     this.uuid = const Value.absent(),
     required TransactionType type,
+    this.accountId = const Value.absent(),
     required int categoryId,
     required int amount,
     this.title = const Value.absent(),
@@ -1740,6 +1784,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Expression<int>? id,
     Expression<String>? uuid,
     Expression<String>? type,
+    Expression<int>? accountId,
     Expression<int>? categoryId,
     Expression<int>? amount,
     Expression<String>? title,
@@ -1757,6 +1802,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       if (id != null) 'id': id,
       if (uuid != null) 'uuid': uuid,
       if (type != null) 'type': type,
+      if (accountId != null) 'account_id': accountId,
       if (categoryId != null) 'category_id': categoryId,
       if (amount != null) 'amount': amount,
       if (title != null) 'title': title,
@@ -1776,6 +1822,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
     Value<int>? id,
     Value<String>? uuid,
     Value<TransactionType>? type,
+    Value<int?>? accountId,
     Value<int>? categoryId,
     Value<int>? amount,
     Value<String>? title,
@@ -1793,6 +1840,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       id: id ?? this.id,
       uuid: uuid ?? this.uuid,
       type: type ?? this.type,
+      accountId: accountId ?? this.accountId,
       categoryId: categoryId ?? this.categoryId,
       amount: amount ?? this.amount,
       title: title ?? this.title,
@@ -1821,6 +1869,9 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
       map['type'] = Variable<String>(
         $TransactionsTable.$convertertype.toSql(type.value),
       );
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
     }
     if (categoryId.present) {
       map['category_id'] = Variable<int>(categoryId.value);
@@ -1873,6 +1924,7 @@ class TransactionsCompanion extends UpdateCompanion<TransactionRecord> {
           ..write('id: $id, ')
           ..write('uuid: $uuid, ')
           ..write('type: $type, ')
+          ..write('accountId: $accountId, ')
           ..write('categoryId: $categoryId, ')
           ..write('amount: $amount, ')
           ..write('title: $title, ')

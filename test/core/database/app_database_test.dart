@@ -1,6 +1,8 @@
-import 'package:drift/drift.dart' show Variable;
+import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
@@ -20,7 +22,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('fresh database creates version 4 tables and indexes', () async {
+  test('fresh database creates version 5 tables and indexes', () async {
     final schema = await database
         .customSelect(
           "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -28,7 +30,7 @@ void main() {
         .get();
     final names = schema.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 4);
+    expect(database.schemaVersion, 5);
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
         .getSingle();
@@ -53,6 +55,13 @@ void main() {
     expect(defaultAccount.name, 'Tunai');
     expect(defaultAccount.type.name, 'cash');
     expect(defaultAccount.isDefault, isTrue);
+    final transactionColumns = await database
+        .customSelect('PRAGMA table_info(transactions)')
+        .get();
+    expect(
+      transactionColumns.map((row) => row.read<String>('name')),
+      contains('account_id'),
+    );
   });
 
   test('category insert generates UUID and stores domain type', () async {
@@ -185,7 +194,7 @@ void main() {
     await expectLater(insert(), throwsA(isA<Exception>()));
   });
 
-  test('version 1 database migrates to version 4 without recreation', () async {
+  test('version 1 database migrates to version 5 without recreation', () async {
     await database.close();
     database = AppDatabase(
       NativeDatabase.memory(
@@ -209,7 +218,7 @@ void main() {
         .customSelect('SELECT value FROM phase_zero_marker')
         .getSingle();
 
-    expect(version.read<int>('user_version'), 4);
+    expect(version.read<int>('user_version'), 5);
     expect(marker.read<String>('value'), 'preserved');
     expect(
       tables.map((row) => row.read<String>('name')),
@@ -277,10 +286,11 @@ void main() {
         .customSelect('PRAGMA table_info(transactions)')
         .get();
 
-    expect(database.schemaVersion, 4);
+    expect(database.schemaVersion, 5);
     expect(transaction.uuid, 'transaction-v2');
     expect(transaction.amount, 25000);
     expect(transaction.transactionDate, DateTime(2026, 8, 29));
+    expect(transaction.accountId, isNotNull);
     expect(transaction.deletedAt, isNull);
     expect(category.uuid, 'category-v2');
     expect(
@@ -288,7 +298,77 @@ void main() {
       contains('receipt_fingerprint'),
     );
     expect(await database.select(database.accounts).getSingle(), isNotNull);
+    expect(transaction.accountId, isNotNull);
   });
+
+  test(
+    'transactions persist and can change account without duplication',
+    () async {
+      final defaultAccount = await database
+          .select(database.accounts)
+          .getSingle();
+      final otherAccount = await database
+          .into(database.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(name: 'BCA Utama', type: AccountType.bank),
+          );
+      final category = await categories.create(
+        name: 'Makan',
+        type: TransactionType.expense,
+      );
+      final transaction = await transactions.create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 50000,
+        accountId: otherAccount.id,
+        transactionDate: DateTime(2026, 8, 31),
+      );
+
+      expect(transaction.accountId, otherAccount.id);
+      expect(
+        await transactions.update(
+          transaction.copyWith(accountId: Value(defaultAccount.id)),
+        ),
+        isTrue,
+      );
+      expect(
+        (await transactions.findActiveById(transaction.id))?.accountId,
+        defaultAccount.id,
+      );
+      expect(await database.select(database.transactions).get(), hasLength(1));
+    },
+  );
+
+  test(
+    'archived account remains readable through historical transaction',
+    () async {
+      final defaultAccount = await database
+          .select(database.accounts)
+          .getSingle();
+      final otherAccount = await database
+          .into(database.accounts)
+          .insertReturning(
+            AccountsCompanion.insert(name: 'GoPay', type: AccountType.eWallet),
+          );
+      final category = await categories.create(
+        name: 'Transportasi',
+        type: TransactionType.expense,
+      );
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 10000,
+        accountId: otherAccount.id,
+        transactionDate: DateTime(2026, 8, 31),
+      );
+      await AccountRepository(database).archive(otherAccount.id);
+
+      final row = await transactions.watchAll().first;
+      expect(row.single.account.id, otherAccount.id);
+      expect(row.single.account.isActive, isFalse);
+      expect(defaultAccount.isActive, isTrue);
+    },
+  );
 }
 
 final _uuidPattern = RegExp(

@@ -401,7 +401,14 @@ class _TransactionRow extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle: transaction.title.isEmpty ? null : Text(item.category.name),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (transaction.title.isNotEmpty) Text(item.category.name),
+              Text(item.account.name),
+            ],
+          ),
+          isThreeLine: transaction.title.isNotEmpty,
           trailing: CurrencyText(
             amount: transaction.amount,
             type: transaction.type,

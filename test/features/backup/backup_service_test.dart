@@ -321,11 +321,12 @@ void main() {
 
       final category = await CategoryRepository(live)
           .create(name: 'Makan', type: TransactionType.expense);
-      await AccountRepository(live)
+      final account = await AccountRepository(live)
           .create(name: 'DANA', type: AccountType.eWallet);
       await TransactionRepository(live).create(
         type: TransactionType.expense,
         categoryId: category.id,
+        accountId: account.id,
         amount: 10000,
         transactionDate: DateTime(2026, 8, 1),
       );
@@ -350,6 +351,10 @@ void main() {
 
       expect(await live.select(live.transactions).get(), hasLength(1));
       expect((await live.select(live.transactions).getSingle()).amount, 10000);
+      expect(
+        (await live.select(live.transactions).getSingle()).accountId,
+        account.id,
+      );
       expect(
         (await live.select(live.accounts).get()).map((account) => account.name),
         contains('DANA'),

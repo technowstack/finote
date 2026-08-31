@@ -124,6 +124,7 @@ class _MonthlyTransactionRow extends StatelessWidget {
           children: [
             Text(isExpense ? 'Pengeluaran' : 'Pemasukan'),
             if (transaction.title.isNotEmpty) Text(transaction.title),
+            Text(item.account.name),
             if (note != null && note.isNotEmpty)
               Text(note, maxLines: 1, overflow: TextOverflow.ellipsis),
           ],

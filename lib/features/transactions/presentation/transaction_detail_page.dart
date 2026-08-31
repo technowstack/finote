@@ -8,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_type.dart';
@@ -49,14 +50,43 @@ class TransactionDetailPage extends ConsumerWidget {
             final category = items.where(
               (item) => item.id == record.categoryId,
             );
-            return _TransactionDetailScaffold(
-              transaction: record,
-              categoryName: category.isEmpty
-                  ? 'Kategori tidak tersedia'
-                  : category.first.name,
-              onEdit: () => context.push('/transactions/$transactionId/edit'),
-              onDelete: () => _delete(context, ref, record.id),
-            );
+            final accountId = record.accountId;
+            if (accountId == null) {
+              return _TransactionDetailScaffold(
+                transaction: record,
+                categoryName: category.isEmpty
+                    ? 'Kategori tidak tersedia'
+                    : category.first.name,
+                accountName: 'Akun tidak tersedia',
+                onEdit: () => context.push('/transactions/$transactionId/edit'),
+                onDelete: () => _delete(context, ref, record.id),
+              );
+            }
+            return ref
+                .watch(accountByIdProvider(accountId))
+                .when(
+                  loading: () => const _LoadingPage(),
+                  error: (error, stackTrace) => _TransactionDetailScaffold(
+                    transaction: record,
+                    categoryName: category.isEmpty
+                        ? 'Kategori tidak tersedia'
+                        : category.first.name,
+                    accountName: 'Akun tidak tersedia',
+                    onEdit: () =>
+                        context.push('/transactions/$transactionId/edit'),
+                    onDelete: () => _delete(context, ref, record.id),
+                  ),
+                  data: (account) => _TransactionDetailScaffold(
+                    transaction: record,
+                    categoryName: category.isEmpty
+                        ? 'Kategori tidak tersedia'
+                        : category.first.name,
+                    accountName: account?.name ?? 'Akun tidak tersedia',
+                    onEdit: () =>
+                        context.push('/transactions/$transactionId/edit'),
+                    onDelete: () => _delete(context, ref, record.id),
+                  ),
+                );
           },
         );
       },
@@ -103,12 +133,14 @@ class _TransactionDetailScaffold extends StatelessWidget {
   const _TransactionDetailScaffold({
     required this.transaction,
     required this.categoryName,
+    required this.accountName,
     required this.onEdit,
     required this.onDelete,
   });
 
   final TransactionRecord transaction;
   final String categoryName;
+  final String accountName;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -169,6 +201,8 @@ class _TransactionDetailScaffold extends StatelessWidget {
               child: Column(
                 children: [
                   _DetailRow(label: 'Kategori', value: categoryName),
+                  const Divider(height: AppSpacing.xl),
+                  _DetailRow(label: 'Akun', value: accountName),
                   const Divider(height: AppSpacing.xl),
                   _DetailRow(
                     label: 'Tanggal',

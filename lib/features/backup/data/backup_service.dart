@@ -360,6 +360,7 @@ class BackupService {
             'id',
             'uuid',
             'type',
+            'account_id',
             'category_id',
             'amount',
             'transaction_date',

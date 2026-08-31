@@ -11,6 +11,8 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
+import '../../accounts/data/account_repository.dart';
+import '../../accounts/domain/account_type.dart';
 import '../../receipt_scanner/data/local_receipt_category_suggestion_service.dart';
 import '../../receipt_scanner/data/receipt_duplicate_detector.dart';
 import '../../receipt_scanner/domain/receipt_duplicate.dart';
@@ -80,6 +82,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   late TransactionType _type;
   late DateTime _date;
   int? _categoryId;
+  int? _accountId;
   CategorySuggestion? _categorySuggestion;
   bool _categoryManuallySelected = false;
   bool _saving = false;
@@ -94,6 +97,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _type = transaction?.type ?? draft?.type ?? TransactionType.expense;
     _date = transaction?.transactionDate ?? draft?.date ?? DateTime.now();
     _categoryId = transaction?.categoryId;
+    _accountId = transaction?.accountId;
     _amountController = TextEditingController(
       text: transaction != null
           ? _formatAmountInput(transaction.amount)
@@ -128,6 +132,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoriesByTypeProvider(_type));
+    final accounts = ref.watch(accountsProvider);
     final isEditing = widget.transaction != null;
     final isReceiptDraft =
         widget.draft?.source == TransactionSource.receiptScan;
@@ -307,6 +312,44 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               ),
             const SizedBox(height: AppSpacing.lg),
 
+            // ----- Account picker -----
+            Text('Akun', style: textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            accounts.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (error, stackTrace) => AppErrorState(
+                message: 'Akun belum dapat dimuat.',
+                onRetry: () => ref.invalidate(accountsProvider),
+              ),
+              data: (items) {
+                final selectedId = _selectedAccountId(items);
+                final options = [
+                  for (final account in items)
+                    if (account.isActive || account.id == selectedId) account,
+                ];
+                return DropdownButtonFormField<int>(
+                  initialValue: selectedId,
+                  decoration: const InputDecoration(
+                    hintText: 'Pilih akun',
+                    prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                  ),
+                  items: [
+                    for (final account in options)
+                      DropdownMenuItem(
+                        value: account.id,
+                        child: Text(
+                          '${account.name} · ${account.type.label}'
+                          '${account.isActive ? '' : ' (Tidak aktif)'}',
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) => setState(() => _accountId = value),
+                  validator: (_) => selectedId == null ? 'Pilih akun.' : null,
+                );
+              },
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
             // ----- Date chip -----
             _DateChip(date: _date, onTap: _selectDate),
             if (isReceiptDraft && widget.draft!.date == null)
@@ -425,6 +468,13 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       return;
     }
     final categoryId = _categoryId;
+    final accountId = _selectedAccountId(
+      ref.read(accountsProvider).valueOrNull ?? const [],
+    );
+    if (accountId == null) {
+      setState(() {});
+      return;
+    }
 
     setState(() => _saving = true);
     final review = widget.draft?.receiptReview;
@@ -473,12 +523,14 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           await repository.createManyWithCategories(
             type: _type,
             entries: itemEntries,
+            accountId: accountId,
             source: TransactionSource.receiptScan,
             receiptFingerprint: fingerprint,
           );
         } else {
           await repository.create(
             type: _type,
+            accountId: accountId,
             categoryId: categoryId!,
             amount: _parseAmount(_amountController.text),
             title: _titleController.text,
@@ -493,6 +545,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           existing.copyWith(
             type: _type,
             categoryId: categoryId!,
+            accountId: Value(accountId),
             amount: _parseAmount(_amountController.text),
             title: _titleController.text.trim(),
             note: Value(note.isEmpty ? null : note),
@@ -568,6 +621,18 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         ],
       ),
     );
+  }
+
+  int? _selectedAccountId(List<AccountRecord> accounts) {
+    if (_accountId != null &&
+        accounts.any((account) => account.id == _accountId)) {
+      return _accountId;
+    }
+    return accounts
+            .where((account) => account.isActive && account.isDefault)
+            .firstOrNull
+            ?.id ??
+        accounts.where((account) => account.isActive).firstOrNull?.id;
   }
 }
 

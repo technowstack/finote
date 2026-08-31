@@ -21,12 +21,14 @@ class TransactionRepository {
   ) {
     final transactions = _database.transactions;
     final categories = _database.categories;
+    final accounts = _database.accounts;
     final query =
         _database.select(transactions).join([
             innerJoin(
               categories,
               categories.id.equalsExp(transactions.categoryId),
             ),
+            innerJoin(accounts, accounts.id.equalsExp(transactions.accountId)),
           ])
           ..where(transactions.deletedAt.isNull())
           ..orderBy([
@@ -73,6 +75,7 @@ class TransactionRepository {
             (row) => (
               transaction: row.readTable(_database.transactions),
               category: row.readTable(_database.categories),
+              account: row.readTable(_database.accounts),
             ),
           )
           .toList(),
@@ -83,6 +86,7 @@ class TransactionRepository {
     required TransactionType type,
     required int categoryId,
     required int amount,
+    int? accountId,
     required DateTime transactionDate,
     String title = '',
     String? note,
@@ -98,11 +102,13 @@ class TransactionRepository {
       receiptFingerprint,
       () => _database.transaction(() async {
         await _requireMatchingCategory(categoryId, type);
+        final resolvedAccountId = await _resolveAccountId(accountId);
         return _database
             .into(_database.transactions)
             .insertReturning(
               TransactionsCompanion.insert(
                 type: type,
+                accountId: Value(resolvedAccountId),
                 categoryId: categoryId,
                 amount: amount,
                 title: Value(title.trim()),
@@ -123,6 +129,7 @@ class TransactionRepository {
     required int categoryId,
     required List<({int amount, String title, DateTime transactionDate})>
     entries,
+    int? accountId,
     TransactionSource source = TransactionSource.manual,
   }) {
     if (entries.isEmpty) throw ArgumentError('At least one entry is required');
@@ -132,6 +139,7 @@ class TransactionRepository {
 
     return _database.transaction(() async {
       await _requireMatchingCategory(categoryId, type);
+      final resolvedAccountId = await _resolveAccountId(accountId);
       final result = <TransactionRecord>[];
       for (final entry in entries) {
         result.add(
@@ -140,6 +148,7 @@ class TransactionRepository {
               .insertReturning(
                 TransactionsCompanion.insert(
                   type: type,
+                  accountId: Value(resolvedAccountId),
                   categoryId: categoryId,
                   amount: entry.amount,
                   title: Value(entry.title.trim()),
@@ -161,6 +170,7 @@ class TransactionRepository {
     entries,
     TransactionSource source = TransactionSource.manual,
     String? receiptFingerprint,
+    int? accountId,
   }) async {
     if (entries.isEmpty) throw ArgumentError('At least one entry is required');
     for (final entry in entries) {
@@ -170,6 +180,7 @@ class TransactionRepository {
     return _runReceiptSave(
       receiptFingerprint,
       () => _database.transaction(() async {
+        final resolvedAccountId = await _resolveAccountId(accountId);
         final result = <TransactionRecord>[];
         for (final entry in entries) {
           await _requireMatchingCategory(entry.categoryId, type);
@@ -179,6 +190,7 @@ class TransactionRepository {
                 .insertReturning(
                   TransactionsCompanion.insert(
                     type: type,
+                    accountId: Value(resolvedAccountId),
                     categoryId: entry.categoryId,
                     amount: entry.amount,
                     title: Value(entry.title.trim()),
@@ -218,6 +230,7 @@ class TransactionRepository {
 
     return _database.transaction(() async {
       await _requireMatchingCategory(transaction.categoryId, transaction.type);
+      await _requireAccountForUpdate(transaction);
       final updated = transaction.copyWith(updatedAt: DateTime.now().toUtc());
       final count =
           await (_database.update(_database.transactions)..where(
@@ -267,6 +280,43 @@ class TransactionRepository {
     }
   }
 
+  Future<int> _resolveAccountId(int? id) async {
+    final account = id == null
+        ? await (_database.select(_database.accounts)..where(
+                    (account) =>
+                        account.isDefault.equals(true) &
+                        account.isActive.equals(true),
+                  ))
+                  .getSingleOrNull() ??
+              await (_database.select(_database.accounts)
+                    ..where((account) => account.isActive.equals(true))
+                    ..orderBy([(account) => OrderingTerm.asc(account.id)]))
+                  .getSingleOrNull()
+        : await (_database.select(_database.accounts)..where(
+                (account) =>
+                    account.id.equals(id) & account.isActive.equals(true),
+              ))
+              .getSingleOrNull();
+    if (account == null) throw StateError('Active account not found');
+    return account.id;
+  }
+
+  Future<void> _requireAccountForUpdate(TransactionRecord transaction) async {
+    final accountId = transaction.accountId;
+    if (accountId == null) throw StateError('Transaction account is required');
+    final current = await (_database.select(
+      _database.transactions,
+    )..where((row) => row.id.equals(transaction.id))).getSingleOrNull();
+    if (current == null) throw StateError('Transaction not found');
+    final account = await (_database.select(
+      _database.accounts,
+    )..where((row) => row.id.equals(accountId))).getSingleOrNull();
+    if (account == null ||
+        (!account.isActive && current.accountId != accountId)) {
+      throw StateError('Active account not found');
+    }
+  }
+
   void _validateAmount(int amount) {
     if (amount <= 0) {
       throw ArgumentError.value(amount, 'amount', 'Amount must be positive');
@@ -301,6 +351,7 @@ final transactionByIdProvider = FutureProvider.family<TransactionRecord?, int>(
 typedef TransactionListItem = ({
   TransactionRecord transaction,
   CategoryRecord category,
+  AccountRecord account,
 });
 
 class TransactionHistoryQuery {
