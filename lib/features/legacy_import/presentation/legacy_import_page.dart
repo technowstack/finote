@@ -194,6 +194,7 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
           label: 'Tabel ditemukan',
           value: result.tablesRecognised.join(', '),
         ),
+        const _InfoRow(label: 'Akun tujuan', value: 'Akun default'),
 
         const SizedBox(height: 20),
         const Divider(),
@@ -318,6 +319,7 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
           label: 'Total pengeluaran',
           value: formatIdr(summary.totalExpense),
         ),
+        _InfoRow(label: 'Akun tujuan', value: summary.destinationAccount),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,

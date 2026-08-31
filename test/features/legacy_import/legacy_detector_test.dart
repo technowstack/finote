@@ -78,6 +78,9 @@ void main() {
           value TEXT
         )
       ''');
+      db.execute(
+        "INSERT INTO TransactionSubType VALUES (1, 'Makan'), (2, 'Gaji')",
+      );
 
       for (final tx in transactions) {
         db.execute(
@@ -165,6 +168,43 @@ void main() {
       );
     },
   );
+
+  test('schema tanpa kolom wajib ditolak sebelum import', () async {
+    final path = await createSqliteFile('missing_column.db', (db) {
+      db.execute(
+        'CREATE TABLE "Transaction" (id INTEGER PRIMARY KEY, type INTEGER, '
+        'amount INTEGER, subType INTEGER, date INTEGER)',
+      );
+      db.execute(
+        'CREATE TABLE TransactionSubType (id INTEGER PRIMARY KEY, name TEXT)',
+      );
+    });
+
+    await expectLater(
+      const LegacyDetector().detect(path),
+      throwsA(isA<LegacyDetectionError>()),
+    );
+  });
+
+  test('critical malformed row is rejected safely', () async {
+    final path = await createLegacyDb(
+      'invalid_row.db',
+      transactions: [
+        {
+          'type': 7,
+          'amount': 1000,
+          'subType': 1,
+          'date': 1672531200000,
+          'title': 'Tidak valid',
+        },
+      ],
+    );
+
+    await expectLater(
+      const LegacyDetector().detect(path),
+      throwsA(isA<LegacyDetectionError>()),
+    );
+  });
 
   // ---------------------------------------------------------------------------
   // 3. Schema kompatibel, 0 transaksi

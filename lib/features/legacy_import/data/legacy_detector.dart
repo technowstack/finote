@@ -49,6 +49,14 @@ class LegacyDetector {
         );
       }
 
+      final missingColumns = _missingRequiredColumns(db);
+      if (missingColumns.isNotEmpty) {
+        throw LegacyDetectionError.incompatibleSchema(
+          missingTables: missingColumns,
+        );
+      }
+      _validateRows(db);
+
       // 4. Baca metadata dari tabel Transaction (read-only)
       final meta = _readTransactionMeta(db);
 
@@ -105,6 +113,74 @@ class LegacyDetector {
     return {for (final row in rows) row['name'] as String};
   }
 
+  Set<String> _missingRequiredColumns(Database db) {
+    final missing = <String>{};
+    for (final entry in LegacySchema.requiredColumns.entries) {
+      final columns = db
+          .select('PRAGMA table_info("${entry.key}")')
+          .map((row) => row['name'] as String)
+          .toSet();
+      for (final column in entry.value.difference(columns)) {
+        missing.add('${entry.key}.$column');
+      }
+    }
+    return missing;
+  }
+
+  void _validateRows(Database db) {
+    final categories = <int>{};
+    for (final row in db.select(
+      'SELECT ${LegacySchema.colCategoryId}, '
+      '${LegacySchema.colCategoryName} FROM TransactionSubType',
+    )) {
+      categories.add(
+        LegacySchema.readWholeInt(
+          row[LegacySchema.colCategoryId],
+          'category id',
+        ),
+      );
+      final name = row[LegacySchema.colCategoryName];
+      if (name is! String || name.trim().isEmpty) {
+        throw const FormatException('Nama kategori legacy tidak valid.');
+      }
+    }
+
+    for (final row in db.select(
+      'SELECT ${LegacySchema.colId}, ${LegacySchema.colType}, '
+      '${LegacySchema.colAmount}, ${LegacySchema.colSubType}, '
+      '${LegacySchema.colDate}, title FROM "Transaction"',
+    )) {
+      LegacySchema.readWholeInt(row[LegacySchema.colId], 'transaction id');
+      final type = LegacySchema.readWholeInt(
+        row[LegacySchema.colType],
+        'transaction type',
+      );
+      if (type != 0 && type != 1) {
+        throw FormatException('Tipe transaksi legacy tidak dikenal: $type');
+      }
+      final amount = LegacySchema.readWholeInt(
+        row[LegacySchema.colAmount],
+        'transaction amount',
+      );
+      if (amount <= 0) {
+        throw const FormatException('Nominal transaksi harus positif.');
+      }
+      final categoryId = LegacySchema.readWholeInt(
+        row[LegacySchema.colSubType],
+        'transaction subtype',
+      );
+      if (!categories.contains(categoryId)) {
+        throw FormatException('Kategori legacy $categoryId tidak ditemukan.');
+      }
+      if (LegacySchema.readDate(row[LegacySchema.colDate]) == null) {
+        throw const FormatException('Tanggal transaksi legacy tidak valid.');
+      }
+      if (row['title'] != null && row['title'] is! String) {
+        throw const FormatException('Judul transaksi legacy tidak valid.');
+      }
+    }
+  }
+
   /// Membaca jumlah transaksi, jumlah kategori unik, dan rentang tanggal
   /// dari tabel `Transaction`.
   ///
@@ -137,13 +213,9 @@ class LegacyDetector {
     );
   }
 
-  int _readWholeNumber(Object? value) => switch (value) {
-    null => 0,
-    int value => value,
-    double value when value.isFinite && value == value.truncateToDouble() =>
-      value.toInt(),
-    _ => throw const FormatException('Nominal legacy tidak valid.'),
-  };
+  int _readWholeNumber(Object? value) => value == null
+      ? 0
+      : LegacySchema.readWholeInt(value, 'transaction amount');
 }
 
 /// Data internal untuk metadata tabel Transaction.

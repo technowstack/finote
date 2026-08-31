@@ -84,7 +84,19 @@ class AppDatabase extends _$AppDatabase {
     final existing = await (select(
       accounts,
     )..where((account) => account.isDefault.equals(true))).getSingleOrNull();
-    if (existing != null) return;
+    if (existing != null) {
+      if (!existing.isActive) {
+        await (update(
+          accounts,
+        )..where((account) => account.id.equals(existing.id))).write(
+          AccountsCompanion(
+            isActive: const Value(true),
+            updatedAt: Value(DateTime.now().toUtc()),
+          ),
+        );
+      }
+      return;
+    }
     await into(accounts).insert(
       AccountsCompanion.insert(
         name: 'Tunai',

@@ -6,6 +6,7 @@ class LegacyImportSummary {
     required this.categoriesCreated,
     required this.totalIncome,
     required this.totalExpense,
+    required this.destinationAccount,
   });
 
   final int newCount;
@@ -14,4 +15,5 @@ class LegacyImportSummary {
   final int categoriesCreated;
   final int totalIncome;
   final int totalExpense;
+  final String destinationAccount;
 }

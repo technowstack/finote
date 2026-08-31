@@ -41,9 +41,9 @@ final class _IncompatibleSchema extends LegacyDetectionError {
 
   @override
   String toUserMessage() {
-    final tables = missingTables.map((t) => '"$t"').join(', ');
+    final structures = missingTables.map((item) => '"$item"').join(', ');
     return 'Database ini tidak kompatibel dengan format yang dikenal. '
-        'Tabel yang diperlukan tidak ditemukan: $tables.';
+        'Struktur yang diperlukan tidak ditemukan: $structures.';
   }
 }
 

@@ -99,6 +99,26 @@ void main() {
     expect((await repository.findById(defaultAccount.id))?.isActive, isTrue);
   });
 
+  test('keeps the canonical default account active', () async {
+    final defaultAccount = await database.select(database.accounts).getSingle();
+    await repository.create(name: 'BCA', type: AccountType.bank);
+
+    await expectLater(repository.archive(defaultAccount.id), throwsStateError);
+    await (database.update(database.accounts)
+          ..where((account) => account.id.equals(defaultAccount.id)))
+        .write(const AccountsCompanion(isActive: Value(false)));
+    await repository.initializeDefaults();
+
+    final repaired = await repository.findById(defaultAccount.id);
+    expect(repaired?.isActive, isTrue);
+    expect(
+      (await database.select(database.accounts).get()).where(
+        (account) => account.isDefault,
+      ),
+      hasLength(1),
+    );
+  });
+
   test('rejects empty, overly long, and negative initial balance', () async {
     await expectLater(
       repository.create(name: '  ', type: AccountType.cash),

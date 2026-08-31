@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:drift/drift.dart';
 import 'package:cryptography/cryptography.dart';
@@ -24,28 +25,37 @@ class LegacyImporter {
     await const LegacyDetector().detect(filePath);
     final data = _readLegacy(filePath);
     final legacySource = await _sourceFor(filePath);
+    final previousPathSource = await _pathSourceFor(filePath);
 
     return _database.transaction(() async {
-      final imported =
-          await (_database.select(_database.transactions)..where(
-                (row) =>
-                    row.legacySource.equals(legacySource) |
-                    row.legacySource.equals(LegacySchema.legacySource),
-              ))
-              .get();
+      await _database.ensureDefaultAccount();
+      for (final previousSource in {
+        LegacySchema.legacySource,
+        previousPathSource,
+      }) {
+        if (previousSource == legacySource) continue;
+        await (_database.update(_database.transactions)
+              ..where((row) => row.legacySource.equals(previousSource)))
+            .write(TransactionsCompanion(legacySource: Value(legacySource)));
+      }
+      final imported = await (_database.select(
+        _database.transactions,
+      )..where((row) => row.legacySource.equals(legacySource))).get();
       final importedIds = imported.map((row) => row.legacyId).nonNulls.toSet();
       final newTransactions = data.transactions
           .where((transaction) => !importedIds.contains(transaction.id))
           .toList();
       final categoryIds = <(int, TransactionType), int>{};
-      final defaultAccount =
-          await (_database.select(_database.accounts)..where(
-                (account) =>
-                    account.isDefault.equals(true) &
-                    account.isActive.equals(true),
-              ))
-              .getSingleOrNull();
-      if (defaultAccount == null) {
+      final existingCategories = {
+        for (final category in await (_database.select(
+          _database.categories,
+        )..where((row) => row.deletedAt.isNull())).get())
+          (category.name, category.type): category.id,
+      };
+      final defaultAccount = await (_database.select(
+        _database.accounts,
+      )..where((account) => account.isDefault.equals(true))).getSingleOrNull();
+      if (defaultAccount == null || !defaultAccount.isActive) {
         throw StateError('Default account is missing');
       }
       var categoriesCreated = 0;
@@ -61,16 +71,10 @@ class LegacyImporter {
           );
         }
 
-        final existing =
-            await (_database.select(_database.categories)..where(
-                  (row) =>
-                      row.name.equals(name.trim()) &
-                      row.type.equals(transaction.type.name) &
-                      row.deletedAt.isNull(),
-                ))
-                .getSingleOrNull();
-        if (existing != null) {
-          categoryIds[key] = existing.id;
+        final categoryKey = (name.trim(), transaction.type);
+        final existingId = existingCategories[categoryKey];
+        if (existingId != null) {
+          categoryIds[key] = existingId;
           continue;
         }
 
@@ -83,6 +87,7 @@ class LegacyImporter {
               ),
             );
         categoryIds[key] = category.id;
+        existingCategories[categoryKey] = category.id;
         categoriesCreated++;
       }
 
@@ -117,16 +122,23 @@ class LegacyImporter {
         totalExpense: newTransactions
             .where((item) => item.type == TransactionType.expense)
             .fold(0, (total, item) => total + item.amount),
+        destinationAccount: defaultAccount.name,
       );
     });
   }
 
   Future<String> _sourceFor(String filePath) async {
+    final digest = await Sha256().hash(await File(filePath).readAsBytes());
+    return '${LegacySchema.legacySource}:${_hex(digest.bytes)}';
+  }
+
+  Future<String> _pathSourceFor(String filePath) async {
     final digest = await Sha256().hash(utf8.encode(p.absolute(filePath)));
-    final fingerprint = digest.bytes
-        .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
-        .join();
-    return '${LegacySchema.legacySource}:$fingerprint';
+    return '${LegacySchema.legacySource}:${_hex(digest.bytes)}';
+  }
+
+  String _hex(List<int> bytes) {
+    return bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join();
   }
 
   _LegacyData _readLegacy(String filePath) {
@@ -137,8 +149,10 @@ class LegacyImporter {
           'SELECT ${LegacySchema.colCategoryId}, '
           '${LegacySchema.colCategoryName} FROM TransactionSubType',
         ))
-          _readInt(row[LegacySchema.colCategoryId], 'category id'):
-              row[LegacySchema.colCategoryName] as String,
+          LegacySchema.readWholeInt(
+            row[LegacySchema.colCategoryId],
+            'category id',
+          ): row[LegacySchema.colCategoryName] as String,
       };
 
       final transactions = db
@@ -149,7 +163,7 @@ class LegacyImporter {
             'ORDER BY ${LegacySchema.colId}',
           )
           .map((row) {
-            final type = switch (_readInt(
+            final type = switch (LegacySchema.readWholeInt(
               row[LegacySchema.colType],
               'transaction type',
             )) {
@@ -165,7 +179,7 @@ class LegacyImporter {
                 'Tanggal transaksi legacy tidak valid.',
               );
             }
-            final amount = _readInt(
+            final amount = LegacySchema.readWholeInt(
               row[LegacySchema.colAmount],
               'transaction amount',
             );
@@ -173,10 +187,13 @@ class LegacyImporter {
               throw const FormatException('Nominal transaksi harus positif.');
             }
             return _LegacyTransaction(
-              id: _readInt(row[LegacySchema.colId], 'transaction id'),
+              id: LegacySchema.readWholeInt(
+                row[LegacySchema.colId],
+                'transaction id',
+              ),
               type: type,
               amount: amount,
-              subType: _readInt(
+              subType: LegacySchema.readWholeInt(
                 row[LegacySchema.colSubType],
                 'transaction subtype',
               ),
@@ -190,14 +207,6 @@ class LegacyImporter {
       db.close();
     }
   }
-
-  int _readInt(Object? value, String field) => switch (value) {
-    int value => value,
-    double value when value.isFinite && value == value.truncateToDouble() =>
-      value.toInt(),
-    String value when int.tryParse(value) != null => int.parse(value),
-    _ => throw FormatException('Nilai $field tidak valid.'),
-  };
 }
 
 class _LegacyData {

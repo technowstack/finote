@@ -133,6 +133,9 @@ class AccountRepository {
   Future<bool> archive(int id) async {
     final account = await findById(id);
     if (account == null || !account.isActive) return false;
+    if (account.isDefault) {
+      throw StateError('Default account cannot be archived');
+    }
 
     final active = await (_database.select(
       _database.accounts,

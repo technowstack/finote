@@ -23,6 +23,11 @@ abstract final class LegacySchema {
     'TransactionSubType',
   };
 
+  static const Map<String, Set<String>> requiredColumns = {
+    'Transaction': {'id', 'type', 'amount', 'subType', 'date', 'title'},
+    'TransactionSubType': {'id', 'name'},
+  };
+
   // ---------------------------------------------------------------------------
   // Kolom Transaction yang akan dibaca detector
   // ---------------------------------------------------------------------------
@@ -45,6 +50,14 @@ abstract final class LegacySchema {
 
   static const String colCategoryId = 'id';
   static const String colCategoryName = 'name';
+
+  static int readWholeInt(Object? value, String field) => switch (value) {
+    int value => value,
+    double value when value.isFinite && value == value.truncateToDouble() =>
+      value.toInt(),
+    String value when int.tryParse(value) != null => int.parse(value),
+    _ => throw FormatException('Nilai $field tidak valid.'),
+  };
 
   static DateTime? readDate(Object? value) {
     final milliseconds = switch (value) {
