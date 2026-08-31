@@ -32,7 +32,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: TransfersPage()),
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.3)),
+            child: TransfersPage(),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -41,6 +46,49 @@ void main() {
     expect(find.text('Rp2.000.000'), findsOneWidget);
     expect(await database.select(database.transfers).get(), hasLength(1));
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('long transfer labels fit a small screen', (tester) async {
+    tester.view.physicalSize = const Size(640, 1200);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final accounts = AccountRepository(database);
+    final source = await accounts.create(
+      name: 'BCA Utama Untuk Kebutuhan Harian Keluarga',
+      type: AccountType.bank,
+    );
+    final destination = await accounts.create(
+      name: 'BCA Tabungan Dana Darurat Jangka Panjang',
+      type: AccountType.savings,
+    );
+    await TransferRepository(database).create(
+      fromAccountId: source.id,
+      toAccountId: destination.id,
+      amount: 9000000000000,
+      transferDate: DateTime(2026, 8, 31),
+      note: 'Catatan transfer yang panjang untuk menguji layar kecil',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.3)),
+            child: TransfersPage(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rp9.000.000.000.000'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });

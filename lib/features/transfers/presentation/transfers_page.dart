@@ -162,15 +162,30 @@ class _TransfersPageState extends ConsumerState<TransfersPage> {
                           leading: const CircleAvatar(
                             child: Icon(Icons.swap_horiz),
                           ),
-                          title: Text('${item.from.name} → ${item.to.name}'),
+                          title: Text(
+                            '${item.from.name} → ${item.to.name}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           subtitle: Text(
                             '${formatDate(item.transfer.transferDate)}'
                             '${item.transfer.note?.isNotEmpty == true ? ' · ${item.transfer.note}' : ''}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(formatIdr(item.transfer.amount)),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 120,
+                                ),
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(formatIdr(item.transfer.amount)),
+                                ),
+                              ),
                               PopupMenuButton<_TransferAction>(
                                 tooltip: 'Tindakan transfer',
                                 onSelected: (action) {

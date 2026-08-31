@@ -214,6 +214,36 @@ void main() {
     expect((await _summary(accounts, source.id)).balance, -500000);
     expect((await _summary(accounts, destination.id)).balance, 1000000);
   });
+
+  test('transfer list reacts to account renames', () async {
+    final source = await accounts.create(name: 'A', type: AccountType.bank);
+    final destination = await accounts.create(
+      name: 'B',
+      type: AccountType.cash,
+    );
+    await transfers.create(
+      fromAccountId: source.id,
+      toAccountId: destination.id,
+      amount: 1000,
+      transferDate: DateTime(2026, 8, 31),
+    );
+    final expectation = expectLater(
+      transfers.watchActive().map(
+        (items) => '${items.single.from.name} → ${items.single.to.name}',
+      ),
+      emitsInOrder(['A → B', 'A Utama → B']),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    await accounts.update(
+      id: source.id,
+      name: 'A Utama',
+      type: source.type,
+      initialBalance: source.initialBalance,
+    );
+
+    await expectation;
+  });
 }
 
 Future<CategoryRecord> _category(

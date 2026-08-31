@@ -21,7 +21,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tunai'), findsAtLeastNWidgets(1));
-    expect(find.text('Saldo Rp0'), findsOneWidget);
+    expect(find.text('Saldo Saat Ini Rp0'), findsOneWidget);
+    await tester.tap(find.byTooltip('Tindakan akun'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nonaktifkan'), findsNothing);
+    await tester.tapAt(Offset.zero);
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'DANA');

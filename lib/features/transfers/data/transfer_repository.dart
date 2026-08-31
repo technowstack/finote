@@ -9,23 +9,37 @@ class TransferRepository {
   final AppDatabase _database;
 
   Stream<List<TransferListItem>> watchActive() {
-    return (_database.select(_database.transfers)
-          ..where((transfer) => transfer.deletedAt.isNull())
+    final transfers = _database.transfers;
+    final source = _database.alias(_database.accounts, 'source_account');
+    final destination = _database.alias(
+      _database.accounts,
+      'destination_account',
+    );
+    final query =
+        _database.select(transfers).join([
+            innerJoin(source, source.id.equalsExp(transfers.fromAccountId)),
+            innerJoin(
+              destination,
+              destination.id.equalsExp(transfers.toAccountId),
+            ),
+          ])
+          ..where(transfers.deletedAt.isNull())
           ..orderBy([
-            (transfer) => OrderingTerm.desc(transfer.transferDate),
-            (transfer) => OrderingTerm.desc(transfer.createdAt),
-          ]))
-        .watch()
-        .asyncMap((transfers) async {
-          final accounts = await _database.select(_database.accounts).get();
-          final byId = {for (final account in accounts) account.id: account};
-          return [
-            for (final transfer in transfers)
-              if (byId[transfer.fromAccountId] case final from?)
-                if (byId[transfer.toAccountId] case final to?)
-                  (transfer: transfer, from: from, to: to),
-          ];
-        });
+            OrderingTerm.desc(transfers.transferDate),
+            OrderingTerm.desc(transfers.createdAt),
+            OrderingTerm.desc(transfers.id),
+          ]);
+
+    return query.watch().map(
+      (rows) => [
+        for (final row in rows)
+          (
+            transfer: row.readTable(transfers),
+            from: row.readTable(source),
+            to: row.readTable(destination),
+          ),
+      ],
+    );
   }
 
   Future<TransferRecord?> findById(int id) {

@@ -349,6 +349,78 @@ void main() {
     );
   });
 
+  for (final oldVersion in [4, 6]) {
+    test(
+      'version $oldVersion account database upgrades without data loss',
+      () async {
+        await database.close();
+        final directory = await Directory.systemTemp.createTemp(
+          'finote_schema_${oldVersion}_upgrade_',
+        );
+        addTearDown(() => directory.delete(recursive: true));
+        final file = File('${directory.path}/finote.sqlite');
+        database = AppDatabase(NativeDatabase(file));
+        final category = await CategoryRepository(database)
+            .create(name: 'Makan', type: TransactionType.expense);
+        final transaction = await TransactionRepository(database).create(
+          type: TransactionType.expense,
+          categoryId: category.id,
+          amount: 25000,
+          transactionDate: DateTime(2026, 8, 31),
+        );
+        await database.close();
+
+        final native = sqlite3.open(file.path);
+        native.execute('DROP TABLE transfers');
+        for (final index in [
+          'transfers_from_account_id',
+          'transfers_to_account_id',
+          'transfers_date',
+          'transfers_deleted_at',
+        ]) {
+          native.execute('DROP INDEX IF EXISTS $index');
+        }
+        if (oldVersion == 4) {
+          native.execute('DROP INDEX IF EXISTS transactions_account_id');
+          native.execute('UPDATE transactions SET account_id = NULL');
+        }
+        native.userVersion = oldVersion;
+        native.close();
+
+        database = AppDatabase(NativeDatabase(file));
+        final restored = await database
+            .select(database.transactions)
+            .getSingle();
+        final defaultAccount = await database
+            .select(database.accounts)
+            .getSingle();
+        final schema = await database
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type IN ('table', 'index')",
+            )
+            .get();
+        final names = schema.map((row) => row.read<String>('name')).toSet();
+
+        expect(restored.uuid, transaction.uuid);
+        expect(restored.amount, 25000);
+        expect(restored.accountId, defaultAccount.id);
+        expect(defaultAccount.isDefault, isTrue);
+        expect(await database.select(database.transfers).get(), isEmpty);
+        expect(
+          names,
+          containsAll([
+            'transfers',
+            'transactions_account_id',
+            'transfers_from_account_id',
+            'transfers_to_account_id',
+            'transfers_date',
+            'transfers_deleted_at',
+          ]),
+        );
+      },
+    );
+  }
+
   test(
     'transactions persist and can change account without duplication',
     () async {

@@ -162,7 +162,7 @@ class _AccountCard extends StatelessWidget {
             Text(
               '${account.type.label}${account.isActive ? '' : ' • Tidak aktif'}',
             ),
-            Text('Saldo ${formatIdr(summary.balance)}'),
+            Text('Saldo Saat Ini ${formatIdr(summary.balance)}'),
             Text(
               'Masuk ${formatIdr(summary.totalIncome)} · '
               'Keluar ${formatIdr(summary.totalExpense)}',
@@ -205,12 +205,13 @@ class _AccountCard extends StatelessWidget {
               value: _AccountAction.edit,
               child: Text('Ubah'),
             ),
-            PopupMenuItem(
-              value: account.isActive
-                  ? _AccountAction.archive
-                  : _AccountAction.reactivate,
-              child: Text(account.isActive ? 'Nonaktifkan' : 'Aktifkan'),
-            ),
+            if (!account.isDefault)
+              PopupMenuItem(
+                value: account.isActive
+                    ? _AccountAction.archive
+                    : _AccountAction.reactivate,
+                child: Text(account.isActive ? 'Nonaktifkan' : 'Aktifkan'),
+              ),
           ],
         ),
       ),
