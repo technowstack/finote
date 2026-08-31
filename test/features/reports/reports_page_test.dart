@@ -96,6 +96,16 @@ void main() {
     expect(find.text('1 transfer'), findsOneWidget);
     expect(find.text('Rp2.000.000'), findsAtLeastNWidgets(1));
 
+    await tester.tap(find.byTooltip('Export laporan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Total aset saat ini: Rp9.500.000'), findsOneWidget);
+    expect(find.text('1 transfer: Rp2.000.000'), findsOneWidget);
+    await tester.tap(find.text('Semua jenis'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pemasukan').last);
+    await tester.pumpAndSettle();
+    expect(find.text('0 transfer: Rp0'), findsOneWidget);
+
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });

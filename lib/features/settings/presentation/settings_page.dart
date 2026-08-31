@@ -24,6 +24,12 @@ class SettingsPage extends ConsumerWidget {
             title: 'Data',
             children: [
               _SettingsTile(
+                icon: Icons.account_balance_wallet_outlined,
+                title: 'Akun & Dompet',
+                subtitle: 'Kelola akun dan saldo awal',
+                onTap: () => context.push('/accounts'),
+              ),
+              _SettingsTile(
                 icon: Icons.category_outlined,
                 title: 'Kategori',
                 subtitle: 'Kelola kategori pemasukan dan pengeluaran',

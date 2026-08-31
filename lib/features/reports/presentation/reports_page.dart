@@ -198,11 +198,14 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
             startDate: widget.document.filter.startDate,
             endDate: widget.document.filter.endDate,
             type: _type,
+            categoryId: widget.document.filter.categoryId,
           ),
           generatedAt: widget.document.generatedAt,
           transactions: widget.document.transactions
               .where((row) => row.type == _type)
               .toList(growable: false),
+          accounts: widget.document.accounts,
+          transfers: const [],
         );
 
   @override
@@ -220,7 +223,12 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
             const SizedBox(height: AppSpacing.sm),
             Text('Pemasukan: ${formatIdr(document.totalIncome)}'),
             Text('Pengeluaran: ${formatIdr(document.totalExpense)}'),
-            Text('Saldo: ${formatIdr(document.balance)}'),
+            Text('Saldo periode: ${formatIdr(document.balance)}'),
+            Text('Total aset saat ini: ${formatIdr(document.totalAssets)}'),
+            Text(
+              '${document.transfers.length} transfer: '
+              '${formatIdr(document.transferVolume)}',
+            ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<ExportFormat>(
               initialValue: _format,

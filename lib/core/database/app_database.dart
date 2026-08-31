@@ -25,7 +25,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -49,7 +49,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 5) {
         if (from >= 2) {
-          await migrator.addColumn(transactions, transactions.accountId);
+          final columns = await customSelect('PRAGMA table_info(transactions)')
+              .get();
+          if (!columns.any((row) => row.read<String>('name') == 'account_id')) {
+            await migrator.addColumn(transactions, transactions.accountId);
+          }
         }
         await ensureDefaultAccount();
         await _backfillTransactionAccounts();
@@ -62,6 +66,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await migrator.createTable(transfers);
+      }
+      if (from < 8) {
+        await _ensureAccountTransferIndexes();
       }
     },
     onCreate: (migrator) async {
@@ -103,6 +110,21 @@ class AppDatabase extends _$AppDatabase {
     ).getSingle();
     if (unassigned.read<int>('count') != 0) {
       throw StateError('Some transactions have no account');
+    }
+  }
+
+  Future<void> _ensureAccountTransferIndexes() async {
+    for (final statement in [
+      'CREATE INDEX IF NOT EXISTS accounts_active ON accounts (is_active)',
+      'CREATE INDEX IF NOT EXISTS transfers_from_account_id '
+          'ON transfers (from_account_id)',
+      'CREATE INDEX IF NOT EXISTS transfers_to_account_id '
+          'ON transfers (to_account_id)',
+      'CREATE INDEX IF NOT EXISTS transfers_date ON transfers (transfer_date)',
+      'CREATE INDEX IF NOT EXISTS transfers_deleted_at '
+          'ON transfers (deleted_at)',
+    ]) {
+      await customStatement(statement);
     }
   }
 

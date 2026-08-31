@@ -343,6 +343,18 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
           value: preview.categoryCount.toString(),
         ),
         _PreviewRow(
+          label: 'Jumlah akun',
+          value: preview.accountCount.toString(),
+        ),
+        _PreviewRow(
+          label: 'Jumlah transfer',
+          value: preview.transferCount.toString(),
+        ),
+        _PreviewRow(
+          label: 'Volume transfer',
+          value: formatIdr(preview.transferVolume),
+        ),
+        _PreviewRow(
           label: 'Total pemasukan',
           value: formatIdr(preview.totalIncome),
         ),

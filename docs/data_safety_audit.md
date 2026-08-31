@@ -15,8 +15,9 @@ or PDF exports.
   creation time, and app version. It contains no PIN or secrets.
 - SQLite snapshots use `VACUUM INTO`, avoiding a blind copy of a live database
   and its WAL/journal state.
-- The snapshot is checked with SQLite integrity and schema-version checks
-  before the archive is returned or saved.
+- The snapshot is checked for SQLite integrity, current schema, complete
+  account/transfer columns and indexes, valid account relationships, one Default
+  Account, and assigned transaction accounts before it is returned or saved.
 - Safety backups are retained under the app documents directory as
   `pre_restore_backup_...zip`; names are collision-safe.
 
@@ -39,9 +40,15 @@ second SQLite/schema verification. If swapping or verification fails, the old
 database is restored where possible. The UI aborts when the safety backup
 cannot be created.
 
-Restore previews show backup metadata plus active transaction count, category
-count, date range, income, and expense totals. Successful restore invalidates
-the database provider, causing dependent Riverpod providers to rebuild.
+Restore previews show backup metadata plus active transaction/category counts,
+account count, active transfer count/volume, date range, income, and expense
+totals. Successful restore invalidates the database provider, causing dependent
+Riverpod providers to rebuild.
+
+The live database is copied to a rollback file while remaining at its normal
+path until the validated staged file atomically replaces it. Failed replacement
+or installed verification restores the rollback copy. WAL/SHM sidecars are
+removed only after the live connection closes and the rollback copy exists.
 
 ## Settings
 
@@ -51,10 +58,21 @@ remain outside the financial database and are not restored.
 
 ## Database Migration
 
-The current Drift schema version is `3`. Existing migrations are additive:
+The current Drift schema version is `8`. Existing migrations are additive:
 
 - versions below `2` create missing application tables;
-- versions below `3` add `receipt_fingerprint` only when absent.
+- versions below `3` add `receipt_fingerprint` only when absent;
+- version `4` creates Accounts and the Default Account;
+- version `5` adds/backfills `transactions.account_id`;
+- version `6` indexes transaction account relations;
+- version `7` creates Transfers;
+- version `8` idempotently repairs account and transfer indexes on upgraded
+  databases.
+
+Pre-account schema-3 backup databases are migrated only in temporary staging.
+Migration is forced with an awaited Drift query, then the current schema,
+Default Account backfill, empty Transfer table, and financial relationships are
+validated before activation. The archived source file is not modified.
 
 There is no destructive drop-and-recreate fallback. Existing rows, UUIDs,
 amounts, dates, soft-delete values, and legacy metadata remain in place.

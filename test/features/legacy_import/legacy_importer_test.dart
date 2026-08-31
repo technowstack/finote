@@ -4,6 +4,8 @@ import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/export/data/export_repository.dart';
+import 'package:finote/features/export/domain/export_document.dart';
 import 'package:finote/features/legacy_import/data/legacy_importer.dart';
 import 'package:finote/features/legacy_import/domain/legacy_schema.dart';
 import 'package:finote/features/reports/data/report_repository.dart';
@@ -130,6 +132,12 @@ void main() {
     expect(report.totalIncome, 500000);
     expect(report.totalExpense, 25000);
     expect(report.transferSummary.count, 0);
+    final export = await ExportRepository(database).buildDocument(
+      ExportFilter(startDate: DateTime(2023), endDate: DateTime(2023, 12, 31)),
+    );
+    expect(export.transactions, hasLength(2));
+    expect(export.transactions.every((row) => row.account == 'Tunai'), isTrue);
+    expect(export.transfers, isEmpty);
   });
 
   test('second import of the same database skips every transaction', () async {

@@ -22,6 +22,12 @@ Uint8List buildExcelExport(ExportDocument document) {
         'xl/worksheets/sheet2.xml',
         _transactionSheet(document),
       ),
+    )
+    ..addFile(
+      ArchiveFile.string('xl/worksheets/sheet3.xml', _accountSheet(document)),
+    )
+    ..addFile(
+      ArchiveFile.string('xl/worksheets/sheet4.xml', _transferSheet(document)),
     );
   return Uint8List.fromList(ZipEncoder().encode(archive)!);
 }
@@ -32,6 +38,10 @@ String _summarySheet(ExportDocument document) => _sheet([
   _row([_text('Total pengeluaran'), _number(document.totalExpense)]),
   _row([_text('Saldo'), _number(document.balance)]),
   _row([_text('Jumlah transaksi'), _number(document.transactions.length)]),
+  _row([_text('Total aset saat ini'), _number(document.totalAssets)]),
+  _row([_text('Jumlah akun'), _number(document.accounts.length)]),
+  _row([_text('Jumlah transfer'), _number(document.transfers.length)]),
+  _row([_text('Total volume transfer'), _number(document.transferVolume)]),
   _row([
     _text('Generated at'),
     _text(document.generatedAt.toLocal().toIso8601String()),
@@ -44,6 +54,7 @@ String _transactionSheet(ExportDocument document) => _sheet([
       'No',
       'Tanggal',
       'Tipe',
+      'Akun',
       'Kategori',
       'Judul',
       'Catatan',
@@ -59,10 +70,56 @@ String _transactionSheet(ExportDocument document) => _sheet([
             ? 'Pemasukan'
             : 'Pengeluaran',
       ),
+      _text(document.transactions[i].account),
       _text(document.transactions[i].category),
       _text(document.transactions[i].title),
       _text(document.transactions[i].note ?? ''),
       _number(document.transactions[i].amount),
+    ]),
+]);
+
+String _accountSheet(ExportDocument document) => _sheet([
+  _row(
+    [
+      'No',
+      'Nama Akun',
+      'Jenis',
+      'Saldo Awal',
+      'Total Pemasukan',
+      'Total Pengeluaran',
+      'Transfer Masuk',
+      'Transfer Keluar',
+      'Saldo Saat Ini',
+      'Status',
+    ].map(_text).toList(),
+  ),
+  for (var i = 0; i < document.accounts.length; i++)
+    _row([
+      _number(i + 1),
+      _text(document.accounts[i].name),
+      _text(document.accounts[i].type),
+      _number(document.accounts[i].initialBalance),
+      _number(document.accounts[i].totalIncome),
+      _number(document.accounts[i].totalExpense),
+      _number(document.accounts[i].incomingTransfers),
+      _number(document.accounts[i].outgoingTransfers),
+      _number(document.accounts[i].balance),
+      _text(document.accounts[i].isActive ? 'Aktif' : 'Diarsipkan'),
+    ]),
+]);
+
+String _transferSheet(ExportDocument document) => _sheet([
+  _row(
+    ['No', 'Tanggal', 'Dari', 'Ke', 'Catatan', 'Nominal'].map(_text).toList(),
+  ),
+  for (var i = 0; i < document.transfers.length; i++)
+    _row([
+      _number(i + 1),
+      _date(document.transfers[i].date),
+      _text(document.transfers[i].fromAccount),
+      _text(document.transfers[i].toAccount),
+      _text(document.transfers[i].note ?? ''),
+      _number(document.transfers[i].amount),
     ]),
 ]);
 
@@ -87,12 +144,12 @@ String _period(ExportDocument document) {
 String _xml(String value) => const HtmlEscape().convert(value);
 
 const _contentTypes =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>';
 const _rels =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
 const _workbook =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Ringkasan" sheetId="1" r:id="rId1"/><sheet name="Transaksi" sheetId="2" r:id="rId2"/></sheets></workbook>';
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Ringkasan" sheetId="1" r:id="rId1"/><sheet name="Transaksi" sheetId="2" r:id="rId2"/><sheet name="Akun" sheetId="3" r:id="rId3"/><sheet name="Transfer" sheetId="4" r:id="rId4"/></sheets></workbook>';
 const _workbookRels =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/><Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>';
 const _styles =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs></styleSheet>';

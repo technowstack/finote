@@ -90,7 +90,7 @@ void main() {
   test('10,000 synthetic transactions complete core data paths', () async {
     final tempDir = await Directory.systemTemp.createTemp('finote_perf_');
     final databasePath = '${tempDir.path}/finote.sqlite';
-    final database = AppDatabase(NativeDatabase(File(databasePath)));
+    var database = AppDatabase(NativeDatabase(File(databasePath)));
     addTearDown(() async {
       await database.close();
       await tempDir.delete(recursive: true);
@@ -178,6 +178,28 @@ void main() {
     stopwatch.stop();
     measure['backup'] = stopwatch.elapsed;
 
+    stopwatch = Stopwatch()..start();
+    await BackupService(
+      database,
+      databasePath: databasePath,
+    ).restoreFromArchive(backup.bytes, temporaryDirectory: tempDir);
+    database = AppDatabase(NativeDatabase(File(databasePath)));
+    final restoredReport = await ReportRepository(database)
+        .watchReport(
+          ReportRange(start: DateTime(2022), end: DateTime(2026, 12, 31)),
+        )
+        .first;
+    final restoredAccounts = await AccountRepository(database)
+        .watchSummaries()
+        .first;
+    final restoredHistory = await FinancialActivityRepository(database)
+        .watch(const FinancialActivityQuery())
+        .first;
+    final restoredExport = await ExportRepository(database)
+        .buildDocument(const ExportFilter());
+    stopwatch.stop();
+    measure['restore-and-verify'] = stopwatch.elapsed;
+
     expect(history, hasLength(9500));
     expect(unifiedHistory, hasLength(14500));
     expect(search, isNotEmpty);
@@ -188,10 +210,19 @@ void main() {
     expect(accountSummaries, hasLength(3));
     expect(accountSummaries.every((summary) => summary.balance != 0), isTrue);
     expect(document.transactions, hasLength(9500));
+    expect(document.accounts, hasLength(3));
+    expect(document.transfers, hasLength(5000));
+    expect(document.transferVolume, greaterThan(0));
     expect(text, isNotEmpty);
     expect(excel, isNotEmpty);
     expect(pdf, isNotEmpty);
     expect(backup.bytes, isNotEmpty);
+    expect(restoredReport.transactionCount, 9500);
+    expect(restoredReport.transferSummary.count, 5000);
+    expect(restoredAccounts, hasLength(3));
+    expect(restoredHistory, hasLength(14500));
+    expect(restoredExport.transactions, hasLength(9500));
+    expect(restoredExport.transfers, hasLength(5000));
 
     // Deliberately informational: hardware-dependent timings must not gate CI.
     // ignore: avoid_print

@@ -88,16 +88,7 @@ class BackupService {
   }
 
   Future<void> _validateSnapshot(File file) async {
-    final snapshot = sqlite3.open(file.path, mode: OpenMode.readOnly);
-    try {
-      final integrity = snapshot.select('PRAGMA integrity_check').single;
-      if (integrity['integrity_check'] != 'ok' ||
-          snapshot.userVersion != _database.schemaVersion) {
-        throw StateError('Database snapshot validation failed');
-      }
-    } finally {
-      snapshot.close();
-    }
+    await _checkRestoredSnapshot(file);
   }
 
   // ---------------------------------------------------------------------------
@@ -132,49 +123,9 @@ class BackupService {
     }
 
     // 2. Temukan manifest.json
-    final manifestFile = archive.findFile('manifest.json');
-    if (manifestFile == null) {
-      throw const RestoreError.invalidManifest();
-    }
+    final manifest = _parseManifest(archive);
     final dbEntry = archive.findFile('database.sqlite');
-    // 3. Decode JSON mentah
-    Map<String, dynamic> rawJson;
-    try {
-      rawJson = jsonDecode(
-        utf8.decode(manifestFile.content as List<int>),
-      ) as Map<String, dynamic>;
-    } catch (_) {
-      throw const RestoreError.invalidManifest();
-    }
-
-    // 4. Periksa backupVersion SEBELUM memanggil BackupManifest.fromJson
-    //    agar dapat memberikan error yang spesifik.
-    final rawBackupVersion = rawJson['backupVersion'];
-    if (rawBackupVersion is int &&
-        rawBackupVersion != BackupManifest.currentBackupVersion) {
-      throw RestoreError.unsupportedVersion(
-        found: rawBackupVersion,
-        required: BackupManifest.currentBackupVersion,
-      );
-    }
-
-    // 5. Validasi penuh manifest
-    BackupManifest manifest;
-    try {
-      manifest = BackupManifest.fromJson(rawJson);
-    } on FormatException {
-      throw const RestoreError.invalidManifest();
-    } catch (_) {
-      throw const RestoreError.invalidManifest();
-    }
-
-    // 6. Periksa databaseVersion
-    if (manifest.databaseVersion > _database.schemaVersion) {
-      throw RestoreError.databaseMismatch(
-        backupVersion: manifest.databaseVersion,
-        currentVersion: _database.schemaVersion,
-      );
-    }
+    _checkManifestDatabaseVersion(manifest);
 
     if (dbEntry == null ||
         dbEntry.size == 0 ||
@@ -187,7 +138,10 @@ class BackupService {
     final snapshot = File(p.join(workingDirectory.path, 'database.sqlite'));
     try {
       await snapshot.writeAsBytes(dbEntry.content as List<int>, flush: true);
-      await _migrateSnapshot(snapshot);
+      await _migrateSnapshot(
+        snapshot,
+        expectedVersion: manifest.databaseVersion,
+      );
       await _checkRestoredSnapshot(snapshot);
       final stats = _readSnapshotStats(snapshot);
       return RestorePreview(
@@ -195,6 +149,9 @@ class BackupService {
         archiveBytes: bytes,
         transactionCount: stats.transactionCount,
         categoryCount: stats.categoryCount,
+        accountCount: stats.accountCount,
+        transferCount: stats.transferCount,
+        transferVolume: stats.transferVolume,
         totalIncome: stats.totalIncome,
         totalExpense: stats.totalExpense,
         oldestTransactionAt: stats.oldestTransactionAt,
@@ -281,6 +238,8 @@ class BackupService {
       throw const RestoreError.invalidZip();
     }
     final dbEntry = archive.findFile('database.sqlite');
+    final manifest = _parseManifest(archive);
+    _checkManifestDatabaseVersion(manifest);
     if (dbEntry == null ||
         dbEntry.size == 0 ||
         dbEntry.size > _maximumArchiveBytes) {
@@ -295,7 +254,10 @@ class BackupService {
       await tempDbFile.writeAsBytes(dbEntry.content as List<int>, flush: true);
 
       // Integrity check pada file yang akan di-restore
-      await _migrateSnapshot(tempDbFile);
+      await _migrateSnapshot(
+        tempDbFile,
+        expectedVersion: manifest.databaseVersion,
+      );
       await _checkRestoredSnapshot(tempDbFile);
 
       final targetPath =
@@ -307,17 +269,18 @@ class BackupService {
       await tempDbFile.copy(stagedFile.path);
 
       await _database.close();
-      var movedOriginal = false;
+      var copiedOriginal = false;
       try {
         if (await targetFile.exists()) {
-          await targetFile.rename(rollbackFile.path);
-          movedOriginal = true;
+          await targetFile.copy(rollbackFile.path);
+          copiedOriginal = true;
         }
+        await _deleteSqliteSidecars(targetPath);
         await stagedFile.rename(targetPath);
         await _checkRestoredSnapshot(targetFile);
       } catch (_) {
         if (await stagedFile.exists()) await stagedFile.delete();
-        if (movedOriginal && await rollbackFile.exists()) {
+        if (copiedOriginal && await rollbackFile.exists()) {
           if (await targetFile.exists()) await targetFile.delete();
           await rollbackFile.rename(targetPath);
         }
@@ -347,6 +310,10 @@ class BackupService {
           .map((row) => row['name'])
           .toSet();
       final foreignKeyErrors = db.select('PRAGMA foreign_key_check');
+      final indexes = db
+          .select("SELECT name FROM sqlite_master WHERE type = 'index'")
+          .map((row) => row['name'])
+          .toSet();
       if (result['integrity_check'] != 'ok' ||
           db.userVersion != _database.schemaVersion ||
           !tables.containsAll({
@@ -356,7 +323,16 @@ class BackupService {
             'transfers',
             'settings',
           }) ||
-          !_hasColumns(db, 'categories', {'id', 'name', 'type'}) ||
+          !_hasColumns(db, 'categories', {
+            'id',
+            'uuid',
+            'name',
+            'type',
+            'icon',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+          }) ||
           !_hasColumns(db, 'transactions', {
             'id',
             'uuid',
@@ -364,10 +340,18 @@ class BackupService {
             'account_id',
             'category_id',
             'amount',
+            'title',
+            'note',
             'transaction_date',
             'source',
+            'receipt_fingerprint',
+            'legacy_source',
+            'legacy_id',
+            'created_at',
+            'updated_at',
+            'deleted_at',
           }) ||
-          !_hasColumns(db, 'settings', {'key', 'value'}) ||
+          !_hasColumns(db, 'settings', {'key', 'value', 'updated_at'}) ||
           !_hasColumns(db, 'transfers', {
             'id',
             'uuid',
@@ -375,6 +359,9 @@ class BackupService {
             'to_account_id',
             'amount',
             'transfer_date',
+            'note',
+            'created_at',
+            'updated_at',
             'deleted_at',
           }) ||
           !_hasColumns(db, 'accounts', {
@@ -385,8 +372,21 @@ class BackupService {
             'initial_balance',
             'is_active',
             'is_default',
+            'created_at',
+            'updated_at',
           }) ||
-          foreignKeyErrors.isNotEmpty) {
+          !indexes.containsAll({
+            'accounts_active',
+            'transactions_account_id',
+            'transfers_from_account_id',
+            'transfers_to_account_id',
+            'transfers_date',
+            'transfers_deleted_at',
+          }) ||
+          foreignKeyErrors.isNotEmpty ||
+          _count(db, 'transactions WHERE account_id IS NULL') != 0 ||
+          _count(db, 'accounts WHERE is_default = 1') != 1 ||
+          _count(db, 'transfers WHERE from_account_id = to_account_id') != 0) {
         throw const RestoreError.integrityCheckFailed();
       }
     } on RestoreError {
@@ -400,17 +400,37 @@ class BackupService {
     }
   }
 
-  Future<void> _migrateSnapshot(File file) async {
+  Future<void> _migrateSnapshot(
+    File file, {
+    required int expectedVersion,
+  }) async {
+    AppDatabase? database;
     try {
       final raw = sqlite3.open(file.path, mode: OpenMode.readOnly);
       final version = raw.userVersion;
       raw.close();
+      if (version < 1 || version != expectedVersion) {
+        throw const RestoreError.integrityCheckFailed();
+      }
       if (version >= _database.schemaVersion) return;
 
-      final database = AppDatabase(NativeDatabase(file));
+      database = AppDatabase(NativeDatabase(file));
+      await database.customSelect('PRAGMA user_version').getSingle();
       await database.close();
+      database = null;
+
+      final migrated = sqlite3.open(file.path, mode: OpenMode.readOnly);
+      final migratedVersion = migrated.userVersion;
+      migrated.close();
+      if (migratedVersion != _database.schemaVersion) {
+        throw const RestoreError.integrityCheckFailed();
+      }
+    } on RestoreError {
+      rethrow;
     } catch (_) {
       throw const RestoreError.integrityCheckFailed();
+    } finally {
+      await database?.close();
     }
   }
 
@@ -428,9 +448,19 @@ class BackupService {
         FROM transactions
         WHERE deleted_at IS NULL
       ''').single;
+      final accountCount = _count(db, 'accounts');
+      final transferRow = db.select('''
+        SELECT COUNT(*) AS transfer_count,
+               COALESCE(SUM(amount), 0) AS transfer_volume
+        FROM transfers
+        WHERE deleted_at IS NULL
+      ''').single;
       return _RestoreStats(
         transactionCount: row['transaction_count'] as int,
         categoryCount: row['category_count'] as int,
+        accountCount: accountCount,
+        transferCount: transferRow['transfer_count'] as int,
+        transferVolume: transferRow['transfer_volume'] as int,
         totalIncome: row['total_income'] as int,
         totalExpense: row['total_expense'] as int,
         oldestTransactionAt: _readDate(row['oldest']),
@@ -451,12 +481,56 @@ class BackupService {
         .toSet();
     return columns.containsAll(required);
   }
+
+  int _count(Database db, String from) =>
+      db.select('SELECT COUNT(*) AS count FROM $from').single['count'] as int;
+
+  BackupManifest _parseManifest(Archive archive) {
+    final file = archive.findFile('manifest.json');
+    if (file == null) throw const RestoreError.invalidManifest();
+    try {
+      final json = jsonDecode(
+        utf8.decode(file.content as List<int>),
+      ) as Map<String, dynamic>;
+      final version = json['backupVersion'];
+      if (version is int && version != BackupManifest.currentBackupVersion) {
+        throw RestoreError.unsupportedVersion(
+          found: version,
+          required: BackupManifest.currentBackupVersion,
+        );
+      }
+      return BackupManifest.fromJson(json);
+    } on RestoreError {
+      rethrow;
+    } catch (_) {
+      throw const RestoreError.invalidManifest();
+    }
+  }
+
+  void _checkManifestDatabaseVersion(BackupManifest manifest) {
+    if (manifest.databaseVersion > _database.schemaVersion) {
+      throw RestoreError.databaseMismatch(
+        backupVersion: manifest.databaseVersion,
+        currentVersion: _database.schemaVersion,
+      );
+    }
+  }
+
+  Future<void> _deleteSqliteSidecars(String databasePath) async {
+    for (final suffix in ['-wal', '-shm']) {
+      final file = File('$databasePath$suffix');
+      if (await file.exists()) await file.delete();
+    }
+  }
 }
 
 class _RestoreStats {
   const _RestoreStats({
     required this.transactionCount,
     required this.categoryCount,
+    required this.accountCount,
+    required this.transferCount,
+    required this.transferVolume,
     required this.totalIncome,
     required this.totalExpense,
     required this.oldestTransactionAt,
@@ -465,6 +539,9 @@ class _RestoreStats {
 
   final int transactionCount;
   final int categoryCount;
+  final int accountCount;
+  final int transferCount;
+  final int transferVolume;
   final int totalIncome;
   final int totalExpense;
   final DateTime? oldestTransactionAt;
