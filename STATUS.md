@@ -23,27 +23,52 @@
 - [x] Phase 5E — Backup / Restore / Legacy Migration Hardening
 - [x] Phase 5F — Performance & Reliability
 - [x] Phase 5G — Play Store Preparation
+- [x] Phase 5H — Closed Testing Preparation / Release Candidate Validation (local)
+- [x] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.0
 
 ## Current
 
-- [ ] Complete Phase 4G manual real-device validation using `docs/receipt_scanner_manual_test.md`.
-- [ ] Record remaining OCR/parser limitations without expanding scope into AI.
-- [ ] Decide whether Receipt Scanner is:
-  - stable enough for v1.0,
-  - experimental but usable, or
-  - hidden behind a feature flag for the first public release.
-- [ ] Complete Phase 5A manual export validation on Android: save, share, open, date/type filters, and all themes.
-- [ ] Resolve or explicitly accept the remaining risks documented in `docs/core_stability_audit.md` before release.
-- [ ] Complete real-device backup/restore validation, including app restart and 10,000+ transactions.
-- [ ] Complete real-device performance/profile validation for long lists, exports, and lifecycle interruptions.
-- [ ] Execute the Phase 5H candidate test plan and device matrix.
-- [ ] Perform an upgrade test from a previous Finote build before release.
-- [ ] Resolve the release gates in `docs/release_readiness.md`.
+Finote v1.0.0 has completed **Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY**.
 
-## Next
+Current focus:
 
-- [ ] Phase 5H — Closed Testing
-- [ ] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.
+- [ ] Daily real usage / dogfooding
+- [ ] Fix real bugs discovered during usage
+- [ ] Preserve financial accuracy and data integrity
+- [ ] Keep release configuration healthy
+- [ ] Perform external Play Store activities only when the user is ready
+- [ ] Do not add new v1.0.0 product features
+
+## Current Product State
+
+```text
+Finote v1.0.0
+LOCAL PRODUCTION FINAL / PLAY STORE READY (local)
+MAINTENANCE / REAL-USAGE MODE
+```
+
+Local production final means the v1.0.0 codebase is considered finalized locally. It does **not** mean the app has already been uploaded, externally closed-tested through Play Console, or published to production.
+
+## External Release When Ready
+
+The following may remain pending until the actual Google Play release window:
+
+- [ ] Final production signing / upload-key configuration as needed
+- [ ] Final versionCode confirmation
+- [ ] Public Privacy Policy URL
+- [ ] Final screenshots / feature graphic
+- [ ] Play Console Data Safety submission
+- [ ] Content rating / target audience / ads declarations
+- [ ] Upload final `.aab`
+- [ ] Configure actual Play Console closed testing if required
+- [ ] Production submission / rollout
+
+These external tasks do not reopen the v1.0 feature scope.
+
+## Next After v1.0
+
+- [ ] Continue real daily usage / bug-fix period
+- [ ] v1.1.0 — Phase 6A Accounts & Transfers **only when explicitly started by the user**
 
 ---
 
@@ -188,9 +213,45 @@ Existing AI-ready abstractions may remain only if they do not create unnecessary
 
 ## Deferred Features
 
-### Post-v1 Candidate Features
+### Planned v1.1.0 — Phase 6A Accounts & Transfers
 
-- [ ] Wallet / Accounts
+- [ ] 6A.1 Account / Wallet Management
+- [ ] 6A.2 Assign Transactions to Account
+- [ ] 6A.3 Account Balance Calculation
+- [ ] 6A.4 Account-to-Account Transfer
+- [ ] 6A.5 Transaction History Integration
+- [ ] 6A.6 Reports Integration
+- [ ] 6A.7 Export Integration
+- [ ] 6A.8 Backup / Restore Migration
+- [ ] 6A.9 Legacy Database Compatibility
+- [ ] 6A.10 Testing & Polish
+
+Core rule:
+
+> Transfer antar account milik user bukan Income dan bukan Expense. Transfer hanya memindahkan saldo/aset antar account.
+
+Migration rule when Phase 6A starts:
+
+```text
+Create accounts
+↓
+Create Default Account / Cash
+↓
+Add nullable account relation to existing transactions
+↓
+Backfill existing records
+↓
+Validate
+↓
+Only tighten constraints when safe
+```
+
+Legacy transaction without account information must be assigned to the Default Account during future import/migration. The legacy database remains read-only.
+
+**Do not implement any Phase 6A schema or feature during v1.0 finalization.**
+
+### Other Post-v1 Candidate Features
+
 - [ ] Budget
 - [ ] Recurring Transactions
 - [ ] Google Drive / Cloud Backup
@@ -198,7 +259,7 @@ Existing AI-ready abstractions may remain only if they do not create unnecessary
 - [ ] Optional User Account
 - [ ] Multi-device Sync
 
-These features should be prioritized based on real user feedback after release.
+These features should be prioritized based on real usage/feedback and explicit product decisions.
 
 ### Deferred AI Features
 
@@ -229,16 +290,18 @@ The following are release-critical for Finote v1.0:
 - [x] Legacy database import
 - [x] Light / Dark / System theme
 - [x] Basic security
-- [ ] Excel export
-- [ ] Text export
-- [ ] PDF export
-- [ ] Core finance stabilization audit
-- [ ] Financial accuracy audit
+- [x] Excel export
+- [x] Text export
+- [x] PDF export
+- [x] Core finance stabilization audit
+- [x] Financial accuracy audit
 - [x] Backup / restore / legacy hardening
 - [x] Performance validation
-- [ ] Play Store preparation
-- [ ] Closed testing
-- [ ] Production release
+- [x] Play Store preparation
+- [x] Closed testing preparation / local RC validation
+- [x] Local production finalization v1.0.0
+- [ ] Actual Play Console closed testing (external, when ready)
+- [ ] Production release (external, when ready)
 
 ---
 
@@ -275,12 +338,17 @@ AI:
 
 ## Immediate Action
 
-Before starting new release-focused development:
+Finote v1.0.0 is now in **maintenance / real-usage mode**.
 
-1. Finish the Phase 4G manual device matrix.
-2. Record receipt scanner limitations.
-3. Freeze further scanner feature expansion.
-4. Start **Phase 5A — Export Excel / Text / PDF**.
-5. Continue directly into stabilization and Play Store preparation after export is complete.
+Current rules:
 
-Do not start AI work.
+1. Use Finote in realistic daily scenarios.
+2. Fix only real bugs, data-integrity issues, security/privacy issues, compatibility issues, and measured reliability/performance problems.
+3. Keep financial reconciliation intact: Dashboard = Reports = Export for equivalent data/filter semantics.
+4. Keep backup/restore/migration/legacy-import safety intact.
+5. Keep AI frozen.
+6. Do not automatically add Wallet/Accounts, Budget, Recurring, Cloud, or other post-v1 features.
+7. Keep Phase 6A parked until the user explicitly starts it.
+8. External Play Store tasks may be completed later without changing the v1.0 core scope.
+
+When the user eventually starts Phase 6A, first inspect the actual Drift schema and migration history before changing any database structure.

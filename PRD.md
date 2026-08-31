@@ -1164,21 +1164,23 @@ Phase 3.5 UI/UX + Theme Polish
 Phase 4A-G Local Receipt Scanner Development
 ```
 
-## Current Release-Focused Roadmap
+## v1.0.0 Release Roadmap — Completed Locally
 
 ```text
-Phase 5A  Export Excel / Text / PDF
-Phase 5B  Core Finance Audit & Stabilization
-Phase 5C  Transaction UX & Workflow Hardening
-Phase 5D  Reports & Financial Accuracy
-Phase 5E  Backup / Restore / Legacy Migration Hardening
-Phase 5F  Performance & Reliability
-Phase 5G  Play Store Preparation
-Phase 5H  Closed Testing
-Phase 5I  Local Production Finalization v1.0.0
+Phase 5A  Export Excel / Text / PDF                         COMPLETE
+Phase 5B  Core Finance Audit & Stabilization               COMPLETE
+Phase 5C  Transaction UX & Workflow Hardening              COMPLETE
+Phase 5D  Reports & Financial Accuracy                     COMPLETE
+Phase 5E  Backup / Restore / Legacy Migration Hardening    COMPLETE
+Phase 5F  Performance & Reliability                        COMPLETE
+Phase 5G  Play Store Preparation                           COMPLETE
+Phase 5H  Closed Testing Preparation / RC Validation       COMPLETE LOCALLY
+Phase 5I  Local Production Final / Play Store Ready v1.0.0 COMPLETE
 ```
 
-No AI development during these phases.
+Finote v1.0.0 is now in **local production-final / maintenance mode**. Public Play Store upload, actual external closed testing, signing secrets, store listing submission, and production rollout remain external release activities that may be performed later.
+
+No AI development is included in v1.0.0.
 
 ---
 
@@ -1514,22 +1516,267 @@ AI tidak termasuk prioritas saat ini.
 
 # 47. Post-v1 Roadmap
 
-Setelah aplikasi memiliki pengguna nyata, evaluasi berdasarkan feedback.
+Finote v1.0.0 telah mencapai **LOCAL PRODUCTION FINAL / PLAY STORE READY** secara lokal. Setelah milestone ini, v1.0.0 masuk maintenance/freeze mode: perubahan hanya untuk bug nyata, data-integrity risk, compatibility fix, security fix, atau release-blocking issue.
 
-Possible features:
+Fitur baru yang mengubah model keuangan inti tetap **tidak boleh dimasukkan ke v1.0.0**. Post-v1 development dimulai hanya atas instruksi eksplisit user.
+
+## 47.1 Planned v1.1.0 — Phase 6A Accounts & Transfers
+
+Fitur post-v1 yang sudah memiliki arah produk paling jelas adalah **Account / Wallet + Transfer Antar Rekening**.
+
+Tujuan utamanya adalah memisahkan:
 
 ```text
-Wallet / Accounts
+Accounts
+├── Cash
+├── Bank
+├── E-Wallet
+└── Savings Account
+
+Transactions
+├── Income
+└── Expense
+
+Transfers
+└── Account → Account
+```
+
+Contoh:
+
+```text
+Income:
+Gaji
+Account: BCA Utama
+Amount: Rp10.000.000
+
+Transfer:
+From: BCA Utama
+To: BCA Tabungan
+Amount: Rp2.000.000
+```
+
+Expected result:
+
+```text
+BCA Utama     Rp8.000.000
+BCA Tabungan  Rp2.000.000
+
+Total aset tetap Rp10.000.000
+```
+
+**Transfer bukan Income dan bukan Expense.** Transfer hanya memindahkan nilai antar account milik user dan tidak boleh mengubah total income/expense pada Reports.
+
+### 47.1.1 Planned Phase Breakdown
+
+```text
+Phase 6A — Accounts & Transfers
+
+6A.1 Account / Wallet Management
+6A.2 Assign Transactions to Account
+6A.3 Account Balance Calculation
+6A.4 Account-to-Account Transfer
+6A.5 Transaction History Integration
+6A.6 Reports Integration
+6A.7 Export Integration
+6A.8 Backup / Restore Migration
+6A.9 Legacy Database Compatibility
+6A.10 Testing & Polish
+```
+
+Phase 5I / finalisasi lokal v1.0.0 telah selesai. Phase 6A tetap **parked** dan hanya boleh dimulai ketika user secara eksplisit memulai pengembangan post-v1. Selesainya v1.0.0 tidak berarti Phase 6A harus dimulai otomatis.
+
+## 47.2 Future Account Domain Model
+
+Skema berikut adalah **konsep awal**, bukan instruksi untuk langsung mengubah schema v1.0. Implementasi Phase 6A wajib menginspeksi schema Drift yang benar-benar ada terlebih dahulu.
+
+Conceptual `accounts`:
+
+```text
+accounts
+- id
+- name
+- type
+- initial_balance
+- is_active
+- created_at
+- updated_at
+```
+
+Transactions nantinya dapat memiliki relasi account:
+
+```text
+transactions
+- id
+- account_id
+- category_id
+- type
+- amount
+- date
+- note
+- ...
+```
+
+Transfer direkomendasikan sebagai entity/table terpisah:
+
+```text
+transfers
+- id
+- from_account_id
+- to_account_id
+- amount
+- date
+- note
+- created_at
+- updated_at
+```
+
+Exact names, foreign keys, nullability, timestamps, indexes, dan generated Drift definitions harus mengikuti codebase aktual saat Phase 6A dimulai.
+
+## 47.3 Account Balance Rule
+
+Saldo account tidak boleh dikelola sebagai angka mutable yang sekadar ditambah/dikurangi secara manual setiap kali transaksi berubah.
+
+Preferred derived formula:
+
+```text
+Account Balance =
+initial_balance
++ income
+- expense
++ incoming_transfer
+- outgoing_transfer
+```
+
+Edit/delete transaction atau transfer harus menghasilkan saldo yang tetap konsisten karena saldo berasal dari source records.
+
+## 47.4 Transfer Reporting Rule
+
+Reports tetap mengikuti definisi:
+
+```text
+Income = income transactions
+Expense = expense transactions
+Balance/Net = Income - Expense
+```
+
+Transfers:
+
+```text
+DO NOT increase Income
+DO NOT increase Expense
+DO NOT change total assets by themselves
+```
+
+Transfer dapat ditampilkan sebagai informasi terpisah, tetapi tidak boleh bercampur ke aggregate income/expense.
+
+## 47.5 Backward-Compatible Migration Requirement
+
+Account/Transfer tidak boleh merusak existing Finote databases.
+
+Initial migration strategy:
+
+```text
+1. Create accounts table
+2. Create one Default Account / Cash
+3. Add account_id to transactions as nullable
+4. Assign existing transactions to Default Account
+5. Validate migrated data
+6. Only tighten account_id constraints later if proven safe
+```
+
+Do **not** introduce `account_id NOT NULL` immediately in the first migration against existing user data.
+
+Migration must preserve:
+
+- transaction UUIDs;
+- amount;
+- type;
+- category relation;
+- transaction date;
+- soft-delete state;
+- legacy identifiers;
+- existing financial totals.
+
+## 47.6 Legacy Import Compatibility
+
+Legacy Catatan Keuangan databases are not expected to contain Finote account information.
+
+When Phase 6A is implemented:
+
+```text
+Legacy transaction
+↓
+Import using existing legacy mapping
+↓
+Assign to Default Account
+```
+
+The legacy source database must remain read-only. Users must not be required to manually modify old databases before import.
+
+Repeat-import protection using legacy identifiers must remain intact.
+
+## 47.7 Backup / Restore Compatibility
+
+After Accounts & Transfers exist, backup/restore must evolve to include:
+
+- accounts;
+- transfers;
+- transaction-account relations;
+- updated database/schema version metadata.
+
+Older supported backups must either migrate safely or be rejected with a clear compatibility message.
+
+## 47.8 Export and History Integration
+
+Future export may add an Account column.
+
+Future Transaction History may show entries such as:
+
+```text
+Gaji
+BCA Utama
++Rp10.000.000
+
+Transfer ke BCA Tabungan
+BCA Utama → BCA Tabungan
+Rp2.000.000
+
+Makan
+BCA Utama
+-Rp75.000
+```
+
+Transfers may appear in history without changing Reports income/expense totals.
+
+## 47.9 Required Regression Coverage for Phase 6A
+
+Before Phase 6A can be considered complete, add regression coverage for:
+
+- migration from pre-account schema;
+- default account backfill;
+- account balance calculations;
+- transfer edit/delete behavior;
+- reports excluding transfers from income/expense;
+- export account integration;
+- backup/restore with accounts/transfers;
+- legacy import assigning Default Account;
+- repeated legacy import without duplicates;
+- existing Finote data preservation.
+
+## 47.10 Other Post-v1 Candidates
+
+Other possible features remain deferred and must be prioritized from real usage/feedback:
+
+```text
 Budget
 Recurring Transactions
 Cloud Backup
 Advanced Reports
-Cloud Sync
+Optional User Account
+Cloud Sync / Multi-device
 ```
 
-Jangan otomatis membangun semuanya.
-
-Setiap feature harus divalidasi.
+Do not automatically build all post-v1 features. Each feature must be validated and explicitly requested.
 
 ---
 
@@ -1642,11 +1889,42 @@ AI remains deferred until validated.
 
 Do not make Finote complicated simply because more features are technically possible.
 
+## Rule 9
+
+When Accounts & Transfers are implemented after v1.0, account-to-account transfer must never be counted as Income or Expense.
+
+---
+
+# 51A. v1.0.0 Maintenance / Freeze Mode
+
+Setelah Phase 5I selesai, Finote v1.0.0 masuk **maintenance / real-usage mode** sampai user memutuskan memulai post-v1 development.
+
+Allowed changes for v1.0.0 maintenance:
+
+- bug fix;
+- financial accuracy fix;
+- data-integrity fix;
+- backup/restore/migration safety fix;
+- security/privacy fix;
+- compatibility fix;
+- performance fix berdasarkan masalah nyata;
+- release-blocking Play Store compatibility fix.
+
+Do not automatically add new product features during this period.
+
+External Play Store activities such as final signing, Play Console configuration, store assets, Data Safety submission, AAB upload, external closed testing, and production rollout are **not prerequisites for local production-final status**.
+
+Phase 6A remains parked until explicitly started.
+
 ---
 
 # 52. Final Product Direction
 
-Target Finote sekarang adalah:
+Current product state:
+
+> **Finote v1.0.0 — LOCAL PRODUCTION FINAL / PLAY STORE READY (local).**
+
+Target produk tetap:
 
 > **Modern Offline-First Personal Finance Tracker focused on reliable manual finance management and strong data portability.**
 

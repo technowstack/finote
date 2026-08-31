@@ -1362,7 +1362,9 @@ rather than performing destructive recovery automatically.
 
 ---
 
-# 55. Current Release Roadmap
+# 55. Release Roadmap Status
+
+Finote v1.0.0 has completed the local release-focused roadmap and is now in maintenance / real-usage mode.
 
 Completed/existing foundation:
 
@@ -1375,25 +1377,27 @@ Phase 3.5 UI/UX + Theme Polish
 Phase 4A-G Local Receipt Scanner Development
 ```
 
-Current release-focused roadmap:
+Completed local release-focused roadmap:
 
 ```text
-Phase 5A  Export Excel / Text / PDF
-Phase 5B  Core Finance Audit & Stabilization
-Phase 5C  Transaction UX & Workflow Hardening
-Phase 5D  Reports & Financial Accuracy
-Phase 5E  Backup / Restore / Legacy Migration Hardening
-Phase 5F  Performance & Reliability
-Phase 5G  Play Store Preparation
-Phase 5H  Closed Testing
-Phase 5I  LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0
+Phase 5A  Export Excel / Text / PDF                         COMPLETE
+Phase 5B  Core Finance Audit & Stabilization               COMPLETE
+Phase 5C  Transaction UX & Workflow Hardening              COMPLETE
+Phase 5D  Reports & Financial Accuracy                     COMPLETE
+Phase 5E  Backup / Restore / Legacy Migration Hardening    COMPLETE
+Phase 5F  Performance & Reliability                        COMPLETE
+Phase 5G  Play Store Preparation                           COMPLETE
+Phase 5H  Closed Testing Preparation / RC Validation       COMPLETE LOCALLY
+Phase 5I  LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0   COMPLETE
 ```
 
-During Phase 5A–5I, do not add major unrelated features.
+The repository is now in **v1.0 maintenance/freeze mode** until the user explicitly starts a post-v1 phase.
 
 ---
 
-# 56. Release-Focused Feature Freeze
+# 56. v1.0 Maintenance / Feature Freeze
+
+Finote v1.0.0 is locally production-final. Default behavior for future tasks is **maintenance first**, not feature expansion.
 
 Do not implement unless explicitly requested:
 
@@ -1412,22 +1416,153 @@ Major Receipt Scanner Expansion
 Current sequence:
 
 ```text
-Export
+Finote v1.0.0 Local Production Final
 ↓
-Stabilize
+Daily Real Usage / Maintenance
 ↓
-Validate Financial Accuracy
+Bug / Data-Integrity / Compatibility Fixes Only
 ↓
-Harden Backup / Restore / Migration
+Optional External Play Store Release When Ready
 ↓
-Validate Performance
-↓
-Prepare Play Store Release
-↓
-Closed Testing
-↓
-v1.0 Production Release
+Post-v1 Development Only When Explicitly Requested
 ```
+
+---
+
+# 56A. Deferred v1.1.0 — Accounts & Transfers
+
+Accounts/Wallet and account-to-account transfers are a planned **post-v1** feature under:
+
+```text
+v1.1.0
+Phase 6A — Accounts & Transfers
+```
+
+Planned sub-phases:
+
+```text
+6A.1 Account / Wallet Management
+6A.2 Assign Transactions to Account
+6A.3 Account Balance Calculation
+6A.4 Account-to-Account Transfer
+6A.5 Transaction History Integration
+6A.6 Reports Integration
+6A.7 Export Integration
+6A.8 Backup / Restore Migration
+6A.9 Legacy Database Compatibility
+6A.10 Testing & Polish
+```
+
+While v1.0.0 remains in maintenance/freeze mode, do NOT automatically:
+
+- create an `accounts` table;
+- create a `transfers` table;
+- add `account_id` to the current transaction schema;
+- alter Reports to include transfer logic;
+- change Legacy Import to require accounts;
+- change backup format solely for future accounts;
+- change exports solely for future accounts.
+
+These changes remain deliberately deferred until Phase 6A is explicitly requested. Completion of Phase 5I does not automatically authorize Phase 6A implementation.
+
+## 56A.1 Transfer Financial Semantics
+
+Future domain separation:
+
+```text
+Transactions
+├── Income
+└── Expense
+
+Transfers
+└── Account → Account
+```
+
+A transfer between user-owned accounts is **not income and not expense**.
+
+Example:
+
+```text
+Income: Salary Rp10.000.000 → BCA Utama
+Transfer: Rp2.000.000 BCA Utama → BCA Tabungan
+
+BCA Utama    Rp8.000.000
+BCA Tabungan Rp2.000.000
+Total assets Rp10.000.000
+```
+
+Reports must not increase expense or income because of the transfer.
+
+## 56A.2 Future Account Balance Rule
+
+When implemented, account balance should be derived conceptually as:
+
+```text
+initial_balance
++ income
+- expense
++ incoming_transfer
+- outgoing_transfer
+```
+
+Do not implement account balance as a manually mutated source-of-truth field that can drift when transactions/transfers are edited or deleted.
+
+## 56A.3 Future Migration Safety
+
+When Phase 6A begins, inspect the actual Drift schema and migration history first. Do not assume conceptual names match current code.
+
+Required backward-compatible strategy:
+
+```text
+Create accounts
+↓
+Create Default Account / Cash
+↓
+Add nullable account relation to transactions
+↓
+Backfill existing transactions
+↓
+Validate
+↓
+Only tighten constraints if safe
+```
+
+Never introduce the first account migration as an unconditional `account_id NOT NULL` change against existing user databases.
+
+The migration must preserve existing financial data and supported upgrade paths.
+
+## 56A.4 Legacy Import Compatibility
+
+Legacy databases may have no account information.
+
+Future Phase 6A behavior:
+
+```text
+Legacy transaction
+↓
+Existing legacy mapping
+↓
+Default Account
+```
+
+Rules:
+
+- legacy database remains READ ONLY;
+- users do not manually modify legacy DBs;
+- repeated import remains duplicate-safe;
+- existing Finote data remains intact;
+- transfer records are not synthesized for historical legacy transactions.
+
+## 56A.5 Future Backup / Restore / Export Rules
+
+After Accounts & Transfers are actually implemented:
+
+- backup/restore must include accounts, transfers, transaction-account relations, and new schema metadata;
+- exports may include Account information;
+- Reports must continue to exclude transfers from income/expense totals;
+- Transaction History may display transfers as a separate entry type.
+
+Required regression testing must cover migrations, Reports, exports, backup/restore, and legacy import.
 
 ---
 
@@ -1550,6 +1685,30 @@ Do not start the next phase automatically.
 
 ---
 
+# 60A. Post-v1.0 Maintenance Rules
+
+Current product state:
+
+```text
+Finote v1.0.0
+LOCAL PRODUCTION FINAL / PLAY STORE READY (local)
+```
+
+When the user asks to continue working on v1.0.0 without explicitly opening Phase 6A or another post-v1 feature phase, default to one of:
+
+- `fix:` bug correction;
+- `perf:` measured performance/reliability correction;
+- `test:` regression coverage;
+- `docs:` release/maintenance documentation;
+- `chore:` release configuration or tooling;
+- narrow `refactor:` only when required by a concrete bug/reliability problem.
+
+Do not infer permission to add a new product feature from the fact that v1.0.0 is complete.
+
+External Play Store actions are separate from local code readiness. Do not upload, publish, create tester groups, or submit releases unless explicitly requested.
+
+---
+
 # 61. Definition of Done
 
 A task is complete only when:
@@ -1644,15 +1803,19 @@ AI remains deferred until real demand is validated.
 
 Do not make Finote complicated simply because more features are technically possible.
 
+## Rule 10
+
+Future account-to-account transfers must never be classified as income or expense.
+
 ---
 
 # 64. Current Finote Product Goal
 
-The current goal is not to maximize feature count.
+Current product state:
 
-The goal is:
+> **Finote v1.0.0 is LOCAL PRODUCTION FINAL / PLAY STORE READY locally.**
 
-> Make Finote a mature, trustworthy, fast, offline-first personal finance application with strong data portability and a safe path to Google Play release.
+The current goal is not to maximize feature count. The default goal now is to preserve v1.0.0 quality through real usage, regression fixes, and safe release maintenance.
 
 Current product focus:
 
