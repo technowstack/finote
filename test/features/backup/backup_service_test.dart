@@ -12,7 +12,9 @@ import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
+import 'package:finote/features/transactions/data/financial_activity_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
+import 'package:finote/features/transfers/data/transfer_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -330,6 +332,14 @@ void main() {
         amount: 10000,
         transactionDate: DateTime(2026, 8, 1),
       );
+      final defaultAccount = (await live.select(live.accounts).get())
+          .singleWhere((item) => item.isDefault);
+      await TransferRepository(live).create(
+        fromAccountId: account.id,
+        toAccountId: defaultAccount.id,
+        amount: 1000,
+        transferDate: DateTime(2026, 8, 1),
+      );
       final fileService = BackupService(live, databasePath: path);
       final backup = await fileService.buildBackup(
         appVersion: '1.0.0',
@@ -350,6 +360,13 @@ void main() {
       addTearDown(live.close);
 
       expect(await live.select(live.transactions).get(), hasLength(1));
+      expect(await live.select(live.transfers).get(), hasLength(1));
+      expect(
+        await FinancialActivityRepository(live)
+            .watch(const FinancialActivityQuery())
+            .first,
+        hasLength(2),
+      );
       expect((await live.select(live.transactions).getSingle()).amount, 10000);
       expect(
         (await live.select(live.transactions).getSingle()).accountId,
@@ -359,14 +376,14 @@ void main() {
         (await live.select(live.accounts).get()).map((account) => account.name),
         contains('DANA'),
       );
-      final restoredSummary = await AccountRepository(live)
+      final restoredSummaries = await AccountRepository(live)
           .watchSummaries()
           .first;
       expect(
-        restoredSummary
+        restoredSummaries
             .singleWhere((item) => item.account.id == account.id)
             .balance,
-        -10000,
+        -11000,
       );
       expect(
         tempDir.listSync().where((entry) => entry.path.contains('.rollback-')),

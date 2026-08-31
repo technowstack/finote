@@ -14,6 +14,7 @@ import '../features/transactions/presentation/transaction_form_page.dart';
 import '../features/transactions/presentation/monthly_transactions_page.dart';
 import '../features/transactions/presentation/transaction_detail_page.dart';
 import '../features/transactions/presentation/transactions_page.dart';
+import '../features/transfers/presentation/transfers_page.dart';
 import 'main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -104,6 +105,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/accounts',
         builder: (context, state) => const AccountsPage(),
+      ),
+      GoRoute(
+        path: '/transfers',
+        builder: (context, state) => TransfersPage(
+          editTransferId: int.tryParse(state.uri.queryParameters['edit'] ?? ''),
+        ),
       ),
       GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
       GoRoute(

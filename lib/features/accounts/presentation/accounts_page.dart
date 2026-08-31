@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -78,7 +79,16 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountSummariesProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Akun & Dompet')),
+      appBar: AppBar(
+        title: const Text('Akun & Dompet'),
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/transfers'),
+            tooltip: 'Transfer antar akun',
+            icon: const Icon(Icons.swap_horiz),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _openForm,
         tooltip: 'Tambah akun',
@@ -88,7 +98,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         loading: () => const AppLoadingState(),
         error: (_, _) => AppErrorState(
           message: 'Akun belum dapat dimuat.',
-          onRetry: () => ref.invalidate(accountsProvider),
+          onRetry: () => ref.invalidate(accountSummariesProvider),
         ),
         data: (items) {
           if (items.isEmpty) {

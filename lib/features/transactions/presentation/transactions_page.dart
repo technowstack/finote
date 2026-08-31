@@ -10,7 +10,10 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../transfers/data/transfer_repository.dart';
+import '../data/financial_activity_repository.dart';
 import '../data/transaction_repository.dart';
+import '../domain/financial_activity.dart';
 import '../domain/transaction_type.dart';
 
 class TransactionsPage extends ConsumerStatefulWidget {
@@ -22,7 +25,7 @@ class TransactionsPage extends ConsumerStatefulWidget {
 
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _searchController = TextEditingController();
-  TransactionType? _type;
+  FinancialActivityType? _type;
   _DateFilter _dateFilter = _DateFilter.month;
   DateTimeRange? _customRange;
   String _search = '';
@@ -39,13 +42,13 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   @override
   Widget build(BuildContext context) {
     final range = _dateRange(_dateFilter, _customRange, DateTime.now());
-    final filter = TransactionHistoryQuery(
+    final filter = FinancialActivityQuery(
       type: _type,
       startDate: range.start,
       endDate: range.end,
       search: _search,
     );
-    final transactions = ref.watch(transactionHistoryProvider(filter));
+    final activities = ref.watch(financialActivityProvider(filter));
     final textTheme = Theme.of(context).textTheme;
     final colors = Theme.of(context).colorScheme;
 
@@ -63,7 +66,7 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   ),
                   child: SearchBar(
                     controller: _searchController,
-                    hintText: 'Cari judul, catatan, atau kategori',
+                    hintText: 'Cari transaksi, transfer, atau akun',
                     autoFocus: true,
                     leading: const Icon(Icons.search, size: 20),
                     trailing: [
@@ -113,15 +116,21 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                 ),
                 _filterChip(
                   'Pemasukan',
-                  selected: _type == TransactionType.income,
+                  selected: _type == FinancialActivityType.income,
                   onSelected: () =>
-                      setState(() => _type = TransactionType.income),
+                      setState(() => _type = FinancialActivityType.income),
                 ),
                 _filterChip(
                   'Pengeluaran',
-                  selected: _type == TransactionType.expense,
+                  selected: _type == FinancialActivityType.expense,
                   onSelected: () =>
-                      setState(() => _type = TransactionType.expense),
+                      setState(() => _type = FinancialActivityType.expense),
+                ),
+                _filterChip(
+                  'Transfer',
+                  selected: _type == FinancialActivityType.transfer,
+                  onSelected: () =>
+                      setState(() => _type = FinancialActivityType.transfer),
                 ),
                 // Divider dot
                 Container(
@@ -174,18 +183,22 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             ),
 
           // ----- Period summary strip -----
-          transactions.whenOrNull(
+          activities.whenOrNull(
                 data: (items) {
                   if (items.isEmpty) return null;
                   var income = 0;
                   var expense = 0;
+                  var hasTransactions = false;
                   for (final item in items) {
-                    if (item.transaction.type == TransactionType.income) {
-                      income += item.transaction.amount;
-                    } else {
-                      expense += item.transaction.amount;
+                    if (item.type == FinancialActivityType.income) {
+                      hasTransactions = true;
+                      income += item.amount;
+                    } else if (item.type == FinancialActivityType.expense) {
+                      hasTransactions = true;
+                      expense += item.amount;
                     }
                   }
+                  if (!hasTransactions) return null;
                   return _PeriodSummaryStrip(income: income, expense: expense);
                 },
               ) ??
@@ -193,19 +206,19 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
 
           // ----- Transaction list -----
           Expanded(
-            child: transactions.when(
+            child: activities.when(
               loading: () => const AppLoadingState(),
               error: (error, stackTrace) => AppErrorState(
-                message: 'Transaksi belum dapat dimuat.',
+                message: 'Aktivitas belum dapat dimuat.',
                 onRetry: () =>
-                    ref.invalidate(transactionHistoryProvider(filter)),
+                    ref.invalidate(financialActivityProvider(filter)),
               ),
               data: (items) => items.isEmpty
                   ? const AppEmptyState(
                       icon: Icons.receipt_long_outlined,
-                      message: 'Tidak ada transaksi yang cocok.',
+                      message: 'Tidak ada aktivitas yang sesuai.',
                     )
-                  : _GroupedTransactionList(items: items),
+                  : _GroupedActivityList(items: items),
             ),
           ),
         ],
@@ -315,10 +328,10 @@ class _PeriodSummaryStrip extends StatelessWidget {
 // Grouped transaction list — flat rows, no individual cards
 // ---------------------------------------------------------------------------
 
-class _GroupedTransactionList extends StatelessWidget {
-  const _GroupedTransactionList({required this.items});
+class _GroupedActivityList extends StatelessWidget {
+  const _GroupedActivityList({required this.items});
 
-  final List<TransactionListItem> items;
+  final List<FinancialActivity> items;
 
   @override
   Widget build(BuildContext context) {
@@ -333,11 +346,7 @@ class _GroupedTransactionList extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = items[index];
         final showDate =
-            index == 0 ||
-            !_isSameDate(
-              item.transaction.transactionDate,
-              items[index - 1].transaction.transactionDate,
-            );
+            index == 0 || !_isSameDate(item.date, items[index - 1].date);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -348,11 +357,11 @@ class _GroupedTransactionList extends StatelessWidget {
                   bottom: AppSpacing.sm,
                 ),
                 child: Text(
-                  formatDate(item.transaction.transactionDate),
+                  formatDate(item.date),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-            _TransactionRow(item: item),
+            _ActivityRow(item: item),
           ],
         );
       },
@@ -360,19 +369,23 @@ class _GroupedTransactionList extends StatelessWidget {
   }
 }
 
-class _TransactionRow extends ConsumerWidget {
-  const _TransactionRow({required this.item});
+class _ActivityRow extends ConsumerWidget {
+  const _ActivityRow({required this.item});
 
-  final TransactionListItem item;
+  final FinancialActivity item;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final transaction = item.transaction;
-    final isExpense = transaction.type == TransactionType.expense;
+    final isTransfer = item.type == FinancialActivityType.transfer;
+    final transactionType = switch (item.type) {
+      FinancialActivityType.income => TransactionType.income,
+      FinancialActivityType.expense => TransactionType.expense,
+      FinancialActivityType.transfer => null,
+    };
     final colors = Theme.of(context).colorScheme;
 
     return Dismissible(
-      key: ValueKey(transaction.id),
+      key: ValueKey(item.identity),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -387,31 +400,47 @@ class _TransactionRow extends ConsumerWidget {
       onDismissed: (_) => _performDelete(context, ref),
       child: Card(
         child: ListTile(
-          onTap: () => context.push('/transactions/${transaction.id}/edit'),
-          leading: Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: colors.amountColor(isExpense: isExpense),
+          onTap: () => isTransfer
+              ? context.push('/transfers?edit=${item.entityId}')
+              : context.push('/transactions/${item.entityId}/edit'),
+          leading: CircleAvatar(
+            backgroundColor: isTransfer
+                ? colors.tertiaryContainer
+                : colors
+                      .amountColor(
+                        isExpense: item.type == FinancialActivityType.expense,
+                      )
+                      .withValues(alpha: 0.15),
+            child: Icon(
+              switch (item.type) {
+                FinancialActivityType.income => Icons.south_west,
+                FinancialActivityType.expense => Icons.north_east,
+                FinancialActivityType.transfer => Icons.swap_horiz,
+              },
+              color: isTransfer
+                  ? colors.onTertiaryContainer
+                  : colors.amountColor(
+                      isExpense: item.type == FinancialActivityType.expense,
+                    ),
             ),
           ),
-          title: Text(
-            transaction.title.isEmpty ? item.category.name : transaction.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (transaction.title.isNotEmpty) Text(item.category.name),
-              Text(item.account.name),
+              if (!isTransfer && item.categoryName != null)
+                Text(item.categoryName!),
+              Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
           ),
-          isThreeLine: transaction.title.isNotEmpty,
+          isThreeLine: !isTransfer && item.categoryName != null,
           trailing: CurrencyText(
-            amount: transaction.amount,
-            type: transaction.type,
+            amount: item.amount,
+            type: transactionType,
+            style: isTransfer
+                ? Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(color: colors.tertiary)
+                : null,
           ),
         ),
       ),
@@ -422,8 +451,8 @@ class _TransactionRow extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus transaksi?'),
-        content: const Text('Transaksi tidak akan muncul lagi.'),
+        title: const Text('Hapus aktivitas?'),
+        content: const Text('Aktivitas tidak akan muncul lagi.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -440,14 +469,16 @@ class _TransactionRow extends ConsumerWidget {
 
   Future<void> _performDelete(BuildContext context, WidgetRef ref) async {
     try {
-      final deleted = await ref
-          .read(transactionRepositoryProvider)
-          .softDelete(item.transaction.id);
-      if (!deleted) throw StateError('Transaction is no longer active');
+      final deleted = item.type == FinancialActivityType.transfer
+          ? await ref.read(transferRepositoryProvider).softDelete(item.entityId)
+          : await ref
+                .read(transactionRepositoryProvider)
+                .softDelete(item.entityId);
+      if (!deleted) throw StateError('Activity is no longer active');
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaksi gagal dihapus. Coba lagi.')),
+          const SnackBar(content: Text('Aktivitas gagal dihapus. Coba lagi.')),
         );
       }
     }

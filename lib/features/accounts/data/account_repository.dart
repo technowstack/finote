@@ -35,14 +35,32 @@ class AccountRepository {
              COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0)
                AS total_income,
              COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0)
-               AS total_expense
+               AS total_expense,
+             COALESCE(incoming.total_amount, 0) AS total_incoming_transfer,
+             COALESCE(outgoing.total_amount, 0) AS total_outgoing_transfer
       FROM accounts a
       LEFT JOIN transactions t
         ON t.account_id = a.id AND t.deleted_at IS NULL
+      LEFT JOIN (
+        SELECT to_account_id AS account_id, SUM(amount) AS total_amount
+        FROM transfers
+        WHERE deleted_at IS NULL
+        GROUP BY to_account_id
+      ) incoming ON incoming.account_id = a.id
+      LEFT JOIN (
+        SELECT from_account_id AS account_id, SUM(amount) AS total_amount
+        FROM transfers
+        WHERE deleted_at IS NULL
+        GROUP BY from_account_id
+      ) outgoing ON outgoing.account_id = a.id
       GROUP BY a.id
       ORDER BY a.is_active DESC, a.name ASC
       ''',
-          readsFrom: {_database.accounts, _database.transactions},
+          readsFrom: {
+            _database.accounts,
+            _database.transactions,
+            _database.transfers,
+          },
         )
         .watch();
 
@@ -61,6 +79,8 @@ class AccountRepository {
               account: account,
               totalIncome: row.read<int>('total_income'),
               totalExpense: row.read<int>('total_expense'),
+              totalIncomingTransfer: row.read<int>('total_incoming_transfer'),
+              totalOutgoingTransfer: row.read<int>('total_outgoing_transfer'),
             ),
       ];
     });

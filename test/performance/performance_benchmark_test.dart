@@ -14,6 +14,7 @@ import 'package:finote/features/export/data/text_exporter.dart';
 import 'package:finote/features/export/domain/export_document.dart';
 import 'package:finote/features/reports/data/report_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
+import 'package:finote/features/transactions/data/financial_activity_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -69,6 +70,19 @@ Future<void> seedSyntheticDatabase(AppDatabase database, int count) async {
         );
       }),
     );
+    batch.insertAll(
+      database.transfers,
+      List.generate(
+        count ~/ 2,
+        (index) => TransfersCompanion.insert(
+          fromAccountId: accounts[index % accounts.length].id,
+          toAccountId: accounts[(index + 1) % accounts.length].id,
+          amount: 5000 + index,
+          transferDate: DateTime(2026, 8, 1 + index % 28),
+          note: Value('Transfer sintetis $index'),
+        ),
+      ),
+    );
   });
 }
 
@@ -87,6 +101,7 @@ void main() {
     seed.stop();
 
     final repository = TransactionRepository(database);
+    final activities = FinancialActivityRepository(database);
     final accountRepository = AccountRepository(database);
     final dashboard = DashboardRepository(database);
     final reports = ReportRepository(database);
@@ -97,6 +112,13 @@ void main() {
     final history = await repository.watchAll().first;
     stopwatch.stop();
     measure['history'] = stopwatch.elapsed;
+
+    stopwatch = Stopwatch()..start();
+    final unifiedHistory = await activities
+        .watch(const FinancialActivityQuery())
+        .first;
+    stopwatch.stop();
+    measure['unified-history'] = stopwatch.elapsed;
 
     stopwatch = Stopwatch()..start();
     final search = await repository
@@ -157,6 +179,7 @@ void main() {
     measure['backup'] = stopwatch.elapsed;
 
     expect(history, hasLength(9500));
+    expect(unifiedHistory, hasLength(14500));
     expect(search, isNotEmpty);
     expect(dashboardSummary.balance, isNot(0));
     expect(report.transactionCount, 9500);

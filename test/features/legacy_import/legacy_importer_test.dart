@@ -9,6 +9,7 @@ import 'package:finote/features/legacy_import/domain/legacy_schema.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
+import 'package:finote/features/transactions/data/financial_activity_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -115,6 +116,11 @@ void main() {
         .watchSummaries()
         .first;
     expect(importedSummary.single.balance, 475000);
+    final history = await FinancialActivityRepository(database)
+        .watch(const FinancialActivityQuery())
+        .first;
+    expect(history, hasLength(2));
+    expect(await database.select(database.transfers).get(), isEmpty);
   });
 
   test('second import of the same database skips every transaction', () async {

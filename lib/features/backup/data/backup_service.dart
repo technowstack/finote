@@ -353,6 +353,7 @@ class BackupService {
             'accounts',
             'categories',
             'transactions',
+            'transfers',
             'settings',
           }) ||
           !_hasColumns(db, 'categories', {'id', 'name', 'type'}) ||
@@ -367,6 +368,15 @@ class BackupService {
             'source',
           }) ||
           !_hasColumns(db, 'settings', {'key', 'value'}) ||
+          !_hasColumns(db, 'transfers', {
+            'id',
+            'uuid',
+            'from_account_id',
+            'to_account_id',
+            'amount',
+            'transfer_date',
+            'deleted_at',
+          }) ||
           !_hasColumns(db, 'accounts', {
             'id',
             'uuid',

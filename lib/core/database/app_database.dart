@@ -13,16 +13,19 @@ import 'tables/categories.dart';
 import 'tables/accounts.dart';
 import 'tables/settings.dart';
 import 'tables/transactions.dart';
+import 'tables/transfers.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Accounts, Categories, Transactions, Settings])
+@DriftDatabase(
+  tables: [Accounts, Categories, Transactions, Transfers, Settings],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -56,6 +59,9 @@ class AppDatabase extends _$AppDatabase {
           'CREATE INDEX IF NOT EXISTS transactions_account_id '
           'ON transactions (account_id)',
         );
+      }
+      if (from < 7) {
+        await migrator.createTable(transfers);
       }
     },
     onCreate: (migrator) async {
