@@ -22,7 +22,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -50,6 +50,12 @@ class AppDatabase extends _$AppDatabase {
         }
         await ensureDefaultAccount();
         await _backfillTransactionAccounts();
+      }
+      if (from < 6) {
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS transactions_account_id '
+          'ON transactions (account_id)',
+        );
       }
     },
     onCreate: (migrator) async {

@@ -20,7 +20,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Tunai'), findsOneWidget);
+    expect(find.text('Tunai'), findsAtLeastNWidgets(1));
+    expect(find.text('Saldo Rp0'), findsOneWidget);
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'DANA');

@@ -2236,6 +2236,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'transactions_deleted_at',
     'CREATE INDEX transactions_deleted_at ON transactions (deleted_at)',
   );
+  late final Index transactionsAccountId = Index(
+    'transactions_account_id',
+    'CREATE INDEX transactions_account_id ON transactions (account_id)',
+  );
   late final Index transactionsReceiptFingerprint = Index(
     'transactions_receipt_fingerprint',
     'CREATE INDEX transactions_receipt_fingerprint ON transactions (receipt_fingerprint)',
@@ -2260,6 +2264,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactionsCategoryId,
     transactionsType,
     transactionsDeletedAt,
+    transactionsAccountId,
     transactionsReceiptFingerprint,
     transactionsLegacySourceId,
   ];

@@ -8,6 +8,7 @@ import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/account_repository.dart';
 import '../domain/account_type.dart';
+import '../domain/account_summary.dart';
 
 class AccountsPage extends ConsumerStatefulWidget {
   const AccountsPage({super.key});
@@ -75,7 +76,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = ref.watch(accountsProvider);
+    final accounts = ref.watch(accountSummariesProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Akun & Dompet')),
       floatingActionButton: FloatingActionButton(
@@ -106,9 +107,9 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             itemCount: items.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
             itemBuilder: (context, index) => _AccountCard(
-              account: items[index],
-              onEdit: () => _openForm(items[index]),
-              onSetActive: (active) => _setActive(items[index], active),
+              summary: items[index],
+              onEdit: () => _openForm(items[index].account),
+              onSetActive: (active) => _setActive(items[index].account, active),
             ),
           );
         },
@@ -119,17 +120,18 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
 class _AccountCard extends StatelessWidget {
   const _AccountCard({
-    required this.account,
+    required this.summary,
     required this.onEdit,
     required this.onSetActive,
   });
 
-  final AccountRecord account;
+  final AccountSummary summary;
   final VoidCallback onEdit;
   final ValueChanged<bool> onSetActive;
 
   @override
   Widget build(BuildContext context) {
+    final account = summary.account;
     final colors = Theme.of(context).colorScheme;
     return Card(
       child: ListTile(
@@ -144,9 +146,18 @@ class _AccountCard extends StatelessWidget {
           ),
         ),
         title: Text(account.name),
-        subtitle: Text(
-          '${account.type.label} • Saldo Awal ${formatIdr(account.initialBalance)}'
-          '${account.isActive ? '' : ' • Tidak aktif'}',
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${account.type.label}${account.isActive ? '' : ' • Tidak aktif'}',
+            ),
+            Text('Saldo ${formatIdr(summary.balance)}'),
+            Text(
+              'Masuk ${formatIdr(summary.totalIncome)} · '
+              'Keluar ${formatIdr(summary.totalExpense)}',
+            ),
+          ],
         ),
         trailing: PopupMenuButton<_AccountAction>(
           tooltip: 'Tindakan akun',

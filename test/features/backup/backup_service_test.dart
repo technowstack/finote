@@ -359,6 +359,15 @@ void main() {
         (await live.select(live.accounts).get()).map((account) => account.name),
         contains('DANA'),
       );
+      final restoredSummary = await AccountRepository(live)
+          .watchSummaries()
+          .first;
+      expect(
+        restoredSummary
+            .singleWhere((item) => item.account.id == account.id)
+            .balance,
+        -10000,
+      );
       expect(
         tempDir.listSync().where((entry) => entry.path.contains('.rollback-')),
         isEmpty,

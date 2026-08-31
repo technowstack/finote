@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/backup/data/backup_service.dart';
 import 'package:finote/features/dashboard/data/dashboard_repository.dart';
 import 'package:finote/features/export/data/excel_exporter.dart';
@@ -17,7 +19,21 @@ import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> seedSyntheticDatabase(AppDatabase database, int count) async {
-  final account = await database.select(database.accounts).getSingle();
+  final accountRepository = AccountRepository(database);
+  final defaultAccount = await database.select(database.accounts).getSingle();
+  final accounts = [
+    defaultAccount,
+    await accountRepository.create(
+      name: 'BCA Perf',
+      type: AccountType.bank,
+      initialBalance: 1000000,
+    ),
+    await accountRepository.create(
+      name: 'Cash Perf',
+      type: AccountType.cash,
+      initialBalance: 500000,
+    ),
+  ];
   final categoryIds = <int>[];
   for (final entry in [
     ('Makanan', TransactionType.expense),
@@ -42,7 +58,7 @@ Future<void> seedSyntheticDatabase(AppDatabase database, int count) async {
         final income = index % 4 >= 2;
         return TransactionsCompanion.insert(
           type: income ? TransactionType.income : TransactionType.expense,
-          accountId: Value(account.id),
+          accountId: Value(accounts[index % accounts.length].id),
           categoryId: categoryIds[index % categoryIds.length],
           amount: 10000 + index,
           title: Value('Transaksi sintetis $index'),
@@ -71,6 +87,7 @@ void main() {
     seed.stop();
 
     final repository = TransactionRepository(database);
+    final accountRepository = AccountRepository(database);
     final dashboard = DashboardRepository(database);
     final reports = ReportRepository(database);
     final exports = ExportRepository(database);
@@ -107,6 +124,11 @@ void main() {
     measure['report'] = stopwatch.elapsed;
 
     stopwatch = Stopwatch()..start();
+    final accountSummaries = await accountRepository.watchSummaries().first;
+    stopwatch.stop();
+    measure['account-balances'] = stopwatch.elapsed;
+
+    stopwatch = Stopwatch()..start();
     final document = await exports.buildDocument(const ExportFilter());
     stopwatch.stop();
     measure['export-data'] = stopwatch.elapsed;
@@ -138,6 +160,8 @@ void main() {
     expect(search, isNotEmpty);
     expect(dashboardSummary.balance, isNot(0));
     expect(report.transactionCount, 9500);
+    expect(accountSummaries, hasLength(3));
+    expect(accountSummaries.every((summary) => summary.balance != 0), isTrue);
     expect(document.transactions, hasLength(9500));
     expect(text, isNotEmpty);
     expect(excel, isNotEmpty);

@@ -1,7 +1,11 @@
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
+import 'package:finote/features/accounts/domain/account_summary.dart';
+import 'package:finote/features/transactions/data/transaction_repository.dart';
+import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -113,6 +117,150 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test(
+    'derives balances from initial balance and active transactions',
+    () async {
+      final account = await repository.create(
+        name: 'BCA Utama',
+        type: AccountType.bank,
+        initialBalance: 1000000,
+      );
+      final expenseCategory = await _category(
+        database,
+        'Belanja',
+        TransactionType.expense,
+      );
+      final incomeCategory = await _category(
+        database,
+        'Gaji',
+        TransactionType.income,
+      );
+      final transactions = TransactionRepository(database);
+
+      await transactions.create(
+        type: TransactionType.income,
+        categoryId: incomeCategory.id,
+        accountId: account.id,
+        amount: 10000000,
+        transactionDate: DateTime(2026, 8, 31),
+      );
+      final expense = await transactions.create(
+        type: TransactionType.expense,
+        categoryId: expenseCategory.id,
+        accountId: account.id,
+        amount: 2500000,
+        transactionDate: DateTime(2026, 8, 31),
+      );
+
+      expect((await _summary(repository, account.id)).balance, 8500000);
+
+      await transactions.update(expense.copyWith(amount: 3000000));
+      expect((await _summary(repository, account.id)).balance, 8000000);
+
+      await transactions.softDelete(expense.id);
+      expect((await _summary(repository, account.id)).balance, 11000000);
+    },
+  );
+
+  test('keeps balances isolated and recalculates type changes', () async {
+    final accountA = await repository.create(
+      name: 'BCA',
+      type: AccountType.bank,
+      initialBalance: 1000000,
+    );
+    final accountB = await repository.create(
+      name: 'Tunai Cadangan',
+      type: AccountType.cash,
+      initialBalance: 500000,
+    );
+    final expenseCategory = await _category(
+      database,
+      'Belanja',
+      TransactionType.expense,
+    );
+    final incomeCategory = await _category(
+      database,
+      'Gaji',
+      TransactionType.income,
+    );
+    final transactions = TransactionRepository(database);
+
+    await transactions.create(
+      type: TransactionType.income,
+      categoryId: incomeCategory.id,
+      accountId: accountA.id,
+      amount: 10000000,
+      transactionDate: DateTime(2026, 8, 31),
+    );
+    final expense = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: expenseCategory.id,
+      accountId: accountA.id,
+      amount: 2000000,
+      transactionDate: DateTime(2026, 8, 31),
+    );
+    await transactions.create(
+      type: TransactionType.income,
+      categoryId: incomeCategory.id,
+      accountId: accountB.id,
+      amount: 250000,
+      transactionDate: DateTime(2026, 8, 31),
+    );
+    await transactions.create(
+      type: TransactionType.expense,
+      categoryId: expenseCategory.id,
+      accountId: accountB.id,
+      amount: 100000,
+      transactionDate: DateTime(2026, 8, 31),
+    );
+
+    expect((await _summary(repository, accountA.id)).balance, 9000000);
+    expect((await _summary(repository, accountB.id)).balance, 650000);
+
+    await transactions.update(
+      expense.copyWith(
+        type: TransactionType.income,
+        categoryId: incomeCategory.id,
+      ),
+    );
+    expect((await _summary(repository, accountA.id)).balance, 13000000);
+
+    await transactions.update(
+      expense.copyWith(accountId: Value<int?>(accountB.id)),
+    );
+    expect((await _summary(repository, accountA.id)).balance, 11000000);
+    expect((await _summary(repository, accountB.id)).balance, -1350000);
+
+    expect(
+      await repository.update(
+        id: accountA.id,
+        name: accountA.name,
+        type: accountA.type,
+        initialBalance: 2000000,
+      ),
+      isTrue,
+    );
+    expect((await _summary(repository, accountA.id)).balance, 12000000);
+
+    expect(await repository.archive(accountB.id), isTrue);
+    expect((await _summary(repository, accountB.id)).balance, -1350000);
+  });
+}
+
+Future<CategoryRecord> _category(
+  AppDatabase database,
+  String name,
+  TransactionType type,
+) {
+  return database
+      .into(database.categories)
+      .insertReturning(CategoriesCompanion.insert(name: name, type: type));
+}
+
+Future<AccountSummary> _summary(AccountRepository repository, int id) async {
+  final summaries = await repository.watchSummaries().first;
+  return summaries.singleWhere((summary) => summary.account.id == id);
 }
 
 final _uuidPattern = RegExp(

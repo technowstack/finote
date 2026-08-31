@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../domain/account_type.dart';
+import '../domain/account_summary.dart';
 
 class AccountRepository {
   AccountRepository(this._database);
@@ -24,6 +25,45 @@ class AccountRepository {
           (account) => OrderingTerm.asc(account.name),
         ]))
         .watch();
+  }
+
+  Stream<List<AccountSummary>> watchSummaries() {
+    final aggregate = _database
+        .customSelect(
+          '''
+      SELECT a.id AS account_id,
+             COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0)
+               AS total_income,
+             COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0)
+               AS total_expense
+      FROM accounts a
+      LEFT JOIN transactions t
+        ON t.account_id = a.id AND t.deleted_at IS NULL
+      GROUP BY a.id
+      ORDER BY a.is_active DESC, a.name ASC
+      ''',
+          readsFrom: {_database.accounts, _database.transactions},
+        )
+        .watch();
+
+    return aggregate.asyncMap((rows) async {
+      final accounts =
+          await (_database.select(_database.accounts)..orderBy([
+                (account) => OrderingTerm.desc(account.isActive),
+                (account) => OrderingTerm.asc(account.name),
+              ]))
+              .get();
+      final byId = {for (final account in accounts) account.id: account};
+      return [
+        for (final row in rows)
+          if (byId[row.read<int>('account_id')] case final account?)
+            AccountSummary(
+              account: account,
+              totalIncome: row.read<int>('total_income'),
+              totalExpense: row.read<int>('total_expense'),
+            ),
+      ];
+    });
   }
 
   Future<AccountRecord?> findById(int id) {
@@ -128,6 +168,10 @@ final accountInitializationProvider = FutureProvider<void>(
 
 final accountsProvider = StreamProvider<List<AccountRecord>>(
   (ref) => ref.watch(accountRepositoryProvider).watchAll(),
+);
+
+final accountSummariesProvider = StreamProvider<List<AccountSummary>>(
+  (ref) => ref.watch(accountRepositoryProvider).watchSummaries(),
 );
 
 final activeAccountsProvider = StreamProvider<List<AccountRecord>>(

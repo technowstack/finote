@@ -10,6 +10,7 @@ import 'categories.dart';
 @TableIndex(name: 'transactions_category_id', columns: {#categoryId})
 @TableIndex(name: 'transactions_type', columns: {#type})
 @TableIndex(name: 'transactions_deleted_at', columns: {#deletedAt})
+@TableIndex(name: 'transactions_account_id', columns: {#accountId})
 @TableIndex(
   name: 'transactions_receipt_fingerprint',
   columns: {#receiptFingerprint},

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/legacy_import/data/legacy_importer.dart';
 import 'package:finote/features/legacy_import/domain/legacy_schema.dart';
@@ -110,6 +111,10 @@ void main() {
       transactions.firstWhere((item) => item.legacyId == 10).transactionDate,
       DateTime(2023),
     );
+    final importedSummary = await AccountRepository(database)
+        .watchSummaries()
+        .first;
+    expect(importedSummary.single.balance, 475000);
   });
 
   test('second import of the same database skips every transaction', () async {
