@@ -20,7 +20,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('fresh database creates version 3 tables and indexes', () async {
+  test('fresh database creates version 4 tables and indexes', () async {
     final schema = await database
         .customSelect(
           "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -28,12 +28,15 @@ void main() {
         .get();
     final names = schema.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
         .getSingle();
     expect(foreignKeys.read<int>('foreign_keys'), 1);
-    expect(names, containsAll(['categories', 'transactions', 'settings']));
+    expect(
+      names,
+      containsAll(['accounts', 'categories', 'transactions', 'settings']),
+    );
     expect(
       names,
       containsAll([
@@ -43,8 +46,13 @@ void main() {
         'transactions_deleted_at',
         'transactions_receipt_fingerprint',
         'transactions_legacy_source_id',
+        'accounts_active',
       ]),
     );
+    final defaultAccount = await database.select(database.accounts).getSingle();
+    expect(defaultAccount.name, 'Tunai');
+    expect(defaultAccount.type.name, 'cash');
+    expect(defaultAccount.isDefault, isTrue);
   });
 
   test('category insert generates UUID and stores domain type', () async {
@@ -177,7 +185,7 @@ void main() {
     await expectLater(insert(), throwsA(isA<Exception>()));
   });
 
-  test('version 1 database migrates to version 3 without recreation', () async {
+  test('version 1 database migrates to version 4 without recreation', () async {
     await database.close();
     database = AppDatabase(
       NativeDatabase.memory(
@@ -201,11 +209,11 @@ void main() {
         .customSelect('SELECT value FROM phase_zero_marker')
         .getSingle();
 
-    expect(version.read<int>('user_version'), 3);
+    expect(version.read<int>('user_version'), 4);
     expect(marker.read<String>('value'), 'preserved');
     expect(
       tables.map((row) => row.read<String>('name')),
-      containsAll(['categories', 'transactions', 'settings']),
+      containsAll(['accounts', 'categories', 'transactions', 'settings']),
     );
   });
 
@@ -269,7 +277,7 @@ void main() {
         .customSelect('PRAGMA table_info(transactions)')
         .get();
 
-    expect(database.schemaVersion, 3);
+    expect(database.schemaVersion, 4);
     expect(transaction.uuid, 'transaction-v2');
     expect(transaction.amount, 25000);
     expect(transaction.transactionDate, DateTime(2026, 8, 29));
@@ -279,6 +287,7 @@ void main() {
       columns.map((row) => row.read<String>('name')),
       contains('receipt_fingerprint'),
     );
+    expect(await database.select(database.accounts).getSingle(), isNotNull);
   });
 }
 

@@ -349,7 +349,12 @@ class BackupService {
       final foreignKeyErrors = db.select('PRAGMA foreign_key_check');
       if (result['integrity_check'] != 'ok' ||
           db.userVersion != _database.schemaVersion ||
-          !tables.containsAll({'categories', 'transactions', 'settings'}) ||
+          !tables.containsAll({
+            'accounts',
+            'categories',
+            'transactions',
+            'settings',
+          }) ||
           !_hasColumns(db, 'categories', {'id', 'name', 'type'}) ||
           !_hasColumns(db, 'transactions', {
             'id',
@@ -361,6 +366,15 @@ class BackupService {
             'source',
           }) ||
           !_hasColumns(db, 'settings', {'key', 'value'}) ||
+          !_hasColumns(db, 'accounts', {
+            'id',
+            'uuid',
+            'name',
+            'type',
+            'initial_balance',
+            'is_active',
+            'is_default',
+          }) ||
           foreignKeyErrors.isNotEmpty) {
         throw const RestoreError.integrityCheckFailed();
       }

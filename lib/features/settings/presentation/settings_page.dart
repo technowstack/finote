@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 
-/// Settings hub page that links to Categories, Backup, Legacy Import,
+/// Settings hub page that links to Accounts, Categories, Backup, Legacy Import,
 /// Security screens, and display preferences.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});

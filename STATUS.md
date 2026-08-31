@@ -25,10 +25,12 @@
 - [x] Phase 5G — Play Store Preparation
 - [x] Phase 5H — Closed Testing Preparation / Release Candidate Validation (local)
 - [x] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.0
+- [x] Phase 6A.1 — Account / Wallet Management
 
 ## Current
 
 Finote v1.0.0 has completed **Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY**.
+Finote v1.1.0 development is active in **Phase 6A.1 — Account / Wallet Management**.
 
 Current focus:
 
@@ -68,7 +70,8 @@ These external tasks do not reopen the v1.0 feature scope.
 ## Next After v1.0
 
 - [ ] Continue real daily usage / bug-fix period
-- [ ] v1.1.0 — Phase 6A Accounts & Transfers **only when explicitly started by the user**
+- [x] v1.1.0 — Phase 6A.1 Account / Wallet Management
+- [ ] Phase 6A.2 — Assign Transactions to Account
 
 ---
 

@@ -3,6 +3,552 @@
 part of 'app_database.dart';
 
 // ignore_for_file: type=lint
+class $AccountsTable extends Accounts
+    with TableInfo<$AccountsTable, AccountRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: generateUuid,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<AccountType, String> type =
+      GeneratedColumn<String>(
+        'type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL CHECK (type IN (\'cash\', \'bank\', \'e_wallet\', \'savings\'))',
+      ).withConverter<AccountType>($AccountsTable.$convertertype);
+  static const VerificationMeta _initialBalanceMeta = const VerificationMeta(
+    'initialBalance',
+  );
+  @override
+  late final GeneratedColumn<int> initialBalance = GeneratedColumn<int>(
+    'initial_balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _isDefaultMeta = const VerificationMeta(
+    'isDefault',
+  );
+  @override
+  late final GeneratedColumn<bool> isDefault = GeneratedColumn<bool>(
+    'is_default',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_default" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    name,
+    type,
+    initialBalance,
+    isActive,
+    isDefault,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'accounts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccountRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('initial_balance')) {
+      context.handle(
+        _initialBalanceMeta,
+        initialBalance.isAcceptableOrUnknown(
+          data['initial_balance']!,
+          _initialBalanceMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('is_default')) {
+      context.handle(
+        _isDefaultMeta,
+        isDefault.isAcceptableOrUnknown(data['is_default']!, _isDefaultMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AccountRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccountRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      type: $AccountsTable.$convertertype.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}type'],
+        )!,
+      ),
+      initialBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}initial_balance'],
+      )!,
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      isDefault: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_default'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AccountsTable createAlias(String alias) {
+    return $AccountsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<AccountType, String> $convertertype =
+      const AccountTypeConverter();
+}
+
+class AccountRecord extends DataClass implements Insertable<AccountRecord> {
+  final int id;
+  final String uuid;
+  final String name;
+  final AccountType type;
+  final int initialBalance;
+  final bool isActive;
+  final bool isDefault;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const AccountRecord({
+    required this.id,
+    required this.uuid,
+    required this.name,
+    required this.type,
+    required this.initialBalance,
+    required this.isActive,
+    required this.isDefault,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['name'] = Variable<String>(name);
+    {
+      map['type'] = Variable<String>($AccountsTable.$convertertype.toSql(type));
+    }
+    map['initial_balance'] = Variable<int>(initialBalance);
+    map['is_active'] = Variable<bool>(isActive);
+    map['is_default'] = Variable<bool>(isDefault);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  AccountsCompanion toCompanion(bool nullToAbsent) {
+    return AccountsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      name: Value(name),
+      type: Value(type),
+      initialBalance: Value(initialBalance),
+      isActive: Value(isActive),
+      isDefault: Value(isDefault),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory AccountRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AccountRecord(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      name: serializer.fromJson<String>(json['name']),
+      type: serializer.fromJson<AccountType>(json['type']),
+      initialBalance: serializer.fromJson<int>(json['initialBalance']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      isDefault: serializer.fromJson<bool>(json['isDefault']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'name': serializer.toJson<String>(name),
+      'type': serializer.toJson<AccountType>(type),
+      'initialBalance': serializer.toJson<int>(initialBalance),
+      'isActive': serializer.toJson<bool>(isActive),
+      'isDefault': serializer.toJson<bool>(isDefault),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  AccountRecord copyWith({
+    int? id,
+    String? uuid,
+    String? name,
+    AccountType? type,
+    int? initialBalance,
+    bool? isActive,
+    bool? isDefault,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => AccountRecord(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    name: name ?? this.name,
+    type: type ?? this.type,
+    initialBalance: initialBalance ?? this.initialBalance,
+    isActive: isActive ?? this.isActive,
+    isDefault: isDefault ?? this.isDefault,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  AccountRecord copyWithCompanion(AccountsCompanion data) {
+    return AccountRecord(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      name: data.name.present ? data.name.value : this.name,
+      type: data.type.present ? data.type.value : this.type,
+      initialBalance: data.initialBalance.present
+          ? data.initialBalance.value
+          : this.initialBalance,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      isDefault: data.isDefault.present ? data.isDefault.value : this.isDefault,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountRecord(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('initialBalance: $initialBalance, ')
+          ..write('isActive: $isActive, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uuid,
+    name,
+    type,
+    initialBalance,
+    isActive,
+    isDefault,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountRecord &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.name == this.name &&
+          other.type == this.type &&
+          other.initialBalance == this.initialBalance &&
+          other.isActive == this.isActive &&
+          other.isDefault == this.isDefault &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class AccountsCompanion extends UpdateCompanion<AccountRecord> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String> name;
+  final Value<AccountType> type;
+  final Value<int> initialBalance;
+  final Value<bool> isActive;
+  final Value<bool> isDefault;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const AccountsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.name = const Value.absent(),
+    this.type = const Value.absent(),
+    this.initialBalance = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  AccountsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required String name,
+    required AccountType type,
+    this.initialBalance = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.isDefault = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : name = Value(name),
+       type = Value(type);
+  static Insertable<AccountRecord> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? name,
+    Expression<String>? type,
+    Expression<int>? initialBalance,
+    Expression<bool>? isActive,
+    Expression<bool>? isDefault,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (initialBalance != null) 'initial_balance': initialBalance,
+      if (isActive != null) 'is_active': isActive,
+      if (isDefault != null) 'is_default': isDefault,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  AccountsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<String>? name,
+    Value<AccountType>? type,
+    Value<int>? initialBalance,
+    Value<bool>? isActive,
+    Value<bool>? isDefault,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return AccountsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      initialBalance: initialBalance ?? this.initialBalance,
+      isActive: isActive ?? this.isActive,
+      isDefault: isDefault ?? this.isDefault,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(
+        $AccountsTable.$convertertype.toSql(type.value),
+      );
+    }
+    if (initialBalance.present) {
+      map['initial_balance'] = Variable<int>(initialBalance.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (isDefault.present) {
+      map['is_default'] = Variable<bool>(isDefault.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('name: $name, ')
+          ..write('type: $type, ')
+          ..write('initialBalance: $initialBalance, ')
+          ..write('isActive: $isActive, ')
+          ..write('isDefault: $isDefault, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CategoriesTable extends Categories
     with TableInfo<$CategoriesTable, CategoryRecord> {
   @override
@@ -1606,9 +2152,14 @@ class SettingsCompanion extends UpdateCompanion<SettingRecord> {
 
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
+  late final $AccountsTable accounts = $AccountsTable(this);
   late final $CategoriesTable categories = $CategoriesTable(this);
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final Index accountsActive = Index(
+    'accounts_active',
+    'CREATE INDEX accounts_active ON accounts (is_active)',
+  );
   late final Index categoriesType = Index(
     'categories_type',
     'CREATE INDEX categories_type ON categories (type)',
@@ -1646,9 +2197,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
+    accounts,
     categories,
     transactions,
     settings,
+    accountsActive,
     categoriesType,
     categoriesDeletedAt,
     transactionsDate,

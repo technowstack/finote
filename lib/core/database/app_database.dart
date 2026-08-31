@@ -4,27 +4,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/accounts/domain/account_type.dart';
 import '../../features/transactions/domain/transaction_source.dart';
 import '../../features/transactions/domain/transaction_type.dart';
 import '../utils/uuid_generator.dart';
 import 'converters.dart';
 import 'tables/categories.dart';
+import 'tables/accounts.dart';
 import 'tables/settings.dart';
 import 'tables/transactions.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Categories, Transactions, Settings])
+@DriftDatabase(tables: [Accounts, Categories, Transactions, Settings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-    onCreate: (migrator) => migrator.createAll(),
     onUpgrade: (migrator, from, to) async {
       if (from < 2) await migrator.createAll();
       if (from < 3) {
@@ -39,11 +40,33 @@ class AppDatabase extends _$AppDatabase {
           );
         }
       }
+      if (from < 4) {
+        if (from >= 2) await migrator.createTable(accounts);
+        await ensureDefaultAccount();
+      }
+    },
+    onCreate: (migrator) async {
+      await migrator.createAll();
+      await ensureDefaultAccount();
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  Future<void> ensureDefaultAccount() async {
+    final existing = await (select(
+      accounts,
+    )..where((account) => account.isDefault.equals(true))).getSingleOrNull();
+    if (existing != null) return;
+    await into(accounts).insert(
+      AccountsCompanion.insert(
+        name: 'Tunai',
+        type: AccountType.cash,
+        isDefault: const Value(true),
+      ),
+    );
+  }
 
   /// Mengembalikan path absolut file SQLite yang digunakan oleh database ini.
   ///

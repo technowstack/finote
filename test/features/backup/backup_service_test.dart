@@ -8,6 +8,8 @@ import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/backup/data/backup_service.dart';
 import 'package:finote/features/backup/domain/backup_manifest.dart';
 import 'package:finote/features/backup/domain/restore_error.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
@@ -58,6 +60,11 @@ void main() {
 
         final category = await CategoryRepository(database)
             .create(name: 'Makanan', type: TransactionType.expense);
+        await AccountRepository(database).create(
+          name: 'BCA Utama',
+          type: AccountType.bank,
+          initialBalance: 500000,
+        );
         await TransactionRepository(database).create(
           type: TransactionType.expense,
           categoryId: category.id,
@@ -106,6 +113,12 @@ void main() {
                 .select('SELECT COUNT(*) AS count FROM transactions')
                 .single['count'],
             1,
+          );
+          expect(
+            snapshot
+                .select("SELECT name FROM accounts WHERE name = 'BCA Utama'")
+                .single['name'],
+            'BCA Utama',
           );
         } finally {
           snapshot.close();
@@ -308,6 +321,8 @@ void main() {
 
       final category = await CategoryRepository(live)
           .create(name: 'Makan', type: TransactionType.expense);
+      await AccountRepository(live)
+          .create(name: 'DANA', type: AccountType.eWallet);
       await TransactionRepository(live).create(
         type: TransactionType.expense,
         categoryId: category.id,
@@ -335,6 +350,10 @@ void main() {
 
       expect(await live.select(live.transactions).get(), hasLength(1));
       expect((await live.select(live.transactions).getSingle()).amount, 10000);
+      expect(
+        (await live.select(live.accounts).get()).map((account) => account.name),
+        contains('DANA'),
+      );
       expect(
         tempDir.listSync().where((entry) => entry.path.contains('.rollback-')),
         isEmpty,

@@ -6,6 +6,7 @@ import '../features/app_lock/presentation/security_page.dart';
 import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/legacy_import/presentation/legacy_import_page.dart';
+import '../features/accounts/presentation/accounts_page.dart';
 import '../features/reports/presentation/reports_page.dart';
 import '../features/receipt_scanner/presentation/receipt_scanner_page.dart';
 import '../features/settings/presentation/settings_page.dart';
@@ -99,6 +100,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/categories',
         builder: (context, state) => const CategoryPage(),
+      ),
+      GoRoute(
+        path: '/accounts',
+        builder: (context, state) => const AccountsPage(),
       ),
       GoRoute(path: '/backup', builder: (context, state) => const BackupPage()),
       GoRoute(
