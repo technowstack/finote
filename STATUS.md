@@ -54,6 +54,7 @@ Current focus:
 - [x] Make account management reachable from Settings
 - [x] Complete Phase 6A.9 legacy database compatibility
 - [x] Complete Phase 6A.10 testing and polish
+- [x] Add safe permanent deletion for unused non-default accounts
 - [x] Preserve financial accuracy and data integrity
 - [x] Keep release configuration healthy
 - [ ] Perform external Play Store activities only when the user is ready

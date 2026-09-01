@@ -529,6 +529,11 @@ void main() {
           name: 'BCA Tabungan',
           type: AccountType.savings,
         );
+        final removed = await accounts.create(
+          name: 'Akun Dihapus',
+          type: AccountType.cash,
+        );
+        expect(await accounts.deleteUnusedAccount(removed.id), isTrue);
         final incomeCategory = await CategoryRepository(live)
             .create(name: 'Gaji', type: TransactionType.income);
         final expenseCategory = await CategoryRepository(live)
@@ -610,6 +615,10 @@ void main() {
         addTearDown(live.close);
 
         final restoredAccounts = await live.select(live.accounts).get();
+        expect(
+          restoredAccounts.map((account) => account.uuid),
+          isNot(contains(removed.uuid)),
+        );
         final restoredSource = restoredAccounts.singleWhere(
           (account) => account.id == source.id,
         );

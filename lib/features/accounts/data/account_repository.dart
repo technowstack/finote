@@ -92,6 +92,54 @@ class AccountRepository {
     )..where((account) => account.id.equals(id))).getSingleOrNull();
   }
 
+  Future<AccountUsage?> getAccountUsage(int id) => _getAccountUsage(id);
+
+  Future<bool> canDeleteAccount(int id) async {
+    return (await _getAccountUsage(id))?.canDelete ?? false;
+  }
+
+  Future<bool> deleteUnusedAccount(int id) {
+    return _database.transaction(() async {
+      final usage = await _getAccountUsage(id);
+      if (usage == null || !usage.canDelete) return false;
+      final deleted = await (_database.delete(
+        _database.accounts,
+      )..where((account) => account.id.equals(id))).go();
+      return deleted == 1;
+    });
+  }
+
+  Future<AccountUsage?> _getAccountUsage(int id) async {
+    final row = await _database
+        .customSelect(
+          '''
+          SELECT a.is_default,
+                 (SELECT COUNT(*) FROM transactions t
+                  WHERE t.account_id = a.id) AS transaction_count,
+                 (SELECT COUNT(*) FROM transfers tr
+                  WHERE tr.to_account_id = a.id) AS incoming_transfer_count,
+                 (SELECT COUNT(*) FROM transfers tr
+                  WHERE tr.from_account_id = a.id) AS outgoing_transfer_count
+          FROM accounts a
+          WHERE a.id = ?
+          ''',
+          variables: [Variable.withInt(id)],
+          readsFrom: {
+            _database.accounts,
+            _database.transactions,
+            _database.transfers,
+          },
+        )
+        .getSingleOrNull();
+    if (row == null) return null;
+    return AccountUsage(
+      isDefault: row.read<int>('is_default') != 0,
+      transactionCount: row.read<int>('transaction_count'),
+      incomingTransferCount: row.read<int>('incoming_transfer_count'),
+      outgoingTransferCount: row.read<int>('outgoing_transfer_count'),
+    );
+  }
+
   Future<AccountRecord> create({
     required String name,
     required AccountType type,
@@ -179,6 +227,27 @@ class AccountRepository {
     }
     return normalizedName;
   }
+}
+
+class AccountUsage {
+  const AccountUsage({
+    required this.isDefault,
+    required this.transactionCount,
+    required this.incomingTransferCount,
+    required this.outgoingTransferCount,
+  });
+
+  final bool isDefault;
+  final int transactionCount;
+  final int incomingTransferCount;
+  final int outgoingTransferCount;
+
+  bool get hasFinancialHistory =>
+      transactionCount > 0 ||
+      incomingTransferCount > 0 ||
+      outgoingTransferCount > 0;
+
+  bool get canDelete => !isDefault && !hasFinancialHistory;
 }
 
 final accountRepositoryProvider = Provider<AccountRepository>(

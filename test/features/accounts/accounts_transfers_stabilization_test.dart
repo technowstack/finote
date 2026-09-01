@@ -127,6 +127,46 @@ void main() {
       expect(export.totalAssets, 14450000);
       expect(export.transferVolume, 2000000);
       expect(export.transfers, hasLength(1));
+
+      final disposable = await accounts.create(
+        name: 'Akun Percobaan',
+        type: AccountType.cash,
+        initialBalance: 550000,
+      );
+      expect(
+        (await accounts.watchSummaries().first).fold<int>(
+          0,
+          (total, item) => total + item.balance,
+        ),
+        15000000,
+      );
+      expect(await accounts.deleteUnusedAccount(disposable.id), isTrue);
+      expect(
+        (await accounts.watchSummaries().first).fold<int>(
+          0,
+          (total, item) => total + item.balance,
+        ),
+        14450000,
+      );
+      final reportAfterDelete = await ReportRepository(database)
+          .watchReport(range)
+          .first;
+      expect(
+        (
+          reportAfterDelete.totalIncome,
+          reportAfterDelete.totalExpense,
+          reportAfterDelete.netBalance,
+        ),
+        (10000000, 1050000, 8950000),
+      );
+      final exportAfterDelete = await ExportRepository(
+        database,
+      ).buildDocument(ExportFilter(startDate: range.start, endDate: range.end));
+      expect(
+        exportAfterDelete.accounts.map((account) => account.name),
+        isNot(contains('Akun Percobaan')),
+      );
+      expect(exportAfterDelete.totalAssets, 14450000);
     },
   );
 }

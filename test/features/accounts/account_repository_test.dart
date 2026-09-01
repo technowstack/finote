@@ -1,11 +1,12 @@
 import 'package:drift/native.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/accounts/domain/account_summary.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
+import 'package:finote/features/transfers/data/transfer_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -136,6 +137,74 @@ void main() {
       ),
       throwsArgumentError,
     );
+  });
+
+  test('deletes only unused non-default accounts', () async {
+    final defaultAccount = await database.select(database.accounts).getSingle();
+    final unused = await repository.create(
+      name: 'Saldo Awal',
+      type: AccountType.savings,
+      initialBalance: 500000,
+    );
+
+    expect(await repository.canDeleteAccount(defaultAccount.id), isFalse);
+    expect(await repository.deleteUnusedAccount(defaultAccount.id), isFalse);
+    expect(await repository.canDeleteAccount(unused.id), isTrue);
+    expect(await repository.deleteUnusedAccount(unused.id), isTrue);
+    expect(await repository.findById(unused.id), isNull);
+    expect(await repository.deleteUnusedAccount(unused.id), isFalse);
+  });
+
+  test('transaction history blocks deletion after soft delete', () async {
+    final account = await repository.create(
+      name: 'BCA',
+      type: AccountType.bank,
+    );
+    final category = await _category(
+      database,
+      'Makan',
+      TransactionType.expense,
+    );
+    final transactions = TransactionRepository(database);
+    final transaction = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: category.id,
+      accountId: account.id,
+      amount: 25000,
+      transactionDate: DateTime(2026, 9, 1),
+    );
+
+    expect((await repository.getAccountUsage(account.id))?.transactionCount, 1);
+    expect(await repository.deleteUnusedAccount(account.id), isFalse);
+    await transactions.softDelete(transaction.id);
+    expect(await repository.canDeleteAccount(account.id), isFalse);
+    expect(await repository.findById(account.id), isNotNull);
+  });
+
+  test('incoming and outgoing transfer history blocks deletion', () async {
+    final source = await repository.create(name: 'BCA', type: AccountType.bank);
+    final destination = await repository.create(
+      name: 'Tabungan',
+      type: AccountType.savings,
+    );
+    final transfers = TransferRepository(database);
+    final transfer = await transfers.create(
+      fromAccountId: source.id,
+      toAccountId: destination.id,
+      amount: 100000,
+      transferDate: DateTime(2026, 9, 1),
+    );
+
+    final sourceUsage = await repository.getAccountUsage(source.id);
+    final destinationUsage = await repository.getAccountUsage(destination.id);
+    expect(sourceUsage?.outgoingTransferCount, 1);
+    expect(destinationUsage?.incomingTransferCount, 1);
+    expect(await repository.deleteUnusedAccount(source.id), isFalse);
+    expect(await repository.deleteUnusedAccount(destination.id), isFalse);
+
+    await transfers.softDelete(transfer.id);
+    expect(await repository.canDeleteAccount(source.id), isFalse);
+    expect(await repository.canDeleteAccount(destination.id), isFalse);
   });
 
   test(

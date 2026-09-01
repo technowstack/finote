@@ -75,6 +75,80 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     }
   }
 
+  Future<void> _deleteAccount(AccountRecord account) async {
+    final repository = ref.read(accountRepositoryProvider);
+    try {
+      final usage = await repository.getAccountUsage(account.id);
+      if (!mounted || usage == null || usage.isDefault) return;
+
+      if (usage.hasFinancialHistory) {
+        final archive = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Akun tidak dapat dihapus'),
+            content: const Text(
+              'Akun ini memiliki riwayat transaksi atau transfer. '
+              'Nonaktifkan akun agar riwayat keuangan tetap aman.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Tutup'),
+              ),
+              if (account.isActive)
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Nonaktifkan'),
+                ),
+            ],
+          ),
+        );
+        if (archive == true && mounted) await _setActive(account, false);
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Hapus akun?'),
+          content: Text(
+            'Akun “${account.name}” akan dihapus permanen. '
+            'Tindakan ini tidak dapat dibatalkan.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus Permanen'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+
+      final deleted = await repository.deleteUnusedAccount(account.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            deleted
+                ? 'Akun berhasil dihapus.'
+                : 'Akun tidak dapat dihapus karena sudah memiliki riwayat.',
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Akun tidak dapat dihapus.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountSummariesProvider);
@@ -120,6 +194,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               summary: items[index],
               onEdit: () => _openForm(items[index].account),
               onSetActive: (active) => _setActive(items[index].account, active),
+              onDelete: () => _deleteAccount(items[index].account),
             ),
           );
         },
@@ -133,11 +208,13 @@ class _AccountCard extends StatelessWidget {
     required this.summary,
     required this.onEdit,
     required this.onSetActive,
+    required this.onDelete,
   });
 
   final AccountSummary summary;
   final VoidCallback onEdit;
   final ValueChanged<bool> onSetActive;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +275,8 @@ class _AccountCard extends StatelessWidget {
                 if (confirmed == true) onSetActive(false);
               case _AccountAction.reactivate:
                 onSetActive(true);
+              case _AccountAction.delete:
+                onDelete();
             }
           },
           itemBuilder: (context) => [
@@ -212,6 +291,11 @@ class _AccountCard extends StatelessWidget {
                     : _AccountAction.reactivate,
                 child: Text(account.isActive ? 'Nonaktifkan' : 'Aktifkan'),
               ),
+            if (!account.isDefault)
+              const PopupMenuItem(
+                value: _AccountAction.delete,
+                child: Text('Hapus Permanen'),
+              ),
           ],
         ),
       ),
@@ -219,7 +303,7 @@ class _AccountCard extends StatelessWidget {
   }
 }
 
-enum _AccountAction { edit, archive, reactivate }
+enum _AccountAction { edit, archive, reactivate, delete }
 
 class _AccountFormData {
   const _AccountFormData(this.name, this.type, this.initialBalance);
