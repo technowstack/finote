@@ -11,13 +11,16 @@ class MainScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showAddButton =navigationShell.currentIndex == 0 || navigationShell.currentIndex == 1;
     return Scaffold(
       body: navigationShell,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddMenu(context),
-        tooltip: 'Tambah transaksi',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: showAddButton
+      ? FloatingActionButton(
+          onPressed: () => _showAddMenu(context),
+          tooltip: 'Tambah transaksi',
+          child: const Icon(Icons.add),
+        )
+      : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {

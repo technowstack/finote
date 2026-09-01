@@ -303,6 +303,7 @@ class _AccountFormDialogState extends State<_AccountFormDialog> {
                   if (value != null) setState(() => _type = value);
                 },
               ),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _balance,
                 keyboardType: TextInputType.number,
