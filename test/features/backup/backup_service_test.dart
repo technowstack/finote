@@ -694,9 +694,19 @@ void main() {
           end: DateTime(2026, 8, 31),
         );
         final report = await ReportRepository(live).watchReport(range).first;
+        final trend = await ReportRepository(live)
+            .watchFinancialTrend(range)
+            .first;
         expect(
           (report.totalIncome, report.totalExpense, report.netBalance),
           (10000000, 1000000, 9000000),
+        );
+        expect(
+          (
+            trend.fold<int>(0, (sum, point) => sum + point.income),
+            trend.fold<int>(0, (sum, point) => sum + point.expense),
+          ),
+          (report.totalIncome, report.totalExpense),
         );
         expect(
           (report.transferSummary.count, report.transferSummary.volume),

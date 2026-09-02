@@ -25,48 +25,31 @@
 - [x] Phase 5G — Play Store Preparation
 - [x] Phase 5H — Closed Testing Preparation / Release Candidate Validation (local)
 - [x] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.0
-- [x] Phase 6A.1 — Account / Wallet Management
-- [x] Phase 6A.2 — Assign Transactions to Account
-- [x] Phase 6A.3 — Account Balance Calculation
-- [x] Phase 6A.4 — Account-to-Account Transfer
-- [x] Phase 6A.5 — Transaction History Integration
-- [x] Phase 6A.6 — Reports Integration
-- [x] Phase 6A.7 — Export Integration
-- [x] Phase 6A.8 — Backup / Restore Migration
-- [x] Phase 6A.9 — Legacy Database Compatibility
-- [x] Phase 6A.10 — Testing & Polish
-- [x] Phase 6A — Accounts & Transfers COMPLETE
+- [x] Phase 6A — Accounts & Transfers v1.1.0
+- [x] Safe Account Deletion Polish
 
 ## Current
 
-Finote v1.0.0 has completed **Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY**.
-Finote v1.1.0 completed **Phase 6A — Accounts & Transfers** through Phase 6A.10 Testing & Polish.
+Finote v1.1.0 has completed **Phase 6A — Accounts & Transfers** including final testing/polish and Safe Account Deletion polish.
 
 Current focus:
 
-- [x] Complete Phase 6A.2 account assignment
-- [x] Complete Phase 6A.3 account balance calculation
-- [x] Complete Phase 6A.4 account-to-account transfer
-- [x] Complete Phase 6A.5 transaction history integration
-- [x] Complete Phase 6A.6 reports integration
-- [x] Complete Phase 6A.7 export integration
-- [x] Complete Phase 6A.8 backup/restore migration
-- [x] Make account management reachable from Settings
-- [x] Complete Phase 6A.9 legacy database compatibility
-- [x] Complete Phase 6A.10 testing and polish
-- [x] Add safe permanent deletion for unused non-default accounts
-- [x] Preserve financial accuracy and data integrity
-- [x] Keep release configuration healthy
-- [ ] Perform external Play Store activities only when the user is ready
+- [x] Phase 6B.1 — Report Chart Foundation
+- [x] Add chart foundations without changing Reports financial semantics
+- [x] Preserve Income / Expense / Net correctness
+- [x] Keep Transfer excluded from Income / Expense chart data
+- [x] Keep Accounts & Transfers regression-safe
+- [ ] Continue real usage and fix real bugs discovered during development
 
 ## Current Product State
 
 ```text
-Finote v1.0.0 foundation remains local production final.
-Finote v1.1.0 Accounts & Transfers is feature complete / stabilization-ready.
+Finote v1.1.0
+ACCOUNTS & TRANSFERS COMPLETE
+PHASE 6B.1 REPORT CHART FOUNDATION COMPLETE
 ```
 
-Local production final means the v1.0.0 codebase is considered finalized locally. It does **not** mean the app has already been uploaded, externally closed-tested through Play Console, or published to production.
+Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
 
 ## External Release When Ready
 
@@ -84,20 +67,13 @@ The following may remain pending until the actual Google Play release window:
 
 These external tasks do not reopen the v1.0 feature scope.
 
-## Next After v1.0
+## Next Development
 
-- [ ] Continue real daily usage / bug-fix period
-- [x] v1.1.0 — Phase 6A.1 Account / Wallet Management
-- [x] v1.1.0 — Phase 6A.2 Assign Transactions to Account
-- [x] Phase 6A.3 — Account Balance Calculation
-- [x] Phase 6A.4 — Account-to-Account Transfer
-- [x] Phase 6A.5 — Transaction History Integration
-- [x] Phase 6A.6 — Reports Integration
-- [x] Phase 6A.7 — Export Integration
-- [x] Phase 6A.8 — Backup / Restore Migration
-- [x] Phase 6A.9 — Legacy Database Compatibility
-- [x] Phase 6A.10 — Testing & Polish
-- [x] Phase 6A — Accounts & Transfers COMPLETE
+- [x] v1.1.0 — Phase 6A Accounts & Transfers
+- [x] Safe Account Deletion polish
+- [ ] v1.2.0 — Phase 6B Reports Visualization & Charts
+- [x] 6B.1 Report Chart Foundation
+- [ ] 6B.2 Income vs Expense Chart
 
 ---
 
@@ -242,7 +218,7 @@ Existing AI-ready abstractions may remain only if they do not create unnecessary
 
 ## Deferred Features
 
-### Planned v1.1.0 — Phase 6A Accounts & Transfers
+### Completed v1.1.0 — Phase 6A Accounts & Transfers
 
 - [x] 6A.1 Account / Wallet Management
 - [x] 6A.2 Assign Transactions to Account
@@ -259,7 +235,7 @@ Core rule:
 
 > Transfer antar account milik user bukan Income dan bukan Expense. Transfer hanya memindahkan saldo/aset antar account.
 
-Migration rule when Phase 6A starts:
+Migration rule used for Phase 6A:
 
 ```text
 Create accounts
@@ -275,9 +251,47 @@ Validate
 Only tighten constraints when safe
 ```
 
-Legacy transaction without account information must be assigned to the Default Account during future import/migration. The legacy database remains read-only.
+Legacy transactions without account information are assigned to the Default Account during import/migration. The legacy database remains read-only.
 
-**Do not implement any Phase 6A schema or feature during v1.0 finalization.**
+Safe Account Deletion polish is complete: only unused non-default accounts may be hard-deleted; used/default accounts remain protected and may be archived/deactivated as appropriate.
+
+
+### Planned v1.2.0 — Phase 6B Reports Visualization & Charts
+
+- [x] 6B.1 Report Chart Foundation
+- [ ] 6B.2 Income vs Expense Chart
+- [ ] 6B.3 Category Expense Chart
+- [ ] 6B.4 Financial Trend Chart
+- [ ] 6B.5 Account Balance Visualization
+- [ ] 6B.6 Chart Filters & Interaction
+- [ ] 6B.7 Chart Testing & Polish
+
+Core chart rules:
+
+- Charts use the same Report/aggregation source of truth.
+- Transfer is not Income and not Expense.
+- Initial Balance is not Income.
+- Income / Expense / Net values in charts must reconcile with Reports for equivalent filters.
+- Account balance visualization must reuse the shared derived account balance formula.
+- Charts must support Light / Dark / System theme.
+- Charts must handle empty/zero data safely.
+- Large datasets should use aggregated queries rather than calculating raw transaction lists inside widgets.
+
+Target report visualization:
+
+```text
+Reports
+├── Financial Summary
+├── Income vs Expense Chart
+├── Expense by Category Chart
+├── Financial Trend Chart
+├── Account Balance Visualization
+└── Transfer Summary (separate from Income/Expense)
+```
+
+Recommended next phase:
+
+> **Phase 6B.2 — Income vs Expense Chart**
 
 ### Other Post-v1 Candidate Features
 
@@ -367,17 +381,21 @@ AI:
 
 ## Immediate Action
 
-Finote v1.0.0 is now in **maintenance / real-usage mode**.
+Finote v1.1.0 has completed **Accounts & Transfers** and is ready to begin the explicitly approved **Phase 6B — Reports Visualization & Charts** track.
 
 Current rules:
 
-1. Use Finote in realistic daily scenarios.
-2. Fix only real bugs, data-integrity issues, security/privacy issues, compatibility issues, and measured reliability/performance problems.
-3. Keep financial reconciliation intact: Dashboard = Reports = Export for equivalent data/filter semantics.
-4. Keep backup/restore/migration/legacy-import safety intact.
-5. Keep AI frozen.
-6. Do not automatically add Wallet/Accounts, Budget, Recurring, Cloud, or other post-v1 features.
-7. Keep Phase 6A parked until the user explicitly starts it.
-8. External Play Store tasks may be completed later without changing the v1.0 core scope.
+1. Phase 6B.1 — Report Chart Foundation is complete.
+2. Reuse existing Reports aggregation as financial source of truth.
+3. Keep Income / Expense / Net semantics unchanged.
+4. Never include Transfer in Income or Expense charts.
+5. Keep Account Balance derived from initial balance + transactions + transfers.
+6. Use chart aggregation that remains usable with large datasets.
+7. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
+8. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
+9. Continue fixing real Accounts & Transfers regressions if discovered.
+10. External Play Store tasks remain separate from local feature development.
 
-When the user eventually starts Phase 6A, first inspect the actual Drift schema and migration history before changing any database structure.
+Recommended next phase, not started:
+
+> **Phase 6B.2 — Income vs Expense Chart**

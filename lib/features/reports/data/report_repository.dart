@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/converters.dart';
 import '../../../core/finance/financial_summary.dart';
+import '../domain/report_chart_data.dart';
 
 class ReportRepository {
   ReportRepository(this._database);
@@ -101,6 +102,81 @@ ORDER BY
         .map(_mapRows);
   }
 
+  Stream<List<FinancialTrendPoint>> watchFinancialTrend(ReportRange range) {
+    final granularity = chartGranularityFor(range);
+    final bucket = switch (granularity) {
+      ChartGranularity.day => 'transaction_date',
+      ChartGranularity.week =>
+        "date(transaction_date, '-' || "
+            "((CAST(strftime('%w', transaction_date) AS INTEGER) + 6) % 7) "
+            "|| ' days')",
+      ChartGranularity.month => "substr(transaction_date, 1, 7) || '-01'",
+    };
+    const converter = DateOnlyConverter();
+    return _database
+        .customSelect(
+          '''
+SELECT $bucket AS period,
+       COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0)
+         AS income,
+       COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
+         AS expense
+FROM transactions
+WHERE deleted_at IS NULL AND transaction_date BETWEEN ? AND ?
+GROUP BY period
+ORDER BY period ASC
+''',
+          variables: [
+            Variable.withString(converter.toSql(range.start)),
+            Variable.withString(converter.toSql(range.end)),
+          ],
+          readsFrom: {_database.transactions},
+        )
+        .watch()
+        .map(
+          (rows) => _completeTrend(range, granularity, {
+            for (final row in rows)
+              converter.fromSql(row.read<String>('period')): (
+                income: row.read<int>('income'),
+                expense: row.read<int>('expense'),
+              ),
+          }),
+        );
+  }
+
+  Stream<List<CategoryChartPoint>> watchExpenseCategories(ReportRange range) {
+    const converter = DateOnlyConverter();
+    return _database
+        .customSelect(
+          '''
+SELECT c.id AS category_id, c.name AS category_name, SUM(t.amount) AS amount
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE t.deleted_at IS NULL
+  AND t.type = 'expense'
+  AND t.transaction_date BETWEEN ? AND ?
+GROUP BY c.id, c.name
+ORDER BY amount DESC, c.name COLLATE NOCASE ASC, c.id ASC
+''',
+          variables: [
+            Variable.withString(converter.toSql(range.start)),
+            Variable.withString(converter.toSql(range.end)),
+          ],
+          readsFrom: {_database.transactions, _database.categories},
+        )
+        .watch()
+        .map(
+          (rows) => [
+            for (final row in rows)
+              CategoryChartPoint(
+                categoryId: row.read<int>('category_id'),
+                categoryName: row.read<String>('category_name'),
+                amount: row.read<int>('amount'),
+              ),
+          ],
+        );
+  }
+
   ReportData _mapRows(List<QueryRow> rows) {
     var income = 0;
     var expense = 0;
@@ -159,6 +235,50 @@ ORDER BY
     );
   }
 }
+
+ChartGranularity chartGranularityFor(ReportRange range) {
+  final start = _dateOnly(range.start);
+  final end = _dateOnly(range.end);
+  if (start.isAfter(end)) throw ArgumentError('Invalid report range');
+  final days = end.difference(start).inDays + 1;
+  if (days <= 62) return ChartGranularity.day;
+  if (days <= 180) return ChartGranularity.week;
+  return ChartGranularity.month;
+}
+
+List<FinancialTrendPoint> _completeTrend(
+  ReportRange range,
+  ChartGranularity granularity,
+  Map<DateTime, ({int income, int expense})> values,
+) {
+  final end = _dateOnly(range.end);
+  var period = switch (granularity) {
+    ChartGranularity.day => _dateOnly(range.start),
+    ChartGranularity.week => _dateOnly(
+      range.start,
+    ).subtract(Duration(days: range.start.weekday - 1)),
+    ChartGranularity.month => DateTime(range.start.year, range.start.month),
+  };
+  final points = <FinancialTrendPoint>[];
+  while (!period.isAfter(end)) {
+    final value = values[period];
+    points.add(
+      FinancialTrendPoint(
+        period: period,
+        income: value?.income ?? 0,
+        expense: value?.expense ?? 0,
+      ),
+    );
+    period = switch (granularity) {
+      ChartGranularity.day => period.add(const Duration(days: 1)),
+      ChartGranularity.week => period.add(const Duration(days: 7)),
+      ChartGranularity.month => DateTime(period.year, period.month + 1),
+    };
+  }
+  return points;
+}
+
+DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
 
 class ReportData extends FinancialSummary {
   const ReportData({

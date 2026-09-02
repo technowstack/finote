@@ -1520,7 +1520,7 @@ Finote v1.0.0 telah mencapai **LOCAL PRODUCTION FINAL / PLAY STORE READY** secar
 
 Fitur baru yang mengubah model keuangan inti tetap **tidak boleh dimasukkan ke v1.0.0**. Post-v1 development dimulai hanya atas instruksi eksplisit user.
 
-## 47.1 Planned v1.1.0 — Phase 6A Accounts & Transfers
+## 47.1 Completed v1.1.0 — Phase 6A Accounts & Transfers
 
 Fitur post-v1 yang sudah memiliki arah produk paling jelas adalah **Account / Wallet + Transfer Antar Rekening**.
 
@@ -1566,28 +1566,28 @@ Total aset tetap Rp10.000.000
 
 **Transfer bukan Income dan bukan Expense.** Transfer hanya memindahkan nilai antar account milik user dan tidak boleh mengubah total income/expense pada Reports.
 
-### 47.1.1 Planned Phase Breakdown
+### 47.1.1 Completed Phase Breakdown
 
 ```text
-Phase 6A — Accounts & Transfers
+Phase 6A — Accounts & Transfers — COMPLETE
 
-6A.1 Account / Wallet Management
-6A.2 Assign Transactions to Account
-6A.3 Account Balance Calculation
-6A.4 Account-to-Account Transfer
-6A.5 Transaction History Integration
-6A.6 Reports Integration
-6A.7 Export Integration
-6A.8 Backup / Restore Migration
-6A.9 Legacy Database Compatibility
-6A.10 Testing & Polish
+6A.1 Account / Wallet Management — COMPLETE
+6A.2 Assign Transactions to Account — COMPLETE
+6A.3 Account Balance Calculation — COMPLETE
+6A.4 Account-to-Account Transfer — COMPLETE
+6A.5 Transaction History Integration — COMPLETE
+6A.6 Reports Integration — COMPLETE
+6A.7 Export Integration — COMPLETE
+6A.8 Backup / Restore Migration — COMPLETE
+6A.9 Legacy Database Compatibility — COMPLETE
+6A.10 Testing & Polish — COMPLETE
 ```
 
-Phase 5I / finalisasi lokal v1.0.0 telah selesai. Phase 6A tetap **parked** dan hanya boleh dimulai ketika user secara eksplisit memulai pengembangan post-v1. Selesainya v1.0.0 tidak berarti Phase 6A harus dimulai otomatis.
+Phase 6A telah selesai dan menjadi baseline fitur utama Finote v1.1.0. Accounts, transaction-account assignment, derived account balances, transfers, history integration, Reports, Export, Backup/Restore, legacy compatibility, dan final testing/polish sudah menjadi bagian dari arsitektur v1.1.0.
 
 ## 47.2 Future Account Domain Model
 
-Skema berikut adalah **konsep awal**, bukan instruksi untuk langsung mengubah schema v1.0. Implementasi Phase 6A wajib menginspeksi schema Drift yang benar-benar ada terlebih dahulu.
+Model berikut mendokumentasikan arah domain Accounts & Transfers yang telah diimplementasikan pada v1.1.0. Exact names dan detail schema tetap mengikuti codebase aktual.
 
 Conceptual `accounts`:
 
@@ -1630,7 +1630,7 @@ transfers
 - updated_at
 ```
 
-Exact names, foreign keys, nullability, timestamps, indexes, dan generated Drift definitions harus mengikuti codebase aktual saat Phase 6A dimulai.
+Exact names, foreign keys, nullability, timestamps, indexes, dan generated Drift definitions mengikuti codebase aktual Finote v1.1.0.
 
 ## 47.3 Account Balance Rule
 
@@ -1701,7 +1701,7 @@ Migration must preserve:
 
 Legacy Catatan Keuangan databases are not expected to contain Finote account information.
 
-When Phase 6A is implemented:
+Pada implementasi Phase 6A:
 
 ```text
 Legacy transaction
@@ -1750,7 +1750,7 @@ Transfers may appear in history without changing Reports income/expense totals.
 
 ## 47.9 Required Regression Coverage for Phase 6A
 
-Before Phase 6A can be considered complete, add regression coverage for:
+Phase 6A dianggap lengkap setelah regression coverage mencakup:
 
 - migration from pre-account schema;
 - default account backfill;
@@ -1763,7 +1763,246 @@ Before Phase 6A can be considered complete, add regression coverage for:
 - repeated legacy import without duplicates;
 - existing Finote data preservation.
 
-## 47.10 Other Post-v1 Candidates
+
+## 47.10 Planned v1.2.0 — Phase 6B Reports Visualization & Charts
+
+Setelah Accounts & Transfers selesai pada v1.1.0, pengembangan laporan berikutnya berfokus pada **visualisasi data keuangan** agar user tidak hanya membaca angka, tetapi juga dapat memahami tren, perbandingan, dan komposisi pengeluaran secara cepat.
+
+Phase 6B tidak mengubah financial source of truth. Semua grafik wajib menggunakan hasil agregasi dari data transaksi/account yang sama dengan Reports.
+
+Core financial rules tetap:
+
+```text
+Income  = active income transactions
+Expense = active expense transactions
+Net     = Income - Expense
+
+Transfer != Income
+Transfer != Expense
+Initial Balance != Income
+```
+
+### 47.10.1 Phase Breakdown
+
+```text
+Phase 6B — Reports Visualization & Charts
+
+6B.1 Report Chart Foundation
+6B.2 Income vs Expense Chart
+6B.3 Category Expense Chart
+6B.4 Financial Trend Chart
+6B.5 Account Balance Visualization
+6B.6 Chart Filters & Interaction
+6B.7 Chart Testing & Polish
+```
+
+Phase 6B harus dibangun bertahap. Jangan mengimplementasikan seluruh chart sekaligus hanya untuk mengejar visual lengkap.
+
+### 47.10.2 Report Page Direction
+
+Target hierarchy halaman Reports:
+
+```text
+Laporan
+│
+├── Filter Periode
+│   ├── Hari / Minggu
+│   ├── Bulan
+│   ├── Tahun
+│   └── Custom
+│
+├── Ringkasan
+│   ├── Pemasukan
+│   ├── Pengeluaran
+│   └── Net
+│
+├── Grafik Arus Keuangan
+│   └── Pemasukan vs Pengeluaran
+│
+├── Grafik Pengeluaran per Kategori
+│
+├── Grafik Tren Keuangan
+│
+├── Visualisasi Saldo Akun
+│
+└── Ringkasan Transfer
+```
+
+Tidak semua section harus ditampilkan sekaligus jika membuat halaman terlalu padat. Prioritas adalah keterbacaan dan insight yang berguna.
+
+### 47.10.3 Required Charts
+
+#### Income vs Expense
+
+Gunakan bar chart atau visual comparison lain yang jelas untuk membandingkan pemasukan dan pengeluaran pada bucket periode yang relevan.
+
+Contoh tahunan:
+
+```text
+Jan  Income / Expense
+Feb  Income / Expense
+Mar  Income / Expense
+...
+```
+
+Transfer tidak boleh masuk ke kedua series tersebut.
+
+#### Expense by Category
+
+Visualisasi pengeluaran per kategori harus menggunakan transaction expense saja.
+
+Preferred:
+
+- horizontal bar chart jika kategori cukup banyak;
+- pie/donut hanya jika jumlah kategori sedikit dan part-to-whole masih mudah dibaca.
+
+Transfer tidak memiliki kategori dan tidak boleh dibuat menjadi kategori palsu.
+
+#### Financial Trend
+
+Line chart digunakan untuk menampilkan tren Income dan Expense berdasarkan waktu.
+
+Granularity harus mengikuti rentang laporan:
+
+```text
+Weekly   -> daily points
+Monthly  -> daily atau weekly points
+Yearly   -> monthly points
+Custom   -> adaptive grouping
+```
+
+#### Account Balance Visualization
+
+Visualisasi saldo account menggunakan derived account balance yang sama dengan Account Management dan Reports:
+
+```text
+Account Balance =
+initial_balance
++ income
+- expense
++ incoming_transfer
+- outgoing_transfer
+```
+
+Jangan membuat formula saldo kedua hanya untuk kebutuhan chart.
+
+### 47.10.4 Chart Architecture
+
+Preferred data flow:
+
+```text
+SQLite / Drift
+      ↓
+Report Repository / Aggregation
+      ↓
+Normalized Chart Data Model
+      ↓
+Flutter Chart Widget
+```
+
+Chart widget tidak boleh menghitung ulang financial truth langsung dari raw transaction list jika aggregation layer sudah tersedia.
+
+Chart implementation sebaiknya menggunakan library Flutter yang matang seperti `fl_chart` jika belum ada library chart existing yang lebih konsisten dengan codebase.
+
+### 47.10.5 Chart UX Requirements
+
+Charts harus:
+
+- mendukung Light / Dark / System Theme;
+- menggunakan Material 3 ColorScheme;
+- tetap terbaca di layar Android kecil;
+- menangani long category/account labels;
+- menyediakan empty state yang jelas;
+- tidak menghasilkan NaN atau broken axes ketika data nol;
+- menggunakan IDR formatting yang konsisten;
+- tidak mengandalkan warna saja untuk membedakan Income/Expense;
+- memiliki label/legend/tooltip yang cukup untuk dipahami.
+
+### 47.10.6 Performance Requirements
+
+Untuk dataset besar, chart harus menggunakan aggregate query yang efisien.
+
+Avoid:
+
+```text
+Load 10,000 transactions
+↓
+recalculate everything inside Widget build()
+```
+
+Prefer:
+
+```text
+Database aggregation
+↓
+small chart dataset
+↓
+render
+```
+
+Report/Chart screen harus tetap usable pada dataset 10,000+ transactions dan multiple accounts/transfers.
+
+### 47.10.7 Chart Regression Rules
+
+Charts tidak boleh menyebabkan perbedaan financial truth antara:
+
+```text
+Dashboard
+Reports
+Charts
+Excel
+Text
+PDF
+```
+
+Untuk filter/periode dengan semantics yang sama:
+
+```text
+Reports Income = Chart Income
+Reports Expense = Chart Expense
+Reports Net = Income - Expense
+```
+
+Transfer tetap informational dan tidak boleh mengubah Income/Expense chart.
+
+### 47.10.8 Phase Completion Requirement
+
+Phase 6B hanya dianggap selesai jika:
+
+- semua required chart memakai shared financial data source;
+- transfer exclusion tervalidasi;
+- chart filters konsisten dengan Reports;
+- empty/zero state aman;
+- Light/Dark/System tervalidasi;
+- large-data behavior layak;
+- `flutter analyze` dan `flutter test` lulus;
+- tidak ada BLOCKER/CRITICAL financial inconsistency.
+
+## 47.11 Safe Account Deletion Policy
+
+Finote v1.1.0 menggunakan hybrid account lifecycle:
+
+```text
+Default Account
+-> tidak dapat dihapus permanen
+
+Unused non-default account
+-> dapat dihapus permanen
+
+Account dengan transaction history
+-> tidak dapat dihapus permanen
+-> dapat dinonaktifkan
+
+Account yang pernah menjadi source/destination transfer
+-> tidak dapat dihapus permanen
+-> dapat dinonaktifkan
+```
+
+Soft-deleted financial records tetap dianggap historical references dan harus mencegah hard deletion account agar tidak menghasilkan orphaned data.
+
+Unused account dengan `initial_balance != 0` tetap dapat dihapus permanen jika tidak memiliki transaction/transfer references. Penghapusan tersebut dapat mengubah Total Assets, tetapi tidak boleh mengubah Income, Expense, atau Net.
+
+## 47.12 Other Post-v1 Candidates
 
 Other possible features remain deferred and must be prioritized from real usage/feedback:
 
@@ -1914,7 +2153,7 @@ Do not automatically add new product features during this period.
 
 External Play Store activities such as final signing, Play Console configuration, store assets, Data Safety submission, AAB upload, external closed testing, and production rollout are **not prerequisites for local production-final status**.
 
-Phase 6A remains parked until explicitly started.
+Phase 6A is complete for Finote v1.1.0. Phase 6B Reports Visualization & Charts is the next explicitly approved development track.
 
 ---
 
@@ -1922,7 +2161,7 @@ Phase 6A remains parked until explicitly started.
 
 Current product state:
 
-> **Finote v1.0.0 — LOCAL PRODUCTION FINAL / PLAY STORE READY (local).**
+> **Finote v1.1.0 — ACCOUNTS & TRANSFERS COMPLETE / STABILIZATION-READY.**
 
 Target produk tetap:
 
@@ -1944,6 +2183,6 @@ Export Excel / Text / PDF
 Backup data dengan aman
 ```
 
-Finote harus terlebih dahulu menjadi aplikasi keuangan manual yang matang dan dapat dipercaya.
+Finote v1.1.0 telah memperluas core finance dengan Accounts & Transfers tanpa mengubah prinsip offline-first dan deterministic financial calculations. Pengembangan berikutnya berfokus pada Reports Visualization & Charts (Phase 6B).
 
-AI, cloud sync, dan fitur kompleks hanya dikembangkan setelah kebutuhan nyata pengguna membuktikannya.
+AI dan cloud sync tetap deferred sampai kebutuhan nyata pengguna membuktikannya.

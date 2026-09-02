@@ -146,6 +146,18 @@ void main() {
     measure['report'] = stopwatch.elapsed;
 
     stopwatch = Stopwatch()..start();
+    final chartRange = ReportRange(
+      start: DateTime(2022),
+      end: DateTime(2026, 12, 31),
+    );
+    final trend = await reports.watchFinancialTrend(chartRange).first;
+    final expenseCategories = await reports
+        .watchExpenseCategories(chartRange)
+        .first;
+    stopwatch.stop();
+    measure['report-charts'] = stopwatch.elapsed;
+
+    stopwatch = Stopwatch()..start();
     final accountSummaries = await accountRepository.watchSummaries().first;
     stopwatch.stop();
     measure['account-balances'] = stopwatch.elapsed;
@@ -207,6 +219,8 @@ void main() {
     expect(report.transactionCount, 9500);
     expect(report.transferSummary.count, 5000);
     expect(report.transferSummary.volume, greaterThan(0));
+    expect(trend, hasLength(60));
+    expect(expenseCategories, hasLength(2));
     expect(accountSummaries, hasLength(3));
     expect(accountSummaries.every((summary) => summary.balance != 0), isTrue);
     expect(document.transactions, hasLength(9500));
