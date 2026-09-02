@@ -27,6 +27,7 @@ final accountBalanceChartProvider =
                 AccountBalanceChartPoint(
                   accountId: summary.account.id,
                   accountName: summary.account.name,
+                  accountType: summary.account.type,
                   balance: summary.balance,
                   isActive: summary.account.isActive,
                 ),

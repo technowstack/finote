@@ -1,3 +1,5 @@
+import '../../accounts/domain/account_type.dart';
+
 enum ChartGranularity { day, week, month }
 
 class FinancialTrendPoint {
@@ -30,12 +32,14 @@ class AccountBalanceChartPoint {
   const AccountBalanceChartPoint({
     required this.accountId,
     required this.accountName,
+    required this.accountType,
     required this.balance,
     required this.isActive,
   });
 
   final int accountId;
   final String accountName;
+  final AccountType accountType;
   final int balance;
   final bool isActive;
 }

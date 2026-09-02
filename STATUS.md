@@ -39,6 +39,7 @@ Current focus:
 - [x] Phase 6B.3 — Analytics Chart Screen
 - [x] Phase 6B.4 — Category Expense Chart
 - [x] Phase 6B.5 — Financial Trend Chart
+- [x] Phase 6B.6 — Account Balance Visualization
 - [x] Keep Reports concise: summary + one primary chart preview
 - [x] Move complete chart exploration to the dedicated Analytics screen
 - [x] Preserve Income / Expense / Net correctness
@@ -52,7 +53,7 @@ Current focus:
 Finote v1.1.0
 ACCOUNTS & TRANSFERS COMPLETE
 PHASE 6B REPORT VISUALIZATION & ANALYTICS — IN PROGRESS
-PHASE 6B.5 FINANCIAL TREND CHART COMPLETE
+PHASE 6B.6 ACCOUNT BALANCE VISUALIZATION COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -83,7 +84,8 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 6B.3 Analytics Chart Screen
 - [x] 6B.4 Category Expense Chart
 - [x] 6B.5 Financial Trend Chart
-- [ ] 6B.6 Account Balance Visualization
+- [x] 6B.6 Account Balance Visualization
+- [ ] 6B.7 Chart Filters & Interaction
 
 ---
 
@@ -273,7 +275,7 @@ Safe Account Deletion polish is complete: only unused non-default accounts may b
 - [x] 6B.3 Analytics Chart Screen
 - [x] 6B.4 Category Expense Chart
 - [x] 6B.5 Financial Trend Chart
-- [ ] 6B.6 Account Balance Visualization
+- [x] 6B.6 Account Balance Visualization
 - [ ] 6B.7 Chart Filters & Interaction
 - [ ] 6B.8 Chart Testing & Polish
 
@@ -315,7 +317,7 @@ Analytics Chart Screen = deeper visual analysis
 
 Recommended next phase:
 
-> **Phase 6B.6 — Account Balance Visualization**
+> **Phase 6B.7 — Chart Filters & Interaction**
 
 ### Other Post-v1 Candidate Features
 
@@ -409,8 +411,8 @@ Finote v1.1.0 has completed **Accounts & Transfers** and Phase 6B — Reports Vi
 
 Current rules:
 
-1. Phase 6B.1 Report Chart Foundation through 6B.5 Financial Trend Chart are complete.
-2. Continue with Phase 6B.6 — Account Balance Visualization only when explicitly requested.
+1. Phase 6B.1 Report Chart Foundation through 6B.6 Account Balance Visualization are complete.
+2. Continue with Phase 6B.7 — Chart Filters & Interaction only when explicitly requested.
 3. Keep Reports concise: Financial Summary + one primary Income vs Expense preview + entry point to Analytics.
 4. Place the complete chart experience on the dedicated Analytics Chart Screen.
 5. Reuse existing Reports aggregation as financial source of truth.
@@ -422,4 +424,4 @@ Current rules:
 
 Recommended next phase, not started:
 
-> **Phase 6B.6 — Account Balance Visualization**
+> **Phase 6B.7 — Chart Filters & Interaction**

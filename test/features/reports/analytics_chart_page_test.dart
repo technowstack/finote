@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:finote/app/router.dart';
 import 'package:finote/core/database/app_database.dart';
@@ -6,6 +7,7 @@ import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/reports/data/report_repository.dart';
+import 'package:finote/features/reports/presentation/account_balance_chart.dart';
 import 'package:finote/features/reports/presentation/analytics_chart_page.dart';
 import 'package:finote/features/reports/presentation/expense_category_chart.dart';
 import 'package:finote/features/reports/presentation/financial_trend_chart.dart';
@@ -376,6 +378,7 @@ void main() {
     expect(find.byType(ExpenseCategoryChart), findsOneWidget);
     expect(find.byType(FinancialTrendChart), findsOneWidget);
     expect(find.byType(LineChart), findsOneWidget);
+    expect(find.byType(AccountBalanceChart), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(640, 320);
@@ -385,7 +388,215 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets(
+    'Account chart stays current and follows shared account lifecycle balances',
+    (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final accounts = AccountRepository(database);
+      final accountA = await accounts.create(
+        name: 'BCA Utama',
+        type: AccountType.bank,
+        initialBalance: 5000000,
+      );
+      final accountB = await accounts.create(
+        name: 'BCA Tabungan',
+        type: AccountType.savings,
+        initialBalance: 500000,
+      );
+      final accountC = await accounts.create(
+        name: 'Tunai',
+        type: AccountType.cash,
+      );
+      final categories = CategoryRepository(database);
+      final incomeCategory = await categories.create(
+        name: 'Gaji',
+        type: TransactionType.income,
+      );
+      final expenseCategory = await categories.create(
+        name: 'Belanja',
+        type: TransactionType.expense,
+      );
+      final transactions = TransactionRepository(database);
+      final income = await transactions.create(
+        type: TransactionType.income,
+        categoryId: incomeCategory.id,
+        accountId: accountA.id,
+        amount: 10000000,
+        transactionDate: DateTime(2026, 8, 1),
+      );
+      var expenseA = await transactions.create(
+        type: TransactionType.expense,
+        categoryId: expenseCategory.id,
+        accountId: accountA.id,
+        amount: 1000000,
+        transactionDate: DateTime(2026, 8, 1),
+      );
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: expenseCategory.id,
+        accountId: accountB.id,
+        amount: 50000,
+        transactionDate: DateTime(2026, 8, 2),
+      );
+      final transfers = TransferRepository(database);
+      var transfer = await transfers.create(
+        fromAccountId: accountA.id,
+        toAccountId: accountB.id,
+        amount: 2000000,
+        transferDate: DateTime(2026, 8, 2),
+      );
+      final range = ReportRange(
+        start: DateTime(2026, 8, 1),
+        end: DateTime(2026, 8, 31),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [databaseProvider.overrideWithValue(database)],
+          child: MaterialApp(home: AnalyticsChartPage(initialRange: range)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      var chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(_balance(chart, accountA.id), 12000000);
+      expect(_balance(chart, accountB.id), 2450000);
+      expect(chart.totalAssets, 14450000);
+      final report = await ReportRepository(database).watchReport(range).first;
+      expect(
+        (report.totalIncome, report.totalExpense, report.netBalance),
+        (10000000, 1050000, 8950000),
+      );
+
+      await tester.tap(find.text('Tahun ini'));
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountA.id), chart.totalAssets),
+        (12000000, 14450000),
+      );
+
+      await accounts.update(
+        id: accountA.id,
+        name: 'BCA Utama Baru',
+        type: AccountType.eWallet,
+        initialBalance: 5500000,
+      );
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountA.id), chart.totalAssets),
+        (12500000, 14950000),
+      );
+      expect(
+        chart.points
+            .singleWhere((point) => point.accountId == accountA.id)
+            .accountType,
+        AccountType.eWallet,
+      );
+
+      expenseA = expenseA.copyWith(accountId: Value(accountB.id));
+      await transactions.update(expenseA);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountA.id), _balance(chart, accountB.id)),
+        (13500000, 1450000),
+      );
+      expect(chart.totalAssets, 14950000);
+
+      transfer = transfer.copyWith(toAccountId: accountC.id);
+      await transfers.update(transfer);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountB.id), _balance(chart, accountC.id)),
+        (-550000, 2000000),
+      );
+      expect(chart.totalAssets, 14950000);
+
+      await accounts.archive(accountB.id);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        chart.points.any((point) => point.accountId == accountB.id),
+        isFalse,
+      );
+      expect((chart.archivedCount, chart.totalAssets), (1, 14950000));
+      await accounts.reactivate(accountB.id);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(_balance(chart, accountB.id), -550000);
+
+      final unused = await accounts.create(
+        name: 'Akun Sementara',
+        type: AccountType.cash,
+        initialBalance: 500000,
+      );
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, unused.id), chart.totalAssets),
+        (500000, 15450000),
+      );
+      expect(await accounts.deleteUnusedAccount(unused.id), isTrue);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        chart.points.any((point) => point.accountId == unused.id),
+        isFalse,
+      );
+      expect(chart.totalAssets, 14950000);
+
+      await transactions.softDelete(income.id);
+      await transfers.softDelete(transfer.id);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountA.id), _balance(chart, accountC.id)),
+        (5500000, 0),
+      );
+      expect(chart.totalAssets, 4950000);
+      await transactions.softDelete(expenseA.id);
+      await tester.pumpAndSettle();
+      chart = tester.widget<AccountBalanceChart>(
+        find.byType(AccountBalanceChart),
+      );
+      expect(
+        (_balance(chart, accountB.id), chart.totalAssets),
+        (450000, 5950000),
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
 }
+
+int _balance(AccountBalanceChart chart, int accountId) =>
+    chart.points.singleWhere((point) => point.accountId == accountId).balance;
 
 (double, double, double) _trendTotals(LineChart chart) {
   final series = chart.data.lineBarsData;

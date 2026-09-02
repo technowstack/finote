@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +8,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
+import 'account_balance_chart.dart';
 import 'expense_category_chart.dart';
 import 'financial_trend_chart.dart';
 import 'income_expense_chart.dart';
@@ -61,7 +64,11 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
   Widget build(BuildContext context) {
     final trend = ref.watch(financialTrendProvider(_range));
     final expenseCategories = ref.watch(expenseCategoryChartProvider(_range));
+    final accountBalances = ref.watch(accountBalanceChartProvider);
     final categoryCount = expenseCategories.valueOrNull?.length ?? 0;
+    final accountCount =
+        accountBalances.valueOrNull?.where((point) => point.isActive).length ??
+        0;
     final granularity = chartGranularityFor(_range);
     return Scaffold(
       appBar: AppBar(title: const Text('Analisis Grafik')),
@@ -173,6 +180,32 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                     granularity: granularity,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Aset',
+                  style: Theme.of(context).textTheme.labelLarge
+                      ?.copyWith(color: Theme.of(context).colorScheme.primary),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ReportChartSection<List<AccountBalanceChartPoint>>(
+                  title: 'Saldo per Akun',
+                  subtitle: 'Saldo saat ini, tidak dibatasi periode laporan',
+                  data: accountBalances,
+                  isEmpty: (points) => !points.any((point) => point.isActive),
+                  onRetry: () => ref.invalidate(accountBalanceChartProvider),
+                  height: _accountChartHeight(accountCount),
+                  emptyMessage: 'Belum ada akun untuk ditampilkan.',
+                  builder: (context, points) => AccountBalanceChart(
+                    points: visibleAccountBalances(points),
+                    totalAssets: points.fold<int>(
+                      0,
+                      (sum, point) => sum + point.balance,
+                    ),
+                    archivedCount: points
+                        .where((point) => !point.isActive)
+                        .length,
+                  ),
+                ),
               ],
             ),
           ),
@@ -215,6 +248,9 @@ double _categoryChartHeight(int categoryCount) {
       : categoryCount;
   return visibleCount <= 2 ? 180 : (visibleCount * 58 + 28).toDouble();
 }
+
+double _accountChartHeight(int accountCount) =>
+    max(270, accountCount * 80 + 130).toDouble();
 
 String _rangeLabel(ReportRange range) {
   final format = DateFormat('d MMM y', 'id_ID');

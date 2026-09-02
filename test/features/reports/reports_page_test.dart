@@ -4,6 +4,7 @@ import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/reports/presentation/reports_page.dart';
+import 'package:finote/features/reports/presentation/account_balance_chart.dart';
 import 'package:finote/features/reports/presentation/expense_category_chart.dart';
 import 'package:finote/features/reports/presentation/financial_trend_chart.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
@@ -84,6 +85,7 @@ void main() {
     expect(find.text('Tahun ini'), findsOneWidget);
     expect(find.byType(ExpenseCategoryChart), findsNothing);
     expect(find.byType(FinancialTrendChart), findsNothing);
+    expect(find.byType(AccountBalanceChart), findsNothing);
     await tester.scrollUntilVisible(
       find.text('Pemasukan vs Pengeluaran'),
       300,
