@@ -218,6 +218,45 @@ void main() {
   );
 
   test(
+    'trend totals reconcile for today, week, month, year, and custom ranges',
+    () async {
+      for (final entry in [
+        (DateTime(2026, 1, 1), TransactionType.income, 100),
+        (DateTime(2026, 1, 2), TransactionType.expense, 30),
+        (DateTime(2026, 2, 1), TransactionType.expense, 20),
+        (DateTime(2026, 8, 1), TransactionType.income, 200),
+      ]) {
+        await transactions.create(
+          type: entry.$2,
+          categoryId: entry.$2 == TransactionType.income ? salary.id : food.id,
+          amount: entry.$3,
+          transactionDate: entry.$1,
+        );
+      }
+
+      final ranges = [
+        ReportRange(start: DateTime(2026, 1, 1), end: DateTime(2026, 1, 1)),
+        ReportRange(start: DateTime(2025, 12, 29), end: DateTime(2026, 1, 4)),
+        ReportRange(start: DateTime(2026, 1, 1), end: DateTime(2026, 1, 31)),
+        ReportRange(start: DateTime(2026, 1, 1), end: DateTime(2026, 12, 31)),
+        ReportRange(start: DateTime(2026, 1, 2), end: DateTime(2026, 8, 1)),
+      ];
+
+      for (final range in ranges) {
+        final report = await reports.watchReport(range).first;
+        final trend = await reports.watchFinancialTrend(range).first;
+        expect(
+          (
+            trend.fold<int>(0, (sum, point) => sum + point.income),
+            trend.fold<int>(0, (sum, point) => sum + point.expense),
+          ),
+          (report.totalIncome, report.totalExpense),
+        );
+      }
+    },
+  );
+
+  test(
     'chart providers expose exact integer data and shared account balances',
     () async {
       final accounts = AccountRepository(database);

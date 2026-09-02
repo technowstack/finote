@@ -14,7 +14,11 @@ import '../../export/data/export_repository.dart';
 import '../../export/data/export_service.dart';
 import '../../export/domain/export_document.dart';
 import '../../transactions/domain/transaction_type.dart';
+import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
+import '../domain/report_chart_data.dart';
+import 'income_expense_chart.dart';
+import 'report_chart_section.dart';
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -45,6 +49,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   Widget build(BuildContext context) {
     final range = _reportRange(_period, _customRange, DateTime.now());
     final report = ref.watch(reportProvider(range));
+    final trend = ref.watch(financialTrendProvider(range));
     final accounts = ref.watch(accountSummariesProvider);
 
     return Scaffold(
@@ -83,6 +88,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
                 _periodChip('Hari ini', _ReportPeriod.today),
                 _periodChip('Minggu ini', _ReportPeriod.week),
                 _periodChip('Bulan ini', _ReportPeriod.month),
+                _periodChip('Tahun ini', _ReportPeriod.year),
                 ChoiceChip(
                   label: const Text('Rentang'),
                   selected: _period == _ReportPeriod.custom,
@@ -117,7 +123,14 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
               data: (data) => TabBarView(
                 controller: _tabController,
                 children: [
-                  _SummaryTab(data: data, accounts: accounts),
+                  _SummaryTab(
+                    data: data,
+                    accounts: accounts,
+                    trend: trend,
+                    range: range,
+                    onRetryTrend: () =>
+                        ref.invalidate(financialTrendProvider(range)),
+                  ),
                   _HistoryTab(data: data),
                 ],
               ),
@@ -332,10 +345,19 @@ String _periodLabel(ExportDocument document) {
 // ---------------------------------------------------------------------------
 
 class _SummaryTab extends StatelessWidget {
-  const _SummaryTab({required this.data, required this.accounts});
+  const _SummaryTab({
+    required this.data,
+    required this.accounts,
+    required this.trend,
+    required this.range,
+    required this.onRetryTrend,
+  });
 
   final ReportData data;
   final AsyncValue<List<AccountSummary>> accounts;
+  final AsyncValue<List<FinancialTrendPoint>> trend;
+  final ReportRange range;
+  final VoidCallback onRetryTrend;
 
   @override
   Widget build(BuildContext context) {
@@ -357,6 +379,20 @@ class _SummaryTab extends StatelessWidget {
         else
           _CompactSummary(data: data),
         const SizedBox(height: AppSpacing.xl),
+        ReportChartSection<List<FinancialTrendPoint>>(
+          title: 'Pemasukan vs Pengeluaran',
+          subtitle: 'Perbandingan berdasarkan periode laporan',
+          data: trend,
+          isEmpty: (points) => !hasIncomeExpenseData(points),
+          onRetry: onRetryTrend,
+          height: 260,
+          emptyMessage: 'Belum ada transaksi pada periode ini.',
+          builder: (context, points) => IncomeExpenseChart(
+            points: points,
+            granularity: chartGranularityFor(range),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
         if (data.topExpenseCategories.isNotEmpty) ...[
           _CategoryBreakdown(
             title: 'Pengeluaran per kategori',
@@ -814,24 +850,35 @@ ReportRange _reportRange(
   DateTimeRange? customRange,
   DateTime now,
 ) {
-  final periodRange = period == _ReportPeriod.all
-      ? null
-      : resolveFinancialDateRange(
-          switch (period) {
-            _ReportPeriod.today => FinancialPeriod.today,
-            _ReportPeriod.week => FinancialPeriod.week,
-            _ReportPeriod.month => FinancialPeriod.month,
-            _ReportPeriod.custom => FinancialPeriod.custom,
-            _ReportPeriod.all => FinancialPeriod.today,
-          },
-          now: now,
-          customStart: customRange?.start,
-          customEnd: customRange?.end,
-        );
+  final periodRange = switch (period) {
+    _ReportPeriod.all || _ReportPeriod.year => null,
+    _ReportPeriod.today => resolveFinancialDateRange(
+      FinancialPeriod.today,
+      now: now,
+    ),
+    _ReportPeriod.week => resolveFinancialDateRange(
+      FinancialPeriod.week,
+      now: now,
+    ),
+    _ReportPeriod.month => resolveFinancialDateRange(
+      FinancialPeriod.month,
+      now: now,
+    ),
+    _ReportPeriod.custom => resolveFinancialDateRange(
+      FinancialPeriod.custom,
+      now: now,
+      customStart: customRange?.start,
+      customEnd: customRange?.end,
+    ),
+  };
   return switch (period) {
     _ReportPeriod.all => ReportRange(
       start: DateTime(2000, 1, 1),
       end: DateTime(2100, 12, 31),
+    ),
+    _ReportPeriod.year => ReportRange(
+      start: DateTime(now.year),
+      end: DateTime(now.year, 12, 31),
     ),
     _ReportPeriod.today || _ReportPeriod.week || _ReportPeriod.month =>
       ReportRange(start: periodRange!.start, end: periodRange.end),
@@ -845,4 +892,4 @@ ReportRange _reportRange(
 String _formatMonth(String month) =>
     DateFormat('MMMM y', 'id_ID').format(DateTime.parse('$month-01'));
 
-enum _ReportPeriod { all, today, week, month, custom }
+enum _ReportPeriod { all, today, week, month, year, custom }

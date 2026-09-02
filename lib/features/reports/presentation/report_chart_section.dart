@@ -14,6 +14,7 @@ class ReportChartSection<T> extends StatelessWidget {
     required this.onRetry,
     this.subtitle,
     this.height = 240,
+    this.emptyMessage = 'Belum ada data untuk ditampilkan.',
   });
 
   final String title;
@@ -23,6 +24,7 @@ class ReportChartSection<T> extends StatelessWidget {
   final Widget Function(BuildContext context, T data) builder;
   final VoidCallback onRetry;
   final double height;
+  final String emptyMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +52,9 @@ class ReportChartSection<T> extends StatelessWidget {
                   onRetry: onRetry,
                 ),
                 data: (value) => isEmpty(value)
-                    ? const AppEmptyState(
+                    ? AppEmptyState(
                         icon: Icons.insert_chart_outlined,
-                        message: 'Belum ada data untuk ditampilkan.',
+                        message: emptyMessage,
                       )
                     : builder(context, value),
               ),

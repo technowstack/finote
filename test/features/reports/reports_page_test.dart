@@ -7,6 +7,7 @@ import 'package:finote/features/reports/presentation/reports_page.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:finote/features/transfers/data/transfer_repository.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +79,48 @@ void main() {
 
     expect(find.text('Saldo periode'), findsOneWidget);
     expect(find.text('Rp9.000.000'), findsOneWidget);
+    expect(find.text('Tahun ini'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Pemasukan vs Pengeluaran'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.byType(BarChart), findsOneWidget);
+    var chart = tester.widget<BarChart>(find.byType(BarChart));
+    expect(
+      chart.data.barGroups,
+      hasLength(DateUtils.getDaysInMonth(now.year, now.month)),
+    );
+    expect(chart.data.barGroups[date.day - 1].barRods.map((rod) => rod.toY), [
+      10000000.0,
+      1000000.0,
+    ]);
+
+    final reactiveExpense = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: expense.id,
+      accountId: source.id,
+      amount: 500000,
+      transactionDate: date,
+    );
+    await tester.pumpAndSettle();
+    chart = tester.widget<BarChart>(find.byType(BarChart));
+    expect(chart.data.barGroups[date.day - 1].barRods.last.toY, 1500000.0);
+    await transactions.softDelete(reactiveExpense.id);
+    await tester.pumpAndSettle();
+    chart = tester.widget<BarChart>(find.byType(BarChart));
+    expect(chart.data.barGroups[date.day - 1].barRods.last.toY, 1000000.0);
+
+    await tester.ensureVisible(find.text('Tahun ini'));
+    await tester.tap(find.text('Tahun ini'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Pemasukan vs Pengeluaran'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    chart = tester.widget<BarChart>(find.byType(BarChart));
+    expect(chart.data.barGroups, hasLength(12));
     await tester.scrollUntilVisible(
       find.text('Saldo akun saat ini'),
       300,

@@ -35,6 +35,7 @@ Finote v1.1.0 has completed **Phase 6A — Accounts & Transfers** including fina
 Current focus:
 
 - [x] Phase 6B.1 — Report Chart Foundation
+- [x] Phase 6B.2 — Income vs Expense Chart
 - [x] Add chart foundations without changing Reports financial semantics
 - [x] Preserve Income / Expense / Net correctness
 - [x] Keep Transfer excluded from Income / Expense chart data
@@ -47,6 +48,7 @@ Current focus:
 Finote v1.1.0
 ACCOUNTS & TRANSFERS COMPLETE
 PHASE 6B.1 REPORT CHART FOUNDATION COMPLETE
+PHASE 6B.2 INCOME VS EXPENSE CHART COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -73,7 +75,8 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] Safe Account Deletion polish
 - [ ] v1.2.0 — Phase 6B Reports Visualization & Charts
 - [x] 6B.1 Report Chart Foundation
-- [ ] 6B.2 Income vs Expense Chart
+- [x] 6B.2 Income vs Expense Chart
+- [ ] 6B.3 Category Expense Chart
 
 ---
 
@@ -259,7 +262,7 @@ Safe Account Deletion polish is complete: only unused non-default accounts may b
 ### Planned v1.2.0 — Phase 6B Reports Visualization & Charts
 
 - [x] 6B.1 Report Chart Foundation
-- [ ] 6B.2 Income vs Expense Chart
+- [x] 6B.2 Income vs Expense Chart
 - [ ] 6B.3 Category Expense Chart
 - [ ] 6B.4 Financial Trend Chart
 - [ ] 6B.5 Account Balance Visualization
@@ -291,7 +294,7 @@ Reports
 
 Recommended next phase:
 
-> **Phase 6B.2 — Income vs Expense Chart**
+> **Phase 6B.3 — Category Expense Chart**
 
 ### Other Post-v1 Candidate Features
 
@@ -386,16 +389,17 @@ Finote v1.1.0 has completed **Accounts & Transfers** and is ready to begin the e
 Current rules:
 
 1. Phase 6B.1 — Report Chart Foundation is complete.
-2. Reuse existing Reports aggregation as financial source of truth.
-3. Keep Income / Expense / Net semantics unchanged.
-4. Never include Transfer in Income or Expense charts.
-5. Keep Account Balance derived from initial balance + transactions + transfers.
-6. Use chart aggregation that remains usable with large datasets.
-7. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
-8. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
-9. Continue fixing real Accounts & Transfers regressions if discovered.
-10. External Play Store tasks remain separate from local feature development.
+2. Phase 6B.2 — Income vs Expense Chart is complete.
+3. Reuse existing Reports aggregation as financial source of truth.
+4. Keep Income / Expense / Net semantics unchanged.
+5. Never include Transfer in Income or Expense charts.
+6. Keep Account Balance derived from initial balance + transactions + transfers.
+7. Use chart aggregation that remains usable with large datasets.
+8. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
+9. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
+10. Continue fixing real Accounts & Transfers regressions if discovered.
+11. External Play Store tasks remain separate from local feature development.
 
 Recommended next phase, not started:
 
-> **Phase 6B.2 — Income vs Expense Chart**
+> **Phase 6B.3 — Category Expense Chart**
