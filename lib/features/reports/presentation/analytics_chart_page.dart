@@ -7,6 +7,7 @@ import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
 import 'expense_category_chart.dart';
+import 'financial_trend_chart.dart';
 import 'income_expense_chart.dart';
 import 'report_chart_section.dart';
 import 'report_period.dart';
@@ -61,6 +62,7 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
     final trend = ref.watch(financialTrendProvider(_range));
     final expenseCategories = ref.watch(expenseCategoryChartProvider(_range));
     final categoryCount = expenseCategories.valueOrNull?.length ?? 0;
+    final granularity = chartGranularityFor(_range);
     return Scaffold(
       appBar: AppBar(title: const Text('Analisis Grafik')),
       body: ListView(
@@ -128,7 +130,7 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   emptyMessage: 'Belum ada transaksi pada periode ini.',
                   builder: (context, points) => IncomeExpenseChart(
                     points: points,
-                    granularity: chartGranularityFor(_range),
+                    granularity: granularity,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -149,6 +151,26 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   emptyMessage: 'Belum ada pengeluaran pada periode ini.',
                   builder: (context, points) => ExpenseCategoryChart(
                     points: visibleExpenseCategories(points),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Tren Keuangan',
+                  style: Theme.of(context).textTheme.labelLarge
+                      ?.copyWith(color: Theme.of(context).colorScheme.primary),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ReportChartSection<List<FinancialTrendPoint>>(
+                  title: 'Tren Keuangan',
+                  subtitle: 'Pergerakan pemasukan, pengeluaran, dan net',
+                  data: trend,
+                  isEmpty: (points) => !hasFinancialTrendData(points),
+                  onRetry: () => ref.invalidate(financialTrendProvider(_range)),
+                  height: 360,
+                  emptyMessage: 'Belum ada data tren pada periode ini.',
+                  builder: (context, points) => FinancialTrendChart(
+                    points: points,
+                    granularity: granularity,
                   ),
                 ),
               ],

@@ -15,7 +15,7 @@ void main() {
     expect(formatCompactIdr(500000), 'Rp500 rb');
     expect(formatCompactIdr(1500000), 'Rp1,5 jt');
     expect(formatCompactIdr(1000000000), 'Rp1 M');
-    expect(formatCompactIdr(-10000000), 'Rp-10 jt');
+    expect(formatCompactIdr(-10000000), '-Rp10 jt');
     expect(
       formatChartPeriod(DateTime(2026, 8, 12), ChartGranularity.day),
       '12 Agu',

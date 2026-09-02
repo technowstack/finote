@@ -17,6 +17,6 @@ String formatCompactIdr(int amount) {
     _ => (1, ''),
   };
   if (divisor == 1) return formatIdr(amount);
-  final compact = NumberFormat('0.#', 'id_ID').format(amount / divisor);
-  return 'Rp$compact $suffix';
+  final compact = NumberFormat('0.#', 'id_ID').format(absolute / divisor);
+  return '${amount.isNegative ? '-' : ''}Rp$compact $suffix';
 }

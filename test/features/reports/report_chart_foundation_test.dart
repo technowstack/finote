@@ -122,6 +122,80 @@ void main() {
       ('Makanan', 750000),
       ('Transportasi', 300000),
     ]);
+    expect(trend.fold<int>(0, (sum, point) => sum + point.net), 8950000);
+  });
+
+  test('financial trend matches deterministic daily Net fixture', () async {
+    final accounts = AccountRepository(database);
+    final bca = await accounts.create(
+      name: 'BCA',
+      type: AccountType.bank,
+      initialBalance: 5000000,
+    );
+    final savings = await accounts.create(
+      name: 'Tabungan',
+      type: AccountType.savings,
+    );
+    for (final entry in [
+      (DateTime(2026, 8, 1), TransactionType.income, salary.id, 2000000),
+      (DateTime(2026, 8, 1), TransactionType.expense, food.id, 500000),
+      (DateTime(2026, 8, 2), TransactionType.expense, food.id, 1000000),
+      (DateTime(2026, 8, 3), TransactionType.income, salary.id, 3000000),
+      (DateTime(2026, 8, 3), TransactionType.expense, food.id, 500000),
+    ]) {
+      await transactions.create(
+        type: entry.$2,
+        categoryId: entry.$3,
+        accountId: bca.id,
+        amount: entry.$4,
+        transactionDate: entry.$1,
+      );
+    }
+    final transfers = TransferRepository(database);
+    var transfer = await transfers.create(
+      fromAccountId: bca.id,
+      toAccountId: savings.id,
+      amount: 2000000,
+      transferDate: DateTime(2026, 8, 2),
+    );
+    final range = ReportRange(
+      start: DateTime(2026, 8, 1),
+      end: DateTime(2026, 8, 3),
+    );
+
+    Future<List<(int, int, int)>> values() async =>
+        (await reports.watchFinancialTrend(range).first)
+            .map((point) => (point.income, point.expense, point.net))
+            .toList();
+
+    const expected = [
+      (2000000, 500000, 1500000),
+      (0, 1000000, -1000000),
+      (3000000, 500000, 2500000),
+    ];
+    expect(await values(), expected);
+    final report = await reports.watchReport(range).first;
+    expect(
+      (report.totalIncome, report.totalExpense, report.netBalance),
+      (5000000, 2000000, 3000000),
+    );
+
+    transfer = transfer.copyWith(
+      amount: 4000000,
+      transferDate: DateTime(2026, 8, 3),
+    );
+    await transfers.update(transfer);
+    expect(await values(), expected);
+    await transfers.softDelete(transfer.id);
+    expect(await values(), expected);
+    await accounts.update(
+      id: bca.id,
+      name: bca.name,
+      type: bca.type,
+      initialBalance: 9000000,
+    );
+    await accounts.archive(bca.id);
+    expect(await values(), expected);
   });
 
   test(
@@ -373,27 +447,63 @@ INSERT INTO transactions (
       addTearDown(iterator.cancel);
       expect(await iterator.moveNext(), isTrue);
 
-      final transaction = await transactions.create(
+      final accounts = AccountRepository(database);
+      final alternateAccount = await accounts.create(
+        name: 'Tunai',
+        type: AccountType.cash,
+      );
+      final bonus = await CategoryRepository(database)
+          .create(name: 'Bonus', type: TransactionType.income);
+      var transaction = await transactions.create(
         type: TransactionType.expense,
         categoryId: food.id,
-        amount: 100,
+        amount: 500000,
         transactionDate: DateTime(2026, 8, 1),
       );
       expect(await iterator.moveNext(), isTrue);
-      expect(iterator.current.first.expense, 100);
-
-      await transactions.update(
-        transaction.copyWith(
-          type: TransactionType.income,
-          categoryId: salary.id,
-          amount: 250,
-          transactionDate: DateTime(2026, 8, 3),
+      expect(
+        (
+          iterator.current.first.income,
+          iterator.current.first.expense,
+          iterator.current.first.net,
         ),
+        (0, 500000, -500000),
       );
+
+      transaction = transaction.copyWith(
+        type: TransactionType.income,
+        categoryId: salary.id,
+      );
+      await transactions.update(transaction);
       expect(await iterator.moveNext(), isTrue);
       expect(
-        (iterator.current.first.expense, iterator.current.last.income),
-        (0, 250),
+        (
+          iterator.current.first.income,
+          iterator.current.first.expense,
+          iterator.current.first.net,
+        ),
+        (500000, 0, 500000),
+      );
+
+      transaction = transaction.copyWith(amount: 800000);
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.first.net, 800000);
+
+      transaction = transaction.copyWith(
+        categoryId: bonus.id,
+        accountId: Value(alternateAccount.id),
+      );
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.first.net, 800000);
+
+      transaction = transaction.copyWith(transactionDate: DateTime(2026, 8, 3));
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(
+        (iterator.current.first.net, iterator.current.last.net),
+        (0, 800000),
       );
 
       await transactions.softDelete(transaction.id);
@@ -441,6 +551,10 @@ INSERT INTO transactions (
         expect(
           categories.fold<int>(0, (sum, point) => sum + point.amount),
           report.totalExpense,
+        );
+        expect(
+          trend.fold<int>(0, (sum, point) => sum + point.net),
+          report.netBalance,
         );
       }
     },
