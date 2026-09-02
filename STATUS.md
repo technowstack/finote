@@ -42,6 +42,7 @@ Current focus:
 - [x] Phase 6B.5 — Financial Trend Chart
 - [x] Phase 6B.6 — Account Balance Visualization
 - [x] Phase 6B.7 — Chart Filters & Interaction
+- [x] Phase 6B.8 — Chart Testing & Polish
 - [x] Keep Reports concise: summary + one primary chart preview
 - [x] Move complete chart exploration to the dedicated Analytics screen
 - [x] Preserve Income / Expense / Net correctness
@@ -52,9 +53,9 @@ Current focus:
 ## Current Product State
 
 ```text
-Finote v1.2.0 DEVELOPMENT
-PHASE 6B REPORT VISUALIZATION & ANALYTICS — IN PROGRESS
-PHASE 6B.7 CHART FILTERS & INTERACTION COMPLETE
+Finote v1.2.0
+PHASE 6B REPORTS VISUALIZATION & ANALYTICS — COMPLETE
+PHASE 6B.8 CHART TESTING & POLISH COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -79,7 +80,7 @@ These external tasks do not reopen the v1.0 feature scope.
 
 - [x] v1.1.0 — Phase 6A Accounts & Transfers
 - [x] Safe Account Deletion polish
-- [ ] v1.2.0 — Phase 6B Reports Visualization & Analytics
+- [x] v1.2.0 — Phase 6B Reports Visualization & Analytics
 - [x] 6B.1 Report Chart Foundation
 - [x] 6B.2 Income vs Expense Preview Chart
 - [x] 6B.3 Analytics Chart Screen
@@ -87,7 +88,7 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 6B.5 Financial Trend Chart
 - [x] 6B.6 Account Balance Visualization
 - [x] 6B.7 Chart Filters & Interaction
-- [ ] 6B.8 Chart Testing & Polish
+- [x] 6B.8 Chart Testing & Polish
 
 ---
 
@@ -279,7 +280,7 @@ Safe Account Deletion polish is complete: only unused non-default accounts may b
 - [x] 6B.5 Financial Trend Chart
 - [x] 6B.6 Account Balance Visualization
 - [x] 6B.7 Chart Filters & Interaction
-- [ ] 6B.8 Chart Testing & Polish
+- [x] 6B.8 Chart Testing & Polish
 
 Core chart rules:
 
@@ -317,9 +318,9 @@ Reports = quick financial summary
 Analytics Chart Screen = deeper visual analysis
 ```
 
-Recommended next phase:
+Phase 6B readiness:
 
-> **Phase 6B.8 — Chart Testing & Polish**
+> **PASS — Reports Visualization & Analytics complete; stabilization and real usage remain.**
 
 ### Other Post-v1 Candidate Features
 
@@ -413,8 +414,8 @@ Finote v1.2.0 development is completing Phase 6B — Reports Visualization & Ana
 
 Current rules:
 
-1. Phase 6B.1 Report Chart Foundation through 6B.7 Chart Filters & Interaction are complete.
-2. Continue with Phase 6B.8 — Chart Testing & Polish only when explicitly requested.
+1. Phase 6B.1 Report Chart Foundation through 6B.8 Chart Testing & Polish are complete.
+2. Continue only with real bug, data-integrity, compatibility, or release fixes.
 3. Keep Reports concise: Financial Summary + one primary Income vs Expense preview + entry point to Analytics.
 4. Place the complete chart experience on the dedicated Analytics Chart Screen.
 5. Reuse existing Reports aggregation as financial source of truth.
@@ -424,6 +425,6 @@ Current rules:
 9. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
 10. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
 
-Recommended next phase, not started:
+Current post-6B state:
 
-> **Phase 6B.8 — Chart Testing & Polish**
+> **Reports Visualization & Analytics complete; no new phase started automatically.**

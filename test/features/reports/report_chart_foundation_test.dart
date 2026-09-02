@@ -560,6 +560,12 @@ INSERT INTO transactions (
         ('Kategori Lama', 100000),
       ]);
       expect(
+        report.topExpenseCategories.map(
+          (item) => (item.categoryName, item.amount),
+        ),
+        [('Kategori tidak tersedia', 200000), ('Kategori Lama', 100000)],
+      );
+      expect(
         points.fold<int>(0, (sum, point) => sum + point.amount),
         report.totalExpense,
       );

@@ -36,22 +36,24 @@ filtered_transfers AS (
   WHERE deleted_at IS NULL AND transfer_date BETWEEN ? AND ?
 ),
 expense_categories AS (
-  SELECT c.name AS label, SUM(f.amount) AS amount
-  FROM filtered f
-  JOIN categories c ON c.id = f.category_id
-  WHERE f.type = 'expense'
-  GROUP BY c.id, c.name
-  ORDER BY amount DESC, c.name ASC
-  LIMIT 5
+  SELECT COALESCE(NULLIF(TRIM(c.name), ''), 'Kategori tidak tersedia') AS label,
+         SUM(f.amount) AS amount
+   FROM filtered f
+   LEFT JOIN categories c ON c.id = f.category_id
+   WHERE f.type = 'expense'
+   GROUP BY f.category_id, c.name
+   ORDER BY amount DESC, c.name ASC
+   LIMIT 5
 ),
 income_categories AS (
-  SELECT c.name AS label, SUM(f.amount) AS amount
-  FROM filtered f
-  JOIN categories c ON c.id = f.category_id
-  WHERE f.type = 'income'
-  GROUP BY c.id, c.name
-  ORDER BY amount DESC, c.name ASC
-  LIMIT 5
+  SELECT COALESCE(NULLIF(TRIM(c.name), ''), 'Kategori tidak tersedia') AS label,
+         SUM(f.amount) AS amount
+   FROM filtered f
+   LEFT JOIN categories c ON c.id = f.category_id
+   WHERE f.type = 'income'
+   GROUP BY f.category_id, c.name
+   ORDER BY amount DESC, c.name ASC
+   LIMIT 5
 ),
 monthly AS (
   SELECT

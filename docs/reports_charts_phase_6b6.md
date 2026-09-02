@@ -128,5 +128,5 @@ Automated coverage verifies:
 The chart shows current balances only. Finote has no historical balance or
 net-worth series. It displays all active accounts instead of a Top N aggregate
 because combining positive and negative balances into `Lainnya` would obscure
-account position. Phase 6B.7 may add shared filters or interaction, but it must
-keep this overall current-balance view unless product requirements change.
+account position. Phase 6B.7 added shared filters without changing this overall
+current-balance view.

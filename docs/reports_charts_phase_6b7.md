@@ -107,5 +107,5 @@ performance.
 - Reports exposes period controls only, so only the period is handed to
   Analytics.
 - There is no type filter, drill-down, zoom, pan, or persistent chart selection.
-- Very long real-world histories still use monthly points; Phase 6B.8 can audit
-  practical touch density without adding a new chart type.
+- Very long real-world histories still use monthly points; this remains a
+  deliberate readability/performance tradeoff.
