@@ -25,9 +25,10 @@ AppSetting
 ```
 
 `TransactionDay` is not a financial source of truth. Missing optional tables do
-not prevent import. Missing required tables/columns, invalid SQLite, failed
-integrity checks, unknown transaction types, non-positive/non-integer amounts,
-invalid dates, and missing/blank category metadata are rejected safely.
+not prevent import. Missing required tables/columns and invalid SQLite reject the
+file. Row-level unknown types, non-positive/non-integer amounts, invalid dates,
+and invalid primary keys are reported with reason codes while other valid rows
+are imported. Missing/blank category metadata uses the `Tanpa Kategori` fallback.
 
 ## Mapping
 
@@ -47,10 +48,11 @@ are read with `DateTime.fromMillisecondsSinceEpoch(..., isUtc: true)`, converted
 to local time by the importer, and persisted with Finote's date-only converter.
 Unix seconds are not interpreted as milliseconds automatically.
 
-Each `Transaction.subType` must resolve to `TransactionSubType.id`. Categories
-are reused by trimmed name plus income/expense type, or created once when no
-active match exists. Active Finote categories are loaded once per import, so
-category resolution does not perform one query per transaction.
+Each valid `Transaction.subType` is resolved to `TransactionSubType.id` when
+available. Categories are reused by trimmed name plus income/expense type, or
+created once when no active match exists. Missing metadata uses `Tanpa Kategori`.
+Active Finote categories are loaded once per import, so category resolution does
+not perform one query per transaction.
 
 Imported records preserve amount, mapped type, title, category, calendar date,
 legacy ID, and `source = legacy_import`. The known legacy schema has no imported
@@ -119,13 +121,12 @@ Finote never modifies them.
 
 ## Atomicity and Invalid Rows
 
-Policy for critical row corruption is all-or-nothing. Detection validates every
-financial row before destination writes. Destination category creation,
-identity normalization, Default Account resolution, and transaction insertion
-then run in one Drift transaction. Any failure rolls back all Finote changes.
-
-There is no silent row skipping and no partial financial import. User-facing UI
-shows friendly compatibility/import failures rather than raw SQLite errors.
+Destination category creation, identity normalization, Default Account
+resolution, and valid transaction insertion run in one Drift transaction. A
+malformed source row is classified and skipped without blocking other valid
+rows. An unexpected destination failure still rolls back all destination changes.
+The completion summary exposes source, imported, duplicate, skipped, and failed
+counts plus reason codes.
 Sensitive source records, titles, notes, and amounts are not logged.
 
 ## Product Integration

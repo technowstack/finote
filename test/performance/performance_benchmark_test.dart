@@ -246,7 +246,7 @@ void main() {
     expect(history, hasLength(9500));
     expect(unifiedHistory, hasLength(14500));
     expect(search, isNotEmpty);
-    expect(dashboardSummary.balance, isNot(0));
+    expect(dashboardSummary.totalAssets, isNot(0));
     expect(report.transactionCount, 9500);
     expect(report.transferSummary.count, 5000);
     expect(report.transferSummary.volume, greaterThan(0));

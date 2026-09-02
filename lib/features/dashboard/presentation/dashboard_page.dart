@@ -159,7 +159,7 @@ class _Summary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Saldo',
+                'Total aset',
                 style: textTheme.labelLarge?.copyWith(
                   color: colors.onPrimaryContainer.withValues(alpha: 0.7),
                 ),
@@ -169,7 +169,7 @@ class _Summary extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  formatIdr(summary.balance),
+                  formatIdr(summary.totalAssets),
                   style: textTheme.displayMedium?.copyWith(
                     color: colors.onPrimaryContainer,
                   ),
@@ -185,7 +185,7 @@ class _Summary extends StatelessWidget {
           children: [
             Expanded(
               child: _MetricTile(
-                label: 'Pemasukan',
+                label: 'Pemasukan bulan ini',
                 amount: summary.monthlyIncome,
                 color: colors.incomeColor,
                 icon: Icons.south_west,
@@ -194,7 +194,7 @@ class _Summary extends StatelessWidget {
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: _MetricTile(
-                label: 'Pengeluaran',
+                label: 'Pengeluaran bulan ini',
                 amount: summary.monthlyExpense,
                 color: colors.expenseColor,
                 icon: Icons.north_east,

@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/main_scaffold.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/database/app_database.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../accounts/data/account_repository.dart';
+import '../../categories/data/category_repository.dart';
 import '../../transfers/data/transfer_repository.dart';
 import '../data/financial_activity_repository.dart';
 import '../data/transaction_repository.dart';
@@ -26,8 +30,10 @@ class TransactionsPage extends ConsumerStatefulWidget {
 class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   final _searchController = TextEditingController();
   FinancialActivityType? _type;
-  _DateFilter _dateFilter = _DateFilter.month;
+  _DateFilter _dateFilter = _DateFilter.all;
   DateTimeRange? _customRange;
+  int? _accountId;
+  int? _categoryId;
   String _search = '';
   Timer? _searchTimer;
   bool _searchOpen = false;
@@ -42,15 +48,23 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
   @override
   Widget build(BuildContext context) {
     final range = _dateRange(_dateFilter, _customRange, DateTime.now());
+    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final accountId = accounts.any((item) => item.id == _accountId)
+        ? _accountId
+        : null;
+    final categoryId = categories.any((item) => item.id == _categoryId)
+        ? _categoryId
+        : null;
     final filter = FinancialActivityQuery(
       type: _type,
       startDate: range.start,
       endDate: range.end,
       search: _search,
+      accountId: accountId,
+      categoryId: categoryId,
     );
     final activities = ref.watch(financialActivityProvider(filter));
-    final textTheme = Theme.of(context).textTheme;
-    final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -132,53 +146,61 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                   onSelected: () =>
                       setState(() => _type = FinancialActivityType.transfer),
                 ),
-                // Divider dot
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: colors.outlineVariant,
+                FilledButton.tonalIcon(
+                  onPressed: () => _openAdvancedFilters(accounts, categories),
+                  icon: const Icon(Icons.filter_alt_outlined, size: 18),
+                  label: Text(
+                    'Filter${_filterCount(accountId, categoryId) > 0 ? ' • ${_filterCount(accountId, categoryId)}' : ''}',
                   ),
-                ),
-                // Date filters
-                _filterChip(
-                  'Hari ini',
-                  selected: _dateFilter == _DateFilter.today,
-                  onSelected: () =>
-                      setState(() => _dateFilter = _DateFilter.today),
-                ),
-                _filterChip(
-                  'Minggu ini',
-                  selected: _dateFilter == _DateFilter.week,
-                  onSelected: () =>
-                      setState(() => _dateFilter = _DateFilter.week),
-                ),
-                _filterChip(
-                  'Bulan ini',
-                  selected: _dateFilter == _DateFilter.month,
-                  onSelected: () =>
-                      setState(() => _dateFilter = _DateFilter.month),
-                ),
-                ChoiceChip(
-                  label: const Text('Rentang'),
-                  selected: _dateFilter == _DateFilter.custom,
-                  onSelected: (_) => _selectCustomRange(),
                 ),
               ],
             ),
           ),
 
-          // ----- Custom range label -----
-          if (_dateFilter == _DateFilter.custom && _customRange != null)
+          if (_dateFilter != _DateFilter.all ||
+              accountId != null ||
+              categoryId != null)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenH,
-                vertical: AppSpacing.xs,
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                0,
+                AppSpacing.screenH,
+                AppSpacing.sm,
               ),
-              child: Text(
-                '${formatDate(_customRange!.start)} - ${formatDate(_customRange!.end)}',
-                style: textTheme.bodySmall,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    if (_dateFilter != _DateFilter.all)
+                      InputChip(
+                        label: Text(_periodLabel(_dateFilter, _customRange)),
+                        onDeleted: () => setState(() {
+                          _dateFilter = _DateFilter.all;
+                          _customRange = null;
+                        }),
+                      ),
+                    if (accountId != null)
+                      InputChip(
+                        label: Text(
+                          accounts
+                              .firstWhere((item) => item.id == accountId)
+                              .name,
+                        ),
+                        onDeleted: () => setState(() => _accountId = null),
+                      ),
+                    if (categoryId != null)
+                      InputChip(
+                        label: Text(
+                          categories
+                              .firstWhere((item) => item.id == categoryId)
+                              .name,
+                        ),
+                        onDeleted: () => setState(() => _categoryId = null),
+                      ),
+                  ],
+                ),
               ),
             ),
 
@@ -214,9 +236,15 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
                     ref.invalidate(financialActivityProvider(filter)),
               ),
               data: (items) => items.isEmpty
-                  ? const AppEmptyState(
-                      icon: Icons.receipt_long_outlined,
-                      message: 'Tidak ada aktivitas yang sesuai.',
+                  ? _FilteredEmptyState(
+                      filtered: _hasAnyFilter(
+                        _type,
+                        _dateFilter,
+                        accountId,
+                        categoryId,
+                        _search,
+                      ),
+                      onReset: _resetFilters,
                     )
                   : _GroupedActivityList(items: items),
             ),
@@ -263,21 +291,263 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     setState(() => _search = value.trim());
   }
 
-  Future<void> _selectCustomRange() async {
-    final today = DateTime.now();
+  Future<void> _openAdvancedFilters(
+    List<AccountRecord> accounts,
+    List<CategoryRecord> categories,
+  ) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    if (ref.read(shellModalOpenProvider)) return;
+    ref.read(shellModalOpenProvider.notifier).state = true;
+
+    _AdvancedFilterResult? result;
+    try {
+      result = await showModalBottomSheet<_AdvancedFilterResult>(
+        context: context,
+        useRootNavigator: true,
+        isScrollControlled: true,
+        builder: (_) => _AdvancedFilterSheet(
+          dateFilter: _dateFilter,
+          customRange: _customRange,
+          accountId: _accountId,
+          categoryId: _categoryId,
+          accounts: accounts,
+          categories: categories,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        ref.read(shellModalOpenProvider.notifier).state = false;
+      }
+    }
+    final applied = result;
+    if (!mounted || applied == null) return;
+    setState(() {
+      _dateFilter = applied.dateFilter;
+      _customRange = applied.customRange;
+      _accountId = applied.accountId;
+      _categoryId = applied.categoryId;
+    });
+  }
+
+  void _resetFilters() => setState(() {
+    _type = null;
+    _dateFilter = _DateFilter.all;
+    _customRange = null;
+    _accountId = null;
+    _categoryId = null;
+  });
+
+  int _filterCount(int? accountId, int? categoryId) =>
+      (_dateFilter == _DateFilter.all ? 0 : 1) +
+      (accountId == null ? 0 : 1) +
+      (categoryId == null ? 0 : 1);
+}
+
+class _FilteredEmptyState extends StatelessWidget {
+  const _FilteredEmptyState({required this.filtered, required this.onReset});
+
+  final bool filtered;
+  final VoidCallback onReset;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!filtered) {
+      return const AppEmptyState(
+        icon: Icons.receipt_long_outlined,
+        message: 'Belum ada transaksi.',
+      );
+    }
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.filter_alt_off_outlined, size: 44),
+          const SizedBox(height: AppSpacing.md),
+          const Text('Tidak ada transaksi yang cocok dengan filter.'),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton(onPressed: onReset, child: const Text('Reset Filter')),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdvancedFilterResult {
+  const _AdvancedFilterResult({
+    required this.dateFilter,
+    required this.customRange,
+    required this.accountId,
+    required this.categoryId,
+  });
+
+  final _DateFilter dateFilter;
+  final DateTimeRange? customRange;
+  final int? accountId;
+  final int? categoryId;
+}
+
+class _AdvancedFilterSheet extends StatefulWidget {
+  const _AdvancedFilterSheet({
+    required this.dateFilter,
+    required this.customRange,
+    required this.accountId,
+    required this.categoryId,
+    required this.accounts,
+    required this.categories,
+  });
+
+  final _DateFilter dateFilter;
+  final DateTimeRange? customRange;
+  final int? accountId;
+  final int? categoryId;
+  final List<AccountRecord> accounts;
+  final List<CategoryRecord> categories;
+
+  @override
+  State<_AdvancedFilterSheet> createState() => _AdvancedFilterSheetState();
+}
+
+class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
+  late _DateFilter _dateFilter = widget.dateFilter;
+  late DateTimeRange? _customRange = widget.customRange;
+  late int? _accountId = widget.accountId;
+  late int? _categoryId = widget.categoryId;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          AppSpacing.lg,
+          AppSpacing.screenH,
+          AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Filter transaksi',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text('Periode', style: Theme.of(context).textTheme.labelLarge),
+            RadioGroup<_DateFilter>(
+              groupValue: _dateFilter,
+              onChanged: (value) {
+                if (value == _DateFilter.custom) {
+                  _pickCustomRange();
+                } else if (value != null) {
+                  setState(() {
+                    _dateFilter = value;
+                    _customRange = null;
+                  });
+                }
+              },
+              child: Column(
+                children: [
+                  for (final option in _DateFilter.values)
+                    RadioListTile<_DateFilter>(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(_periodOptionLabel(option)),
+                      subtitle:
+                          option == _DateFilter.custom && _customRange != null
+                          ? Text(
+                              '${formatDate(_customRange!.start)} - ${formatDate(_customRange!.end)}',
+                            )
+                          : null,
+                      value: option,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<int?>(
+              initialValue: _accountId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Akun'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Semua akun')),
+                for (final account in widget.accounts)
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(
+                      '${account.name}${account.isActive ? '' : ' (diarsipkan)'}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _accountId = value),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<int?>(
+              initialValue: _categoryId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Kategori'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Semua kategori'),
+                ),
+                for (final category in widget.categories)
+                  DropdownMenuItem(
+                    value: category.id,
+                    child: Text(
+                      '${category.name} (${category.type == TransactionType.income ? 'pemasukan' : 'pengeluaran'})',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _categoryId = value),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => setState(() {
+                    _dateFilter = _DateFilter.all;
+                    _customRange = null;
+                    _accountId = null;
+                    _categoryId = null;
+                  }),
+                  child: const Text('Reset'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                FilledButton(
+                  onPressed: () => Navigator.pop(
+                    context,
+                    _AdvancedFilterResult(
+                      dateFilter: _dateFilter,
+                      customRange: _customRange,
+                      accountId: _accountId,
+                      categoryId: _categoryId,
+                    ),
+                  ),
+                  child: const Text('Terapkan'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCustomRange() async {
+    final now = DateTime.now();
     final selected = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      initialDateRange: _customRange ?? DateTimeRange(start: today, end: today),
+      initialDateRange: _customRange ?? DateTimeRange(start: now, end: now),
     );
-    if (!mounted) return;
-    if (selected != null) {
-      setState(() {
-        _customRange = selected;
-        _dateFilter = _DateFilter.custom;
-      });
-    }
+    if (!mounted || selected == null) return;
+    setState(() {
+      _dateFilter = _DateFilter.custom;
+      _customRange = selected;
+    });
   }
 }
 
@@ -489,13 +759,17 @@ class _ActivityRow extends ConsumerWidget {
 // Helpers
 // ---------------------------------------------------------------------------
 
-({DateTime start, DateTime end}) _dateRange(
+({DateTime? start, DateTime? end}) _dateRange(
   _DateFilter filter,
   DateTimeRange? customRange,
   DateTime now,
 ) {
+  if (filter == _DateFilter.all) {
+    return (start: null, end: null);
+  }
   final range = resolveFinancialDateRange(
     switch (filter) {
+      _DateFilter.all => throw StateError('All-time range has no dates'),
       _DateFilter.today => FinancialPeriod.today,
       _DateFilter.week => FinancialPeriod.week,
       _DateFilter.month => FinancialPeriod.month,
@@ -513,4 +787,32 @@ bool _isSameDate(DateTime first, DateTime second) =>
     first.month == second.month &&
     first.day == second.day;
 
-enum _DateFilter { today, week, month, custom }
+String _periodOptionLabel(_DateFilter filter) => switch (filter) {
+  _DateFilter.all => 'Semua waktu',
+  _DateFilter.today => 'Hari ini',
+  _DateFilter.week => 'Minggu ini',
+  _DateFilter.month => 'Bulan ini',
+  _DateFilter.custom => 'Rentang kustom',
+};
+
+String _periodLabel(_DateFilter filter, DateTimeRange? range) {
+  if (filter == _DateFilter.custom && range != null) {
+    return '${formatDate(range.start)} - ${formatDate(range.end)}';
+  }
+  return _periodOptionLabel(filter);
+}
+
+bool _hasAnyFilter(
+  FinancialActivityType? type,
+  _DateFilter date,
+  int? accountId,
+  int? categoryId,
+  String search,
+) =>
+    type != null ||
+    date != _DateFilter.all ||
+    accountId != null ||
+    categoryId != null ||
+    search.trim().isNotEmpty;
+
+enum _DateFilter { all, today, week, month, custom }

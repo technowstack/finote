@@ -65,16 +65,16 @@ active expenses.
 created. It is not a fake income transaction and is not included in Reports'
 income or expense totals.
 
-Consequently:
+Consequently, transaction-only flow totals may differ from current total assets:
 
 ```text
 sum(account balances)
 ```
 
 may differ from the global transaction balance by the sum of account initial
-balances. This distinction is intentional. Dashboard, Reports, Excel, Text,
-and PDF continue to derive global financial totals from active transactions
-only.
+balances. This distinction is intentional. Reports, Excel, Text, and PDF keep
+their Income/Expense/Net totals transaction-based, while Dashboard's `Total
+aset` uses the shared current account summaries.
 
 ## Account UI
 
@@ -122,9 +122,8 @@ Tests cover:
 
 - Transfers are not implemented and do not affect balances.
 - There is no account filter in Reports or exports.
-- Total assets are not exposed as a separate dashboard metric; whether
-  archived accounts should be included in a future total-assets display remains
-  a later product decision.
+- Dashboard exposes `Total aset` using the shared current account summaries;
+  archived accounts remain included in that derived total.
 - Physical-device validation of upgrade, restore, legacy import, and restart
   flows remains a manual follow-up.
 

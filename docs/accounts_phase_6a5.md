@@ -87,7 +87,9 @@ The main history type filters are:
 - Transfer.
 
 The existing Today, Week, Month, and custom inclusive date ranges apply to both
-entity tables using their respective financial dates.
+entity tables using their respective financial dates. The main History also
+provides `Semua` to access older imported records without requiring a custom
+range.
 
 Search matches:
 

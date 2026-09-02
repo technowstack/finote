@@ -37,12 +37,58 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Finote'), findsOneWidget);
-    expect(find.text('Saldo'), findsOneWidget);
+    expect(find.text('Total aset'), findsOneWidget);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
+
+  testWidgets(
+    'transaction filters and add menu remain independently tappable',
+    (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseProvider.overrideWithValue(database),
+            pinStoreProvider.overrideWithValue(_EmptyPinStore()),
+          ],
+          child: const FinoteApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Transaksi'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Tambah transaksi'), findsOneWidget);
+      expect(find.text('Filter'), findsOneWidget);
+
+      await tester.tap(find.text('Filter'));
+      await tester.pumpAndSettle();
+      expect(find.text('Filter transaksi'), findsOneWidget);
+      expect(find.byTooltip('Tambah transaksi'), findsNothing);
+      await tester.tap(find.text('Terapkan'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Tambah transaksi'), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Tambah transaksi'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Tambah transaksi'), findsNothing);
+      expect(find.text('Tambah transaksi'), findsOneWidget);
+      expect(find.text('Tambah transaksi manual'), findsOneWidget);
+      expect(find.text('Scan struk'), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Tambah transaksi'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
 }
 
 class _EmptyPinStore implements PinStore {

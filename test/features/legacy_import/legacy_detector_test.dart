@@ -186,7 +186,7 @@ void main() {
     );
   });
 
-  test('critical malformed row is rejected safely', () async {
+  test('malformed row does not prevent schema detection', () async {
     final path = await createLegacyDb(
       'invalid_row.db',
       transactions: [
@@ -200,10 +200,9 @@ void main() {
       ],
     );
 
-    await expectLater(
-      const LegacyDetector().detect(path),
-      throwsA(isA<LegacyDetectionError>()),
-    );
+    final result = await const LegacyDetector().detect(path);
+    expect(result.isCompatible, isTrue);
+    expect(result.transactionCount, 1);
   });
 
   // ---------------------------------------------------------------------------

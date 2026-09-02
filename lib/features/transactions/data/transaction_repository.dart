@@ -34,6 +34,7 @@ class TransactionRepository {
           ..orderBy([
             OrderingTerm.desc(transactions.transactionDate),
             OrderingTerm.desc(transactions.createdAt),
+            OrderingTerm.desc(transactions.id),
           ]);
 
     final type = filter.type;

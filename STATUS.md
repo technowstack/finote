@@ -48,6 +48,11 @@ Current focus:
 - [x] Preserve Income / Expense / Net correctness
 - [x] Keep Transfer excluded from Income / Expense charts
 - [x] Keep Accounts & Transfers regression-safe
+- [x] Legacy import missing-data audit and row accounting fix
+- [x] Dashboard / Reports financial reconciliation audit and Home Total Assets fix
+- [x] Transaction history legacy/missing-row visibility audit and all-time filter fix
+- [x] Transaction Filter UX Polish
+- [x] Transaction FAB / Filter modal layering fix
 - [ ] Continue real usage and fix real bugs discovered during development
 
 ## Current Product State

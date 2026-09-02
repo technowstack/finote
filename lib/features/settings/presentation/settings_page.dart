@@ -70,7 +70,7 @@ class SettingsPage extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.info_outline,
                 title: 'Finote',
-                subtitle: 'Versi 1.0.0',
+                subtitle: 'Versi 1.2.0',
                 onTap: () {},
               ),
             ],

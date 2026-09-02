@@ -16,13 +16,22 @@ class FinancialActivityRepository {
     final transferWhere = <String>['tr.deleted_at IS NULL'];
     final includeTransactions = filter.type != FinancialActivityType.transfer;
     final includeTransfers =
-        filter.type == null || filter.type == FinancialActivityType.transfer;
+        filter.categoryId == null &&
+        (filter.type == null || filter.type == FinancialActivityType.transfer);
 
     if (includeTransactions &&
         (filter.type == FinancialActivityType.income ||
             filter.type == FinancialActivityType.expense)) {
       transactionWhere.add('t.type = ?');
       variables.add(Variable.withString(filter.type!.name));
+    }
+    if (includeTransactions && filter.accountId != null) {
+      transactionWhere.add('t.account_id = ?');
+      variables.add(Variable.withInt(filter.accountId!));
+    }
+    if (includeTransactions && filter.categoryId != null) {
+      transactionWhere.add('t.category_id = ?');
+      variables.add(Variable.withInt(filter.categoryId!));
     }
 
     const dateConverter = DateOnlyConverter();
@@ -73,6 +82,11 @@ class FinancialActivityRepository {
       variables.add(
         Variable.withString(dateConverter.toSql(filter.startDate!)),
       );
+    }
+    if (includeTransfers && filter.accountId != null) {
+      transferWhere.add('(tr.from_account_id = ? OR tr.to_account_id = ?)');
+      variables.add(Variable.withInt(filter.accountId!));
+      variables.add(Variable.withInt(filter.accountId!));
     }
     if (includeTransfers && filter.endDate != null) {
       transferWhere.add('tr.transfer_date <= ?');
@@ -157,6 +171,8 @@ class FinancialActivityQuery {
     this.endDate,
     this.search = '',
     this.limit,
+    this.accountId,
+    this.categoryId,
   }) : assert(limit == null || limit > 0);
 
   final FinancialActivityType? type;
@@ -164,6 +180,8 @@ class FinancialActivityQuery {
   final DateTime? endDate;
   final String search;
   final int? limit;
+  final int? accountId;
+  final int? categoryId;
 
   @override
   bool operator ==(Object other) =>
@@ -172,10 +190,20 @@ class FinancialActivityQuery {
       other.startDate == startDate &&
       other.endDate == endDate &&
       other.search == search &&
-      other.limit == limit;
+      other.limit == limit &&
+      other.accountId == accountId &&
+      other.categoryId == categoryId;
 
   @override
-  int get hashCode => Object.hash(type, startDate, endDate, search, limit);
+  int get hashCode => Object.hash(
+    type,
+    startDate,
+    endDate,
+    search,
+    limit,
+    accountId,
+    categoryId,
+  );
 }
 
 final financialActivityRepositoryProvider =

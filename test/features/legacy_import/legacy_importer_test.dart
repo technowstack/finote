@@ -187,6 +187,51 @@ void main() {
     expect(await database.select(database.categories).get(), hasLength(2));
   });
 
+  test(
+    'identical financial values with different legacy IDs both import',
+    () async {
+      final path = await createLegacyDatabase('identical.db');
+      final legacy = sqlite3.open(path);
+      legacy.execute(
+        'INSERT INTO "Transaction" VALUES '
+        "(10, 0, 50000, 1, 1672531200000, 'Makan 1'), "
+        "(11, 0, 50000, 1, 1672531200000, 'Makan 2')",
+      );
+      legacy.close();
+
+      final summary = await LegacyImporter(database).import(path);
+
+      expect(summary.newCount, 2);
+      expect(summary.duplicateCount, 0);
+      expect(
+        (await database.select(database.transactions).get()).map(
+          (row) => row.legacyId,
+        ),
+        containsAll([10, 11]),
+      );
+    },
+  );
+
+  test(
+    'valid transaction with missing subtype uses safe fallback category',
+    () async {
+      final path = await createLegacyDatabase('missing_category.db');
+      final legacy = sqlite3.open(path);
+      legacy.execute(
+        'INSERT INTO "Transaction" VALUES '
+        "(10, 0, 50000, 99, 1672531200000, 'Tanpa kategori')",
+      );
+      legacy.close();
+
+      final summary = await LegacyImporter(database).import(path);
+      final categories = await database.select(database.categories).get();
+
+      expect(summary.newCount, 1);
+      expect(summary.diagnostics.reasons['missing_category_fallback'], 1);
+      expect(categories.single.name, 'Tanpa Kategori');
+    },
+  );
+
   test('copied legacy database keeps the same source identity', () async {
     final path = await createLegacyDatabase();
     final legacy = sqlite3.open(path);
@@ -487,19 +532,50 @@ void main() {
     },
   );
 
-  test('rolls back categories and transactions when import fails', () async {
+  test('accounts for malformed rows and imports valid rows', () async {
     final path = await createLegacyDatabase();
     final legacy = sqlite3.open(path);
     legacy.execute(
       'INSERT INTO "Transaction" VALUES '
       "(10, 0, 25000, 1, 1672531200000, 'Valid'), "
-      "(11, 0, 10000, 99, 1672617600000, 'Kategori hilang')",
+      "(11, 7, 10000, 99, 1672617600000, 'Tipe tidak dikenal')",
     );
     legacy.close();
 
-    await expectLater(LegacyImporter(database).import(path), throwsException);
+    final summary = await LegacyImporter(database).import(path);
 
-    expect(await database.select(database.categories).get(), isEmpty);
-    expect(await database.select(database.transactions).get(), isEmpty);
+    expect(summary.newCount, 1);
+    expect(summary.diagnostics.totalSourceRows, 2);
+    expect(summary.diagnostics.parsedRows, 1);
+    expect(summary.diagnostics.eligibleRows, 1);
+    expect(summary.diagnostics.importedRows, 1);
+    expect(summary.diagnostics.skippedRows, 1);
+    expect(summary.diagnostics.reasons['unknown_type'], 1);
+    expect(summary.diagnostics.reconciles, isTrue);
+    expect(await database.select(database.transactions).get(), hasLength(1));
+  });
+
+  test('classifies invalid amount and date rows explicitly', () async {
+    final path = await createLegacyDatabase('invalid_values.db');
+    final legacy = sqlite3.open(path);
+    legacy.execute(
+      'INSERT INTO "Transaction" VALUES '
+      "(10, 0, 0, 1, 1672531200000, 'Nol'), "
+      "(11, 1, 1000, 2, 'not-a-date', 'Tanggal'), "
+      "(12, 1, 1000, 2, 1672531200000, 'Valid')",
+    );
+    legacy.close();
+
+    final summary = await LegacyImporter(database).import(path);
+
+    expect(summary.diagnostics.totalSourceRows, 3);
+    expect(summary.diagnostics.parsedRows, 1);
+    expect(summary.diagnostics.importedRows, 1);
+    expect(summary.diagnostics.skippedRows, 2);
+    expect(summary.diagnostics.reasons, {
+      'invalid_amount': 1,
+      'invalid_date': 1,
+    });
+    expect(summary.diagnostics.reconciles, isTrue);
   });
 }

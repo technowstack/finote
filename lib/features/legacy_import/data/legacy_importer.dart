@@ -64,14 +64,19 @@ class LegacyImporter {
         final key = (transaction.subType, transaction.type);
         if (categoryIds.containsKey(key)) continue;
 
-        final name = data.categoryNames[transaction.subType];
-        if (name == null || name.trim().isEmpty) {
-          throw FormatException(
-            'Kategori legacy ${transaction.subType} tidak ditemukan.',
+        final name = data.categoryNames[transaction.subType]?.trim();
+        final categoryName = name == null || name.isEmpty
+            ? 'Tanpa Kategori'
+            : name;
+        if (name == null || name.isEmpty) {
+          data.reasonCounts.update(
+            'missing_category_fallback',
+            (count) => count + 1,
+            ifAbsent: () => 1,
           );
         }
 
-        final categoryKey = (name.trim(), transaction.type);
+        final categoryKey = (categoryName, transaction.type);
         final existingId = existingCategories[categoryKey];
         if (existingId != null) {
           categoryIds[key] = existingId;
@@ -82,7 +87,7 @@ class LegacyImporter {
             .into(_database.categories)
             .insertReturning(
               CategoriesCompanion.insert(
-                name: name.trim(),
+                name: categoryName,
                 type: transaction.type,
               ),
             );
@@ -123,6 +128,17 @@ class LegacyImporter {
             .where((item) => item.type == TransactionType.expense)
             .fold(0, (total, item) => total + item.amount),
         destinationAccount: defaultAccount.name,
+        diagnostics: LegacyImportDiagnostics(
+          totalSourceRows: data.sourceRowCount,
+          parsedRows: data.transactions.length,
+          eligibleRows: data.transactions.length,
+          importedRows: newTransactions.length,
+          existingRows: data.transactions.length - newTransactions.length,
+          skippedRows: data.issues.length,
+          failedRows: 0,
+          reasons: data.reasonCounts,
+          issues: data.issues,
+        ),
       );
     });
   }
@@ -144,76 +160,136 @@ class LegacyImporter {
   _LegacyData _readLegacy(String filePath) {
     final db = sqlite.sqlite3.open(filePath, mode: sqlite.OpenMode.readOnly);
     try {
-      final categoryNames = <int, String>{
-        for (final row in db.select(
-          'SELECT ${LegacySchema.colCategoryId}, '
-          '${LegacySchema.colCategoryName} FROM TransactionSubType',
-        ))
-          LegacySchema.readWholeInt(
+      final categoryNames = <int, String>{};
+      for (final row in db.select(
+        'SELECT ${LegacySchema.colCategoryId}, '
+        '${LegacySchema.colCategoryName} FROM TransactionSubType',
+      )) {
+        try {
+          final id = LegacySchema.readWholeInt(
             row[LegacySchema.colCategoryId],
             'category id',
-          ): row[LegacySchema.colCategoryName] as String,
-      };
+          );
+          final name = row[LegacySchema.colCategoryName];
+          if (name is String && name.trim().isNotEmpty) {
+            categoryNames[id] = name;
+          }
+        } on FormatException {
+          // Invalid category metadata is handled by the row fallback.
+        }
+      }
 
-      final transactions = db
-          .select(
-            'SELECT ${LegacySchema.colId}, ${LegacySchema.colType}, '
-            '${LegacySchema.colAmount}, ${LegacySchema.colSubType}, '
-            '${LegacySchema.colDate}, title FROM "Transaction" '
-            'ORDER BY ${LegacySchema.colId}',
-          )
-          .map((row) {
-            final type = switch (LegacySchema.readWholeInt(
-              row[LegacySchema.colType],
-              'transaction type',
-            )) {
-              0 => TransactionType.expense,
-              1 => TransactionType.income,
-              final value => throw FormatException(
-                'Tipe transaksi legacy tidak dikenal: $value',
-              ),
-            };
-            final date = LegacySchema.readDate(row[LegacySchema.colDate]);
-            if (date == null) {
-              throw const FormatException(
-                'Tanggal transaksi legacy tidak valid.',
-              );
-            }
-            final amount = LegacySchema.readWholeInt(
-              row[LegacySchema.colAmount],
-              'transaction amount',
-            );
-            if (amount <= 0) {
-              throw const FormatException('Nominal transaksi harus positif.');
-            }
-            return _LegacyTransaction(
-              id: LegacySchema.readWholeInt(
-                row[LegacySchema.colId],
-                'transaction id',
-              ),
+      final rows = db.select(
+        'SELECT ${LegacySchema.colId}, ${LegacySchema.colType}, '
+        '${LegacySchema.colAmount}, ${LegacySchema.colSubType}, '
+        '${LegacySchema.colDate}, title FROM "Transaction" '
+        'ORDER BY ${LegacySchema.colId}',
+      );
+      final transactions = <_LegacyTransaction>[];
+      final issues = <LegacyImportIssue>[];
+      final reasonCounts = <String, int>{};
+      for (final row in rows) {
+        int? legacyId;
+        String? reason;
+        try {
+          legacyId = LegacySchema.readWholeInt(
+            row[LegacySchema.colId],
+            'transaction id',
+          );
+          final typeValue = LegacySchema.readWholeInt(
+            row[LegacySchema.colType],
+            'transaction type',
+          );
+          final type = switch (typeValue) {
+            0 => TransactionType.expense,
+            1 => TransactionType.income,
+            _ => throw const FormatException('unknown_type'),
+          };
+          final date = _readDate(row[LegacySchema.colDate]);
+          if (date == null || date.year < 1970 || date.year > 2100) {
+            throw const FormatException('invalid_date');
+          }
+          final amount = LegacySchema.readWholeInt(
+            row[LegacySchema.colAmount],
+            'transaction amount',
+          );
+          if (amount <= 0) throw const FormatException('invalid_amount');
+          final subType = LegacySchema.readWholeInt(
+            row[LegacySchema.colSubType],
+            'transaction subtype',
+          );
+          transactions.add(
+            _LegacyTransaction(
+              id: legacyId,
               type: type,
               amount: amount,
-              subType: LegacySchema.readWholeInt(
-                row[LegacySchema.colSubType],
-                'transaction subtype',
-              ),
+              subType: subType,
               date: date,
               title: row['title'] as String? ?? '',
-            );
-          })
-          .toList();
-      return _LegacyData(categoryNames, transactions);
+            ),
+          );
+        } on FormatException catch (error) {
+          reason = _reasonCode(error.message.toString());
+        } on Object {
+          reason = 'unsupported_row';
+        }
+        if (reason != null) {
+          issues.add(LegacyImportIssue(reason: reason, legacyId: legacyId));
+          reasonCounts.update(reason, (count) => count + 1, ifAbsent: () => 1);
+        }
+      }
+      return _LegacyData(
+        categoryNames,
+        transactions,
+        sourceRowCount: rows.length,
+        issues: issues,
+        reasonCounts: reasonCounts,
+      );
     } finally {
       db.close();
+    }
+  }
+
+  String _reasonCode(String message) {
+    if (message.startsWith('Nilai transaction id')) {
+      return 'invalid_primary_key';
+    }
+    if (message.startsWith('Nilai transaction type')) {
+      return 'unknown_type';
+    }
+    if (message.startsWith('Nilai transaction amount') ||
+        message == 'invalid_amount') {
+      return 'invalid_amount';
+    }
+    if (message.startsWith('Nilai transaction subtype')) {
+      return 'invalid_category';
+    }
+    return message;
+  }
+
+  DateTime? _readDate(Object? value) {
+    try {
+      return LegacySchema.readDate(value);
+    } on Object {
+      return null;
     }
   }
 }
 
 class _LegacyData {
-  const _LegacyData(this.categoryNames, this.transactions);
+  const _LegacyData(
+    this.categoryNames,
+    this.transactions, {
+    required this.sourceRowCount,
+    required this.issues,
+    required this.reasonCounts,
+  });
 
   final Map<int, String> categoryNames;
   final List<_LegacyTransaction> transactions;
+  final int sourceRowCount;
+  final List<LegacyImportIssue> issues;
+  final Map<String, int> reasonCounts;
 }
 
 class _LegacyTransaction {

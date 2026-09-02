@@ -78,7 +78,7 @@ void main() {
     // Should navigate to transactions page showing the entry
     expect(find.text(formatDate(DateTime.now())), findsOneWidget);
     expect(find.text('Semua'), findsOneWidget);
-    expect(find.text('Bulan ini'), findsOneWidget);
+    expect(find.text('Bulan ini'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

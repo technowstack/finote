@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/dashboard/data/dashboard_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
+import 'package:finote/features/transfers/data/transfer_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -39,7 +42,7 @@ void main() {
     addTearDown(summaries.cancel);
 
     expect(await summaries.moveNext(), isTrue);
-    expect(summaries.current.balance, 0);
+    expect(summaries.current.totalAssets, 0);
 
     final transaction = await transactions.create(
       type: TransactionType.income,
@@ -49,13 +52,13 @@ void main() {
     );
 
     expect(await summaries.moveNext(), isTrue);
-    expect(summaries.current.balance, 1000000);
+    expect(summaries.current.totalAssets, 1000000);
     expect(summaries.current.monthlyIncome, 1000000);
     expect(summaries.current.todayTransactionCount, 1);
 
     await transactions.update(transaction.copyWith(amount: 1200000));
     expect(await summaries.moveNext(), isTrue);
-    expect(summaries.current.balance, 1200000);
+    expect(summaries.current.totalAssets, 1200000);
     expect(summaries.current.monthlyIncome, 1200000);
   });
 
@@ -82,7 +85,7 @@ void main() {
       );
 
       var summary = await dashboard.watchSummary(DateTime(2026, 8, 29)).first;
-      expect(summary.balance, 700000);
+      expect(summary.totalAssets, 700000);
       expect(summary.monthlyIncome, 1000000);
       expect(summary.monthlyExpense, 200000);
       expect(summary.todayTransactionCount, 2);
@@ -90,8 +93,54 @@ void main() {
       await transactions.update(currentExpense.copyWith(amount: 300000));
       await transactions.softDelete(oldExpense.id);
       summary = await dashboard.watchSummary(DateTime(2026, 8, 29)).first;
-      expect(summary.balance, 700000);
+      expect(summary.totalAssets, 700000);
       expect(summary.monthlyExpense, 300000);
+    },
+  );
+
+  test(
+    'total assets includes initial balance and stays invariant on transfer',
+    () async {
+      final accounts = AccountRepository(database);
+      final source = await accounts.create(
+        name: 'A',
+        type: AccountType.bank,
+        initialBalance: 5000000,
+      );
+      final destination = await accounts.create(
+        name: 'B',
+        type: AccountType.cash,
+      );
+      await transactions.create(
+        type: TransactionType.income,
+        categoryId: incomeCategory.id,
+        accountId: source.id,
+        amount: 2000000,
+        transactionDate: DateTime(2026, 8, 29),
+      );
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: expenseCategory.id,
+        accountId: source.id,
+        amount: 500000,
+        transactionDate: DateTime(2026, 8, 29),
+      );
+
+      final summary = await dashboard.watchSummary(DateTime(2026, 8, 29)).first;
+      expect(summary.totalAssets, 6500000);
+      expect(summary.monthlyIncome, 2000000);
+      expect(summary.monthlyExpense, 500000);
+
+      await TransferRepository(database).create(
+        fromAccountId: source.id,
+        toAccountId: destination.id,
+        amount: 1000000,
+        transferDate: DateTime(2026, 8, 29),
+      );
+      expect(
+        (await dashboard.watchSummary(DateTime(2026, 8, 29)).first).totalAssets,
+        6500000,
+      );
     },
   );
 

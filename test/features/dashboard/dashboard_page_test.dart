@@ -20,9 +20,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Saldo'), findsOneWidget);
-    expect(find.text('Pemasukan'), findsOneWidget);
-    expect(find.text('Pengeluaran'), findsOneWidget);
+    expect(find.text('Total aset'), findsOneWidget);
+    expect(find.text('Pemasukan bulan ini'), findsOneWidget);
+    expect(find.text('Pengeluaran bulan ini'), findsOneWidget);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

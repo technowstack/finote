@@ -7,6 +7,7 @@ import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/transactions/data/financial_activity_repository.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/financial_activity.dart';
+import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:finote/features/transfers/data/transfer_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -126,6 +127,52 @@ void main() {
     },
   );
 
+  test(
+    'all-time history exposes older transactions and same-date rows',
+    () async {
+      final categories = CategoryRepository(database);
+      final oldCategory = await categories.create(
+        name: 'Lama',
+        type: TransactionType.expense,
+      );
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: oldCategory.id,
+        accountId: source.id,
+        amount: 50000,
+        title: 'Legacy A',
+        transactionDate: DateTime(2020, 9, 10),
+        source: TransactionSource.legacyImport,
+        legacySource: 'fixture',
+        legacyId: 1,
+      );
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: oldCategory.id,
+        accountId: source.id,
+        amount: 50000,
+        title: 'Legacy B',
+        transactionDate: DateTime(2020, 9, 10),
+        source: TransactionSource.legacyImport,
+        legacySource: 'fixture',
+        legacyId: 2,
+      );
+
+      final result = await activities
+          .watch(const FinancialActivityQuery())
+          .first;
+      expect(result, hasLength(5));
+      expect(
+        result.where((item) => item.date == DateTime(2020, 9, 10)),
+        hasLength(2),
+      );
+      expect(
+        result.map((item) => item.title),
+        containsAll(['Legacy A', 'Legacy B']),
+      );
+    },
+  );
+
   test('searches transfer note and both account names', () async {
     Future<List<FinancialActivity>> search(String value) =>
         activities.watch(FinancialActivityQuery(search: value)).first;
@@ -140,6 +187,26 @@ void main() {
     );
     expect((await search('%')), isEmpty);
   });
+
+  test(
+    'account and category filters preserve matching transaction rows',
+    () async {
+      expect(
+        (await activities
+                .watch(FinancialActivityQuery(accountId: source.id))
+                .first)
+            .map((item) => item.entityId),
+        containsAll([income.id, expense.id, transfer.id]),
+      );
+      expect(
+        (await activities
+                .watch(FinancialActivityQuery(categoryId: expense.categoryId))
+                .first)
+            .map((item) => item.entityId),
+        [expense.id],
+      );
+    },
+  );
 
   test('reacts to edits, soft deletes, and archived accounts', () async {
     await AccountRepository(database).archive(destination.id);

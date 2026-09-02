@@ -308,6 +308,21 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
         ),
         _InfoRow(label: 'Gagal', value: summary.failedCount.toString()),
         _InfoRow(
+          label: 'Baris dilewati',
+          value: summary.diagnostics.skippedRows.toString(),
+        ),
+        _InfoRow(
+          label: 'Baris sumber',
+          value: summary.diagnostics.totalSourceRows.toString(),
+        ),
+        if (summary.diagnostics.reasons.isNotEmpty)
+          _InfoRow(
+            label: 'Catatan audit',
+            value: summary.diagnostics.reasons.entries
+                .map((entry) => '${_reasonLabel(entry.key)}: ${entry.value}')
+                .join(', '),
+          ),
+        _InfoRow(
           label: 'Kategori baru',
           value: summary.categoriesCreated.toString(),
         ),
@@ -469,6 +484,17 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
     });
   }
 }
+
+String _reasonLabel(String reason) => switch (reason) {
+  'unknown_type' => 'tipe tidak dikenal',
+  'invalid_date' => 'tanggal tidak valid',
+  'invalid_amount' => 'nominal tidak valid',
+  'invalid_primary_key' => 'ID transaksi tidak valid',
+  'invalid_category' => 'kategori tidak valid',
+  'missing_category_fallback' => 'kategori memakai fallback',
+  'unsupported_row' => 'baris tidak didukung',
+  _ => reason,
+};
 
 // ---------------------------------------------------------------------------
 // Helper widget
