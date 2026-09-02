@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
@@ -177,6 +178,190 @@ void main() {
     },
   );
 
+  test('expense categories aggregate, sort, exclude non-expense sources, and reconcile', () async {
+    final accounts = AccountRepository(database);
+    final bca = await accounts.create(
+      name: 'BCA',
+      type: AccountType.bank,
+      initialBalance: 5000000,
+    );
+    final savings = await accounts.create(
+      name: 'Tabungan',
+      type: AccountType.savings,
+    );
+    final categoryRepository = CategoryRepository(database);
+    final bills = await categoryRepository.create(
+      name: 'Tagihan',
+      type: TransactionType.expense,
+    );
+    final entertainment = await categoryRepository.create(
+      name: 'Hiburan',
+      type: TransactionType.expense,
+    );
+    final date = DateTime(2026, 8, 1);
+    for (final entry in [
+      (food.id, TransactionType.expense, 500000),
+      (food.id, TransactionType.expense, 250000),
+      (transport.id, TransactionType.expense, 300000),
+      (bills.id, TransactionType.expense, 1000000),
+      (entertainment.id, TransactionType.expense, 150000),
+      (salary.id, TransactionType.income, 10000000),
+    ]) {
+      await transactions.create(
+        type: entry.$2,
+        categoryId: entry.$1,
+        accountId: bca.id,
+        amount: entry.$3,
+        transactionDate: date,
+      );
+    }
+    final deleted = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: food.id,
+      accountId: bca.id,
+      amount: 999999,
+      transactionDate: date,
+    );
+    await transactions.softDelete(deleted.id);
+    await TransferRepository(database).create(
+      fromAccountId: bca.id,
+      toAccountId: savings.id,
+      amount: 2000000,
+      transferDate: date,
+    );
+    final range = ReportRange(start: date, end: date);
+
+    final report = await reports.watchReport(range).first;
+    final trend = await reports.watchFinancialTrend(range).first;
+    final categories = await reports.watchExpenseCategories(range).first;
+
+    expect(categories.map((point) => (point.categoryName, point.amount)), [
+      ('Tagihan', 1000000),
+      ('Makanan', 750000),
+      ('Transportasi', 300000),
+      ('Hiburan', 150000),
+    ]);
+    final categoryExpense = categories.fold<int>(
+      0,
+      (sum, point) => sum + point.amount,
+    );
+    expect(categoryExpense, 2200000);
+    expect(categoryExpense, report.totalExpense);
+    expect(categoryExpense, trend.single.expense);
+    expect(categories.any((point) => point.categoryName == 'Gaji'), isFalse);
+  });
+
+  test(
+    'expense category stream reacts to category, type, date, and delete edits',
+    () async {
+      final range = ReportRange(
+        start: DateTime(2026, 8, 1),
+        end: DateTime(2026, 8, 31),
+      );
+      final iterator = StreamIterator(reports.watchExpenseCategories(range));
+      addTearDown(iterator.cancel);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current, isEmpty);
+
+      var transaction = await transactions.create(
+        type: TransactionType.expense,
+        categoryId: food.id,
+        amount: 500000,
+        transactionDate: DateTime(2026, 8, 1),
+      );
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.single.amount, 500000);
+
+      transaction = transaction.copyWith(
+        categoryId: transport.id,
+        amount: 600000,
+      );
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(
+        (iterator.current.single.categoryName, iterator.current.single.amount),
+        ('Transportasi', 600000),
+      );
+
+      transaction = transaction.copyWith(
+        type: TransactionType.income,
+        categoryId: salary.id,
+        amount: 600000,
+      );
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current, isEmpty);
+
+      transaction = transaction.copyWith(
+        type: TransactionType.expense,
+        categoryId: food.id,
+        amount: 700000,
+      );
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.single.amount, 700000);
+
+      transaction = transaction.copyWith(transactionDate: DateTime(2026, 9, 1));
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current, isEmpty);
+
+      transaction = transaction.copyWith(transactionDate: DateTime(2026, 8, 2));
+      await transactions.update(transaction);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.single.amount, 700000);
+
+      await transactions.softDelete(transaction.id);
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current, isEmpty);
+    },
+  );
+
+  test(
+    'expense categories retain archived and missing category labels safely',
+    () async {
+      final category = await CategoryRepository(database)
+          .create(name: 'Kategori Lama', type: TransactionType.expense);
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: category.id,
+        amount: 100000,
+        transactionDate: DateTime(2026, 8, 1),
+      );
+      await (database.update(database.categories)
+            ..where((row) => row.id.equals(category.id)))
+          .write(CategoriesCompanion(deletedAt: Value(DateTime.now().toUtc())));
+
+      await database.customStatement('PRAGMA foreign_keys = OFF');
+      await database.customStatement(
+        '''
+INSERT INTO transactions (
+  uuid, type, category_id, amount, title, transaction_date, source,
+  created_at, updated_at
+) VALUES (?, 'expense', 999999, 200000, '', '2026-08-01',
+          'legacy_import', 0, 0)
+''',
+        ['missing-category-fixture'],
+      );
+      await database.customStatement('PRAGMA foreign_keys = ON');
+      final range = ReportRange(
+        start: DateTime(2026, 8, 1),
+        end: DateTime(2026, 8, 31),
+      );
+
+      final report = await reports.watchReport(range).first;
+      final points = await reports.watchExpenseCategories(range).first;
+      expect(points.map((point) => (point.categoryName, point.amount)), [
+        ('Kategori tidak tersedia', 200000),
+        ('Kategori Lama', 100000),
+      ]);
+      expect(
+        points.fold<int>(0, (sum, point) => sum + point.amount),
+        report.totalExpense,
+      );
+    },
+  );
+
   test(
     'trend stream reacts to amount, type, date, and soft delete changes',
     () async {
@@ -245,12 +430,17 @@ void main() {
       for (final range in ranges) {
         final report = await reports.watchReport(range).first;
         final trend = await reports.watchFinancialTrend(range).first;
+        final categories = await reports.watchExpenseCategories(range).first;
         expect(
           (
             trend.fold<int>(0, (sum, point) => sum + point.income),
             trend.fold<int>(0, (sum, point) => sum + point.expense),
           ),
           (report.totalIncome, report.totalExpense),
+        );
+        expect(
+          categories.fold<int>(0, (sum, point) => sum + point.amount),
+          report.totalExpense,
         );
       }
     },

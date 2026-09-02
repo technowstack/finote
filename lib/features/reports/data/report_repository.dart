@@ -149,14 +149,17 @@ ORDER BY period ASC
     return _database
         .customSelect(
           '''
-SELECT c.id AS category_id, c.name AS category_name, SUM(t.amount) AS amount
+SELECT t.category_id AS category_id,
+       COALESCE(NULLIF(TRIM(c.name), ''), 'Kategori tidak tersedia')
+         AS category_name,
+       SUM(t.amount) AS amount
 FROM transactions t
-JOIN categories c ON c.id = t.category_id
+LEFT JOIN categories c ON c.id = t.category_id
 WHERE t.deleted_at IS NULL
   AND t.type = 'expense'
   AND t.transaction_date BETWEEN ? AND ?
-GROUP BY c.id, c.name
-ORDER BY amount DESC, c.name COLLATE NOCASE ASC, c.id ASC
+GROUP BY t.category_id, c.name
+ORDER BY amount DESC, category_name COLLATE NOCASE ASC, t.category_id ASC
 ''',
           variables: [
             Variable.withString(converter.toSql(range.start)),

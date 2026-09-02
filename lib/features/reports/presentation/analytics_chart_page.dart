@@ -6,6 +6,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
+import 'expense_category_chart.dart';
 import 'income_expense_chart.dart';
 import 'report_chart_section.dart';
 import 'report_period.dart';
@@ -58,6 +59,8 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
   @override
   Widget build(BuildContext context) {
     final trend = ref.watch(financialTrendProvider(_range));
+    final expenseCategories = ref.watch(expenseCategoryChartProvider(_range));
+    final categoryCount = expenseCategories.valueOrNull?.length ?? 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Analisis Grafik')),
       body: ListView(
@@ -128,6 +131,26 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                     granularity: chartGranularityFor(_range),
                   ),
                 ),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Pengeluaran',
+                  style: Theme.of(context).textTheme.labelLarge
+                      ?.copyWith(color: Theme.of(context).colorScheme.primary),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                ReportChartSection<List<CategoryChartPoint>>(
+                  title: 'Pengeluaran per Kategori',
+                  subtitle: 'Kategori dengan pengeluaran terbesar',
+                  data: expenseCategories,
+                  isEmpty: (points) => points.isEmpty,
+                  onRetry: () =>
+                      ref.invalidate(expenseCategoryChartProvider(_range)),
+                  height: _categoryChartHeight(categoryCount),
+                  emptyMessage: 'Belum ada pengeluaran pada periode ini.',
+                  builder: (context, points) => ExpenseCategoryChart(
+                    points: visibleExpenseCategories(points),
+                  ),
+                ),
               ],
             ),
           ),
@@ -162,6 +185,13 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
       _range = resolveReportRange(ReportPeriod.custom, customRange: selected);
     });
   }
+}
+
+double _categoryChartHeight(int categoryCount) {
+  final visibleCount = categoryCount > maxVisibleExpenseCategories
+      ? maxVisibleExpenseCategories + 1
+      : categoryCount;
+  return visibleCount <= 2 ? 180 : (visibleCount * 58 + 28).toDouble();
 }
 
 String _rangeLabel(ReportRange range) {

@@ -7,6 +7,7 @@ import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/reports/data/report_repository.dart';
 import 'package:finote/features/reports/presentation/analytics_chart_page.dart';
+import 'package:finote/features/reports/presentation/expense_category_chart.dart';
 import 'package:finote/features/reports/presentation/report_period.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
@@ -210,6 +211,16 @@ void main() {
         amount: 1000000,
         transactionDate: now,
       );
+      final otherDay = now.day == 1
+          ? DateTime(now.year, now.month, 2)
+          : DateTime(now.year, now.month);
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: expense.id,
+        accountId: source.id,
+        amount: 300000,
+        transactionDate: otherDay,
+      );
 
       await tester.pumpWidget(
         ProviderScope(
@@ -225,6 +236,10 @@ void main() {
         report.totalIncome.toDouble(),
         report.totalExpense.toDouble(),
       ));
+      var categoryChart = tester.widget<ExpenseCategoryChart>(
+        find.byType(ExpenseCategoryChart),
+      );
+      expect(categoryChart.points.single.amount, report.totalExpense);
 
       final addedExpense = await transactions.create(
         type: TransactionType.expense,
@@ -235,12 +250,16 @@ void main() {
       );
       await tester.pumpAndSettle();
       totals = _chartTotals(tester.widget<BarChart>(find.byType(BarChart)));
-      expect(totals, (10000000.0, 1250000.0));
+      expect(totals, (10000000.0, 1550000.0));
+      categoryChart = tester.widget<ExpenseCategoryChart>(
+        find.byType(ExpenseCategoryChart),
+      );
+      expect(categoryChart.points.single.amount, 1550000);
 
       await transactions.update(addedExpense.copyWith(amount: 500000));
       await tester.pumpAndSettle();
       totals = _chartTotals(tester.widget<BarChart>(find.byType(BarChart)));
-      expect(totals, (10000000.0, 1500000.0));
+      expect(totals, (10000000.0, 1800000.0));
 
       await TransferRepository(database).create(
         fromAccountId: source.id,
@@ -257,12 +276,25 @@ void main() {
       await accounts.archive(source.id);
       await tester.pumpAndSettle();
       totals = _chartTotals(tester.widget<BarChart>(find.byType(BarChart)));
-      expect(totals, (10000000.0, 1500000.0));
+      expect(totals, (10000000.0, 1800000.0));
 
       await transactions.softDelete(expenseTransaction.id);
       await tester.pumpAndSettle();
       totals = _chartTotals(tester.widget<BarChart>(find.byType(BarChart)));
+      expect(totals, (10000000.0, 800000.0));
+      categoryChart = tester.widget<ExpenseCategoryChart>(
+        find.byType(ExpenseCategoryChart),
+      );
+      expect(categoryChart.points.single.amount, 800000);
+
+      await tester.tap(find.text('Hari ini'));
+      await tester.pumpAndSettle();
+      totals = _chartTotals(tester.widget<BarChart>(find.byType(BarChart)));
+      categoryChart = tester.widget<ExpenseCategoryChart>(
+        find.byType(ExpenseCategoryChart),
+      );
       expect(totals, (10000000.0, 500000.0));
+      expect(categoryChart.points.single.amount, 500000);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 1));
@@ -307,6 +339,7 @@ void main() {
 
     expect(find.text('Analisis Grafik'), findsOneWidget);
     expect(find.byType(BarChart), findsOneWidget);
+    expect(find.byType(ExpenseCategoryChart), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     tester.view.physicalSize = const Size(640, 320);
