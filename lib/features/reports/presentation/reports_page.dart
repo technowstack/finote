@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
-import '../../../core/utils/financial_date_range.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../accounts/domain/account_summary.dart';
@@ -17,8 +16,10 @@ import '../../transactions/domain/transaction_type.dart';
 import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
+import 'analytics_chart_page.dart';
 import 'income_expense_chart.dart';
 import 'report_chart_section.dart';
+import 'report_period.dart';
 
 class ReportsPage extends ConsumerStatefulWidget {
   const ReportsPage({super.key});
@@ -29,7 +30,7 @@ class ReportsPage extends ConsumerStatefulWidget {
 
 class _ReportsPageState extends ConsumerState<ReportsPage>
     with SingleTickerProviderStateMixin {
-  _ReportPeriod _period = _ReportPeriod.month;
+  ReportPeriod _period = ReportPeriod.month;
   DateTimeRange? _customRange;
   late final TabController _tabController;
 
@@ -47,7 +48,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
 
   @override
   Widget build(BuildContext context) {
-    final range = _reportRange(_period, _customRange, DateTime.now());
+    final range = resolveReportRange(_period, customRange: _customRange);
     final report = ref.watch(reportProvider(range));
     final trend = ref.watch(financialTrendProvider(range));
     final accounts = ref.watch(accountSummariesProvider);
@@ -84,20 +85,20 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
             child: Row(
               spacing: AppSpacing.sm,
               children: [
-                _periodChip('Semua', _ReportPeriod.all),
-                _periodChip('Hari ini', _ReportPeriod.today),
-                _periodChip('Minggu ini', _ReportPeriod.week),
-                _periodChip('Bulan ini', _ReportPeriod.month),
-                _periodChip('Tahun ini', _ReportPeriod.year),
+                _periodChip('Semua', ReportPeriod.all),
+                _periodChip('Hari ini', ReportPeriod.today),
+                _periodChip('Minggu ini', ReportPeriod.week),
+                _periodChip('Bulan ini', ReportPeriod.month),
+                _periodChip('Tahun ini', ReportPeriod.year),
                 ChoiceChip(
                   label: const Text('Rentang'),
-                  selected: _period == _ReportPeriod.custom,
+                  selected: _period == ReportPeriod.custom,
                   onSelected: (_) => _selectCustomRange(),
                 ),
               ],
             ),
           ),
-          if (_period == _ReportPeriod.custom && _customRange != null)
+          if (_period == ReportPeriod.custom && _customRange != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.screenH,
@@ -141,7 +142,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     );
   }
 
-  Widget _periodChip(String label, _ReportPeriod period) {
+  Widget _periodChip(String label, ReportPeriod period) {
     return ChoiceChip(
       label: Text(label),
       selected: _period == period,
@@ -161,7 +162,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     if (selected != null) {
       setState(() {
         _customRange = selected;
-        _period = _ReportPeriod.custom;
+        _period = ReportPeriod.custom;
       });
     }
   }
@@ -171,7 +172,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
       final document = await ref
           .read(exportRepositoryProvider)
           .buildDocument(
-            _period == _ReportPeriod.all
+            _period == ReportPeriod.all
                 ? const ExportFilter()
                 : ExportFilter(startDate: range.start, endDate: range.end),
           );
@@ -390,6 +391,17 @@ class _SummaryTab extends StatelessWidget {
           builder: (context, points) => IncomeExpenseChart(
             points: points,
             granularity: chartGranularityFor(range),
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            key: const Key('open-analytics'),
+            onPressed: () =>
+                context.push(AnalyticsChartPage.locationFor(range)),
+            icon: const Icon(Icons.arrow_forward),
+            iconAlignment: IconAlignment.end,
+            label: const Text('Lihat Analisis Grafik'),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -845,51 +857,5 @@ class _MonthlyRow extends StatelessWidget {
 // Helpers
 // ---------------------------------------------------------------------------
 
-ReportRange _reportRange(
-  _ReportPeriod period,
-  DateTimeRange? customRange,
-  DateTime now,
-) {
-  final periodRange = switch (period) {
-    _ReportPeriod.all || _ReportPeriod.year => null,
-    _ReportPeriod.today => resolveFinancialDateRange(
-      FinancialPeriod.today,
-      now: now,
-    ),
-    _ReportPeriod.week => resolveFinancialDateRange(
-      FinancialPeriod.week,
-      now: now,
-    ),
-    _ReportPeriod.month => resolveFinancialDateRange(
-      FinancialPeriod.month,
-      now: now,
-    ),
-    _ReportPeriod.custom => resolveFinancialDateRange(
-      FinancialPeriod.custom,
-      now: now,
-      customStart: customRange?.start,
-      customEnd: customRange?.end,
-    ),
-  };
-  return switch (period) {
-    _ReportPeriod.all => ReportRange(
-      start: DateTime(2000, 1, 1),
-      end: DateTime(2100, 12, 31),
-    ),
-    _ReportPeriod.year => ReportRange(
-      start: DateTime(now.year),
-      end: DateTime(now.year, 12, 31),
-    ),
-    _ReportPeriod.today || _ReportPeriod.week || _ReportPeriod.month =>
-      ReportRange(start: periodRange!.start, end: periodRange.end),
-    _ReportPeriod.custom => ReportRange(
-      start: periodRange!.start,
-      end: periodRange.end,
-    ),
-  };
-}
-
 String _formatMonth(String month) =>
     DateFormat('MMMM y', 'id_ID').format(DateTime.parse('$month-01'));
-
-enum _ReportPeriod { all, today, week, month, year, custom }

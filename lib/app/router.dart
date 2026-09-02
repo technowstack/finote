@@ -8,6 +8,7 @@ import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/legacy_import/presentation/legacy_import_page.dart';
 import '../features/accounts/presentation/accounts_page.dart';
 import '../features/reports/presentation/reports_page.dart';
+import '../features/reports/presentation/analytics_chart_page.dart';
 import '../features/receipt_scanner/presentation/receipt_scanner_page.dart';
 import '../features/settings/presentation/settings_page.dart';
 import '../features/transactions/presentation/transaction_form_page.dart';
@@ -91,6 +92,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             : null,
         builder: (context, state) => TransactionDetailPage(
           transactionId: int.parse(state.pathParameters['id']!),
+        ),
+      ),
+      GoRoute(
+        path: '/reports/analytics',
+        builder: (context, state) => AnalyticsChartPage(
+          initialRange: AnalyticsChartPage.rangeFromUri(state.uri),
         ),
       ),
       GoRoute(

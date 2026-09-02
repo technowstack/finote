@@ -35,10 +35,12 @@ Finote v1.1.0 has completed **Phase 6A — Accounts & Transfers** including fina
 Current focus:
 
 - [x] Phase 6B.1 — Report Chart Foundation
-- [x] Phase 6B.2 — Income vs Expense Chart
-- [x] Add chart foundations without changing Reports financial semantics
+- [x] Phase 6B.2 — Income vs Expense Preview Chart
+- [x] Phase 6B.3 — Analytics Chart Screen
+- [x] Keep Reports concise: summary + one primary chart preview
+- [x] Move complete chart exploration to the dedicated Analytics screen
 - [x] Preserve Income / Expense / Net correctness
-- [x] Keep Transfer excluded from Income / Expense chart data
+- [x] Keep Transfer excluded from Income / Expense charts
 - [x] Keep Accounts & Transfers regression-safe
 - [ ] Continue real usage and fix real bugs discovered during development
 
@@ -47,8 +49,8 @@ Current focus:
 ```text
 Finote v1.1.0
 ACCOUNTS & TRANSFERS COMPLETE
-PHASE 6B.1 REPORT CHART FOUNDATION COMPLETE
-PHASE 6B.2 INCOME VS EXPENSE CHART COMPLETE
+PHASE 6B REPORT VISUALIZATION & ANALYTICS — IN PROGRESS
+PHASE 6B.3 ANALYTICS CHART SCREEN COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -73,10 +75,11 @@ These external tasks do not reopen the v1.0 feature scope.
 
 - [x] v1.1.0 — Phase 6A Accounts & Transfers
 - [x] Safe Account Deletion polish
-- [ ] v1.2.0 — Phase 6B Reports Visualization & Charts
+- [ ] v1.2.0 — Phase 6B Reports Visualization & Analytics
 - [x] 6B.1 Report Chart Foundation
-- [x] 6B.2 Income vs Expense Chart
-- [ ] 6B.3 Category Expense Chart
+- [x] 6B.2 Income vs Expense Preview Chart
+- [x] 6B.3 Analytics Chart Screen
+- [ ] 6B.4 Category Expense Chart
 
 ---
 
@@ -259,15 +262,16 @@ Legacy transactions without account information are assigned to the Default Acco
 Safe Account Deletion polish is complete: only unused non-default accounts may be hard-deleted; used/default accounts remain protected and may be archived/deactivated as appropriate.
 
 
-### Planned v1.2.0 — Phase 6B Reports Visualization & Charts
+### Planned v1.2.0 — Phase 6B Reports Visualization & Analytics
 
 - [x] 6B.1 Report Chart Foundation
-- [x] 6B.2 Income vs Expense Chart
-- [ ] 6B.3 Category Expense Chart
-- [ ] 6B.4 Financial Trend Chart
-- [ ] 6B.5 Account Balance Visualization
-- [ ] 6B.6 Chart Filters & Interaction
-- [ ] 6B.7 Chart Testing & Polish
+- [x] 6B.2 Income vs Expense Preview Chart
+- [x] 6B.3 Analytics Chart Screen
+- [ ] 6B.4 Category Expense Chart
+- [ ] 6B.5 Financial Trend Chart
+- [ ] 6B.6 Account Balance Visualization
+- [ ] 6B.7 Chart Filters & Interaction
+- [ ] 6B.8 Chart Testing & Polish
 
 Core chart rules:
 
@@ -280,21 +284,34 @@ Core chart rules:
 - Charts must handle empty/zero data safely.
 - Large datasets should use aggregated queries rather than calculating raw transaction lists inside widgets.
 
-Target report visualization:
+Target visualization architecture:
 
 ```text
 Reports
 ├── Financial Summary
-├── Income vs Expense Chart
-├── Expense by Category Chart
-├── Financial Trend Chart
-├── Account Balance Visualization
-└── Transfer Summary (separate from Income/Expense)
+├── Income vs Expense Preview
+├── [Lihat Analisis Grafik]
+├── Category Summary
+├── Account Summary
+└── Transfer Summary
+
+Analisis Grafik
+├── Income vs Expense
+├── Financial Trend
+├── Expense by Category
+└── Account Balance Visualization
+```
+
+UX principle:
+
+```text
+Reports = quick financial summary
+Analytics Chart Screen = deeper visual analysis
 ```
 
 Recommended next phase:
 
-> **Phase 6B.3 — Category Expense Chart**
+> **Phase 6B.4 — Category Expense Chart**
 
 ### Other Post-v1 Candidate Features
 
@@ -384,22 +401,21 @@ AI:
 
 ## Immediate Action
 
-Finote v1.1.0 has completed **Accounts & Transfers** and is ready to begin the explicitly approved **Phase 6B — Reports Visualization & Charts** track.
+Finote v1.1.0 has completed **Accounts & Transfers** and Phase 6B — Reports Visualization & Analytics is now in progress.
 
 Current rules:
 
-1. Phase 6B.1 — Report Chart Foundation is complete.
-2. Phase 6B.2 — Income vs Expense Chart is complete.
-3. Reuse existing Reports aggregation as financial source of truth.
-4. Keep Income / Expense / Net semantics unchanged.
-5. Never include Transfer in Income or Expense charts.
-6. Keep Account Balance derived from initial balance + transactions + transfers.
-7. Use chart aggregation that remains usable with large datasets.
-8. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
-9. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
-10. Continue fixing real Accounts & Transfers regressions if discovered.
-11. External Play Store tasks remain separate from local feature development.
+1. Phase 6B.1 Report Chart Foundation, 6B.2 Income vs Expense Preview, and 6B.3 Analytics Chart Screen are complete.
+2. Continue with Phase 6B.4 — Category Expense Chart only when explicitly requested.
+3. Keep Reports concise: Financial Summary + one primary Income vs Expense preview + entry point to Analytics.
+4. Place the complete chart experience on the dedicated Analytics Chart Screen.
+5. Reuse existing Reports aggregation as financial source of truth.
+6. Keep Income / Expense / Net semantics unchanged.
+7. Never include Transfer in Income or Expense charts.
+8. Keep Account Balance derived from initial balance + transactions + transfers.
+9. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
+10. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
 
 Recommended next phase, not started:
 
-> **Phase 6B.3 — Category Expense Chart**
+> **Phase 6B.4 — Category Expense Chart**

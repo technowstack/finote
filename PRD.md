@@ -1764,9 +1764,9 @@ Phase 6A dianggap lengkap setelah regression coverage mencakup:
 - existing Finote data preservation.
 
 
-## 47.10 Planned v1.2.0 — Phase 6B Reports Visualization & Charts
+## 47.10 Planned v1.2.0 — Phase 6B Reports Visualization & Analytics
 
-Setelah Accounts & Transfers selesai pada v1.1.0, pengembangan laporan berikutnya berfokus pada **visualisasi data keuangan** agar user tidak hanya membaca angka, tetapi juga dapat memahami tren, perbandingan, dan komposisi pengeluaran secara cepat.
+Setelah Accounts & Transfers selesai pada v1.1.0, pengembangan laporan berikutnya berfokus pada **visualisasi data keuangan dan analisis grafik** agar user tidak hanya membaca angka, tetapi juga dapat memahami tren, perbandingan, komposisi pengeluaran, dan posisi aset secara cepat.
 
 Phase 6B tidak mengubah financial source of truth. Semua grafik wajib menggunakan hasil agregasi dari data transaksi/account yang sama dengan Reports.
 
@@ -1785,20 +1785,25 @@ Initial Balance != Income
 ### 47.10.1 Phase Breakdown
 
 ```text
-Phase 6B — Reports Visualization & Charts
+Phase 6B — Reports Visualization & Analytics
 
 6B.1 Report Chart Foundation
-6B.2 Income vs Expense Chart
-6B.3 Category Expense Chart
-6B.4 Financial Trend Chart
-6B.5 Account Balance Visualization
-6B.6 Chart Filters & Interaction
-6B.7 Chart Testing & Polish
+6B.2 Income vs Expense Preview Chart
+6B.3 Analytics Chart Screen
+6B.4 Category Expense Chart
+6B.5 Financial Trend Chart
+6B.6 Account Balance Visualization
+6B.7 Chart Filters & Interaction
+6B.8 Chart Testing & Polish
 ```
 
 Phase 6B harus dibangun bertahap. Jangan mengimplementasikan seluruh chart sekaligus hanya untuk mengejar visual lengkap.
 
-### 47.10.2 Report Page Direction
+### 47.10.2 Reports vs Analytics UX Direction
+
+Finote menggunakan pendekatan **hybrid**.
+
+Halaman **Laporan** tetap menjadi ringkasan cepat dan tidak boleh berubah menjadi halaman yang terlalu panjang karena seluruh grafik ditempatkan sekaligus.
 
 Target hierarchy halaman Reports:
 
@@ -1806,35 +1811,57 @@ Target hierarchy halaman Reports:
 Laporan
 │
 ├── Filter Periode
-│   ├── Hari / Minggu
-│   ├── Bulan
-│   ├── Tahun
-│   └── Custom
 │
 ├── Ringkasan
 │   ├── Pemasukan
 │   ├── Pengeluaran
 │   └── Net
 │
-├── Grafik Arus Keuangan
-│   └── Pemasukan vs Pengeluaran
+├── Income vs Expense Preview
 │
-├── Grafik Pengeluaran per Kategori
+├── [ Lihat Analisis Grafik ]
 │
-├── Grafik Tren Keuangan
-│
-├── Visualisasi Saldo Akun
-│
+├── Ringkasan Kategori
+├── Saldo Akun
 └── Ringkasan Transfer
 ```
 
-Tidak semua section harus ditampilkan sekaligus jika membuat halaman terlalu padat. Prioritas adalah keterbacaan dan insight yang berguna.
+Halaman **Analisis Grafik** menjadi tempat eksplorasi visual yang lebih lengkap:
 
-### 47.10.3 Required Charts
+```text
+Analisis Grafik
+│
+├── Filter Periode
+│
+├── Arus Keuangan
+│   └── Income vs Expense
+│
+├── Tren Keuangan
+│   └── Financial Trend
+│
+├── Pengeluaran
+│   └── Expense by Category
+│
+└── Aset
+    └── Account Balance Visualization
+```
+
+Prinsip UX:
+
+```text
+Reports = ringkasan cepat
+Analytics Chart Screen = eksplorasi visual lebih dalam
+```
+
+Halaman Analytics bukan bottom-navigation baru. Entry point utama berasal dari halaman Reports melalui tombol seperti **Lihat Analisis Grafik**.
+
+Saat user membuka Analytics dari Reports, periode/filter utama sebaiknya diwariskan jika memungkinkan agar konteks tidak berubah secara mengejutkan.
+
+### 47.10.3 Required Charts and Placement
 
 #### Income vs Expense
 
-Gunakan bar chart atau visual comparison lain yang jelas untuk membandingkan pemasukan dan pengeluaran pada bucket periode yang relevan.
+Gunakan bar chart atau visual comparison lain yang jelas untuk membandingkan pemasukan dan pengeluaran pada bucket periode yang relevan. Versi ringkas dapat tampil sebagai preview di halaman Reports, sedangkan versi analisis lengkap berada di Analytics Chart Screen.
 
 Contoh tahunan:
 
@@ -1849,7 +1876,7 @@ Transfer tidak boleh masuk ke kedua series tersebut.
 
 #### Expense by Category
 
-Visualisasi pengeluaran per kategori harus menggunakan transaction expense saja.
+Visualisasi pengeluaran per kategori harus menggunakan transaction expense saja dan ditempatkan pada Analytics Chart Screen sebagai visualisasi analitis, bukan memenuhi halaman Reports utama.
 
 Preferred:
 
@@ -1860,7 +1887,7 @@ Transfer tidak memiliki kategori dan tidak boleh dibuat menjadi kategori palsu.
 
 #### Financial Trend
 
-Line chart digunakan untuk menampilkan tren Income dan Expense berdasarkan waktu.
+Line chart digunakan untuk menampilkan tren Income dan Expense berdasarkan waktu pada Analytics Chart Screen.
 
 Granularity harus mengikuti rentang laporan:
 
@@ -1873,7 +1900,7 @@ Custom   -> adaptive grouping
 
 #### Account Balance Visualization
 
-Visualisasi saldo account menggunakan derived account balance yang sama dengan Account Management dan Reports:
+Visualisasi saldo account berada pada Analytics Chart Screen dan menggunakan derived account balance yang sama dengan Account Management dan Reports:
 
 ```text
 Account Balance =
@@ -1970,6 +1997,8 @@ Transfer tetap informational dan tidak boleh mengubah Income/Expense chart.
 Phase 6B hanya dianggap selesai jika:
 
 - semua required chart memakai shared financial data source;
+- Reports tetap ringkas dan Analytics Chart Screen menjadi tempat visualisasi lengkap;
+- tombol/entry point dari Reports ke Analytics bekerja dan mewariskan konteks periode bila didukung;
 - transfer exclusion tervalidasi;
 - chart filters konsisten dengan Reports;
 - empty/zero state aman;
@@ -2153,7 +2182,7 @@ Do not automatically add new product features during this period.
 
 External Play Store activities such as final signing, Play Console configuration, store assets, Data Safety submission, AAB upload, external closed testing, and production rollout are **not prerequisites for local production-final status**.
 
-Phase 6A is complete for Finote v1.1.0. Phase 6B Reports Visualization & Charts is the next explicitly approved development track.
+Phase 6A is complete for Finote v1.1.0. Phase 6B Reports Visualization & Analytics is the next explicitly approved development track.
 
 ---
 
@@ -2183,6 +2212,6 @@ Export Excel / Text / PDF
 Backup data dengan aman
 ```
 
-Finote v1.1.0 telah memperluas core finance dengan Accounts & Transfers tanpa mengubah prinsip offline-first dan deterministic financial calculations. Pengembangan berikutnya berfokus pada Reports Visualization & Charts (Phase 6B).
+Finote v1.1.0 telah memperluas core finance dengan Accounts & Transfers tanpa mengubah prinsip offline-first dan deterministic financial calculations. Pengembangan berikutnya berfokus pada Reports Visualization & Analytics (Phase 6B).
 
 AI dan cloud sync tetap deferred sampai kebutuhan nyata pengguna membuktikannya.
