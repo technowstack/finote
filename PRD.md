@@ -1880,8 +1880,8 @@ Visualisasi pengeluaran per kategori harus menggunakan transaction expense saja 
 
 Preferred:
 
-- horizontal bar chart jika kategori cukup banyak;
-- pie/donut hanya jika jumlah kategori sedikit dan part-to-whole masih mudah dibaca.
+- donut/pie composition visualization with a numeric breakdown list;
+- Top 5 categories plus `Lainnya` when many categories make slices difficult to read.
 
 Transfer tidak memiliki kategori dan tidak boleh dibuat menjadi kategori palsu.
 

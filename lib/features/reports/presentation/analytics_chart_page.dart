@@ -239,9 +239,8 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   emptyMessage: filter.hasTransactionFilter
                       ? 'Tidak ada data untuk filter ini.'
                       : 'Belum ada pengeluaran pada periode ini.',
-                  builder: (context, points) => ExpenseCategoryChart(
-                    points: visibleExpenseCategories(points),
-                  ),
+                  builder: (context, points) =>
+                      ExpenseCategoryChart(points: points),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
@@ -481,7 +480,7 @@ double _categoryChartHeight(int categoryCount) {
   final visibleCount = categoryCount > maxVisibleExpenseCategories
       ? maxVisibleExpenseCategories + 1
       : categoryCount;
-  return visibleCount <= 2 ? 180 : (visibleCount * 58 + 28).toDouble();
+  return max(330, visibleCount * 56 + 250).toDouble();
 }
 
 double _accountChartHeight(int accountCount) =>

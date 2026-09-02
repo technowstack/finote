@@ -38,6 +38,7 @@ Current focus:
 - [x] Phase 6B.2 — Income vs Expense Preview Chart
 - [x] Phase 6B.3 — Analytics Chart Screen
 - [x] Phase 6B.4 — Category Expense Chart
+- [x] Phase 6B.4.1 — Category Expense Visualization Polish
 - [x] Phase 6B.5 — Financial Trend Chart
 - [x] Phase 6B.6 — Account Balance Visualization
 - [x] Phase 6B.7 — Chart Filters & Interaction
