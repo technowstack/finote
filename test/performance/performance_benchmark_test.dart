@@ -157,6 +157,37 @@ void main() {
     stopwatch.stop();
     measure['report-charts'] = stopwatch.elapsed;
 
+    final filteredAccount = await (database.select(
+      database.accounts,
+    )..where((row) => row.name.equals('BCA Perf'))).getSingle();
+    final filteredCategory = await (database.select(
+      database.categories,
+    )..where((row) => row.name.equals('Makanan'))).getSingle();
+    stopwatch = Stopwatch()..start();
+    final filteredReport = await reports
+        .watchReport(
+          chartRange,
+          accountId: filteredAccount.id,
+          categoryId: filteredCategory.id,
+        )
+        .first;
+    final filteredTrend = await reports
+        .watchFinancialTrend(
+          chartRange,
+          accountId: filteredAccount.id,
+          categoryId: filteredCategory.id,
+        )
+        .first;
+    final filteredCategories = await reports
+        .watchExpenseCategories(
+          chartRange,
+          accountId: filteredAccount.id,
+          categoryId: filteredCategory.id,
+        )
+        .first;
+    stopwatch.stop();
+    measure['filtered-report-charts'] = stopwatch.elapsed;
+
     stopwatch = Stopwatch()..start();
     final accountSummaries = await accountRepository.watchSummaries().first;
     stopwatch.stop();
@@ -221,6 +252,18 @@ void main() {
     expect(report.transferSummary.volume, greaterThan(0));
     expect(trend, hasLength(60));
     expect(expenseCategories, hasLength(2));
+    expect(
+      filteredTrend.fold<int>(0, (sum, point) => sum + point.income),
+      filteredReport.totalIncome,
+    );
+    expect(
+      filteredTrend.fold<int>(0, (sum, point) => sum + point.expense),
+      filteredReport.totalExpense,
+    );
+    expect(
+      filteredCategories.fold<int>(0, (sum, point) => sum + point.amount),
+      filteredReport.totalExpense,
+    );
     expect(accountSummaries, hasLength(3));
     expect(accountSummaries.every((summary) => summary.balance != 0), isTrue);
     expect(document.transactions, hasLength(9500));

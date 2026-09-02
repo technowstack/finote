@@ -49,8 +49,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   @override
   Widget build(BuildContext context) {
     final range = resolveReportRange(_period, customRange: _customRange);
-    final report = ref.watch(reportProvider(range));
-    final trend = ref.watch(financialTrendProvider(range));
+    final filter = ReportFilter(range: range);
+    final report = ref.watch(reportProvider(filter));
+    final trend = ref.watch(financialTrendProvider(filter));
     final accounts = ref.watch(accountSummariesProvider);
 
     return Scaffold(
@@ -119,7 +120,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
               loading: () => const AppLoadingState(),
               error: (error, stackTrace) => AppErrorState(
                 message: 'Laporan belum dapat dimuat.',
-                onRetry: () => ref.invalidate(reportProvider(range)),
+                onRetry: () => ref.invalidate(reportProvider(filter)),
               ),
               data: (data) => TabBarView(
                 controller: _tabController,
@@ -130,7 +131,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
                     trend: trend,
                     range: range,
                     onRetryTrend: () =>
-                        ref.invalidate(financialTrendProvider(range)),
+                        ref.invalidate(financialTrendProvider(filter)),
                   ),
                   _HistoryTab(data: data),
                 ],
@@ -391,6 +392,7 @@ class _SummaryTab extends StatelessWidget {
           builder: (context, points) => IncomeExpenseChart(
             points: points,
             granularity: chartGranularityFor(range),
+            range: range,
           ),
         ),
         Align(

@@ -58,16 +58,18 @@ void main() {
       tester
           .widgetList<Tooltip>(find.byType(Tooltip))
           .map((item) => item.message),
-      contains('Kebutuhan Anak dan Pendidikan\nRp2.450.000'),
+      contains('Kebutuhan Anak dan Pendidikan\nRp2.450.000\n83%'),
     );
     expect(
-      find.bySemanticsLabel('Kebutuhan Anak dan Pendidikan, Rp2.450.000'),
+      find.bySemanticsLabel(
+        'Kebutuhan Anak dan Pendidikan, Rp2.450.000, 83 persen',
+      ),
       findsOneWidget,
     );
-    await tester.longPress(find.text('Kebutuhan Anak dan Pendidikan'));
+    await tester.tap(find.text('Kebutuhan Anak dan Pendidikan'));
     await tester.pumpAndSettle();
     expect(
-      find.text('Kebutuhan Anak dan Pendidikan\nRp2.450.000'),
+      find.text('Kebutuhan Anak dan Pendidikan\nRp2.450.000\n83%'),
       findsOneWidget,
     );
     expect(tester.takeException(), isNull);

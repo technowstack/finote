@@ -44,6 +44,126 @@ void main() {
 
   tearDown(() => database.close());
 
+  test('ReportFilter uses value equality for provider family keys', () {
+    final range = ReportRange(
+      start: DateTime(2026, 9, 1),
+      end: DateTime(2026, 9, 30),
+    );
+    final first = ReportFilter(range: range, accountId: 2, categoryId: 3);
+    final equal = ReportFilter(
+      range: ReportRange(
+        start: DateTime(2026, 9, 1, 14),
+        end: DateTime(2026, 9, 30, 23),
+      ),
+      accountId: 2,
+      categoryId: 3,
+    );
+
+    expect(first, equal);
+    expect(first.hashCode, equal.hashCode);
+    expect(first, isNot(ReportFilter(range: range, accountId: 4)));
+    expect(
+      () => ReportFilter(
+        range: ReportRange(
+          start: DateTime(2026, 9, 2),
+          end: DateTime(2026, 9, 1),
+        ),
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('account and category filters reconcile without transfer or initial balance', () async {
+    final accountRepository = AccountRepository(database);
+    final bca = await accountRepository.create(
+      name: 'BCA',
+      type: AccountType.bank,
+      initialBalance: 5000000,
+    );
+    final cash = await accountRepository.create(
+      name: 'Cash',
+      type: AccountType.cash,
+      initialBalance: 500000,
+    );
+    for (final entry in [
+      (bca.id, salary.id, TransactionType.income, 5000000),
+      (bca.id, food.id, TransactionType.expense, 1000000),
+      (bca.id, transport.id, TransactionType.expense, 500000),
+      (cash.id, salary.id, TransactionType.income, 1000000),
+      (cash.id, food.id, TransactionType.expense, 300000),
+    ]) {
+      await transactions.create(
+        accountId: entry.$1,
+        categoryId: entry.$2,
+        type: entry.$3,
+        amount: entry.$4,
+        transactionDate: DateTime(2026, 9, 12),
+      );
+    }
+    await TransferRepository(database).create(
+      fromAccountId: bca.id,
+      toAccountId: cash.id,
+      amount: 2000000,
+      transferDate: DateTime(2026, 9, 12),
+    );
+    final range = ReportRange(
+      start: DateTime(2026, 9, 1),
+      end: DateTime(2026, 9, 30),
+    );
+
+    Future<(int, int, int)> totals({int? accountId, int? categoryId}) async {
+      final report = await reports
+          .watchReport(range, accountId: accountId, categoryId: categoryId)
+          .first;
+      final trend = await reports
+          .watchFinancialTrend(
+            range,
+            accountId: accountId,
+            categoryId: categoryId,
+          )
+          .first;
+      final categories = await reports
+          .watchExpenseCategories(
+            range,
+            accountId: accountId,
+            categoryId: categoryId,
+          )
+          .first;
+      expect(
+        trend.fold<int>(0, (sum, point) => sum + point.income),
+        report.totalIncome,
+      );
+      expect(
+        trend.fold<int>(0, (sum, point) => sum + point.expense),
+        report.totalExpense,
+      );
+      expect(
+        categories.fold<int>(0, (sum, point) => sum + point.amount),
+        report.totalExpense,
+      );
+      return (report.totalIncome, report.totalExpense, report.netBalance);
+    }
+
+    expect(await totals(), (6000000, 1800000, 4200000));
+    expect(await totals(accountId: bca.id), (5000000, 1500000, 3500000));
+    expect(await totals(categoryId: food.id), (0, 1300000, -1300000));
+    expect(await totals(accountId: bca.id, categoryId: food.id), (
+      0,
+      1000000,
+      -1000000,
+    ));
+    expect(await totals(accountId: 999999), (0, 0, 0));
+    final balances = await accountRepository.watchSummaries().first;
+    expect(
+      balances
+          .where(
+            (item) => item.account.id == bca.id || item.account.id == cash.id,
+          )
+          .fold<int>(0, (sum, item) => sum + item.balance),
+      9700000,
+    );
+  });
+
   test('chart totals reconcile and exclude transfers, initial balance, and deletes', () async {
     final accounts = AccountRepository(database);
     final bca = await accounts.create(
@@ -249,6 +369,16 @@ void main() {
       expect(monthly, hasLength(12));
       expect(monthly.first.period, DateTime(2026));
       expect(monthly.last.period, DateTime(2026, 12));
+
+      final all = await reports
+          .watchFinancialTrend(
+            ReportRange(start: DateTime(2000), end: DateTime(2100, 12, 31)),
+          )
+          .first;
+      expect(all.map((point) => point.period), [
+        DateTime(2025, 12),
+        DateTime(2026),
+      ]);
     },
   );
 
@@ -585,7 +715,9 @@ INSERT INTO transactions (
       );
       addTearDown(container.dispose);
 
-      final trend = await container.read(financialTrendProvider(range).future);
+      final trend = await container.read(
+        financialTrendProvider(ReportFilter(range: range)).future,
+      );
       final balances = await container.read(accountBalanceChartProvider.future);
       expect(
         trend.fold<int>(0, (sum, point) => sum + point.income),

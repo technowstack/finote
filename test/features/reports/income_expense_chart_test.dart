@@ -1,6 +1,8 @@
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/features/reports/data/report_repository.dart';
 import 'package:finote/features/reports/domain/report_chart_data.dart';
 import 'package:finote/features/reports/presentation/income_expense_chart.dart';
+import 'package:finote/features/reports/presentation/report_chart_formatters.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,26 @@ import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
+
+  test('partial bucket tooltip stays inside the selected range', () {
+    final range = ReportRange(
+      start: DateTime(2026, 4, 1),
+      end: DateTime(2026, 4, 3),
+    );
+
+    expect(
+      formatChartTooltipPeriod(
+        DateTime(2026, 3, 30),
+        ChartGranularity.week,
+        range: range,
+      ),
+      '1 Apr 2026 - 3 Apr 2026',
+    );
+    expect(
+      formatChartTooltipPeriod(DateTime(2025, 12, 29), ChartGranularity.week),
+      '29 Des 2025 - 4 Jan 2026',
+    );
+  });
 
   Widget app(
     List<FinancialTrendPoint> points, {

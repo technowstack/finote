@@ -4,7 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../accounts/data/account_repository.dart';
+import '../../accounts/domain/account_type.dart';
+import '../../categories/data/category_repository.dart';
+import '../../transactions/domain/transaction_type.dart';
 import '../data/report_chart_providers.dart';
 import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
@@ -49,6 +54,8 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
   late ReportRange _range;
   late ReportPeriod _period;
   DateTimeRange? _customRange;
+  int? _accountId;
+  int? _categoryId;
 
   @override
   void initState() {
@@ -62,8 +69,21 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
 
   @override
   Widget build(BuildContext context) {
-    final trend = ref.watch(financialTrendProvider(_range));
-    final expenseCategories = ref.watch(expenseCategoryChartProvider(_range));
+    final accounts = ref.watch(accountsProvider).valueOrNull ?? const [];
+    final categories = ref.watch(categoriesProvider).valueOrNull ?? const [];
+    final accountId = accounts.any((account) => account.id == _accountId)
+        ? _accountId
+        : null;
+    final categoryId = categories.any((category) => category.id == _categoryId)
+        ? _categoryId
+        : null;
+    final filter = ReportFilter(
+      range: _range,
+      accountId: accountId,
+      categoryId: categoryId,
+    );
+    final trend = ref.watch(financialTrendProvider(filter));
+    final expenseCategories = ref.watch(expenseCategoryChartProvider(filter));
     final accountBalances = ref.watch(accountBalanceChartProvider);
     final categoryCount = expenseCategories.valueOrNull?.length ?? 0;
     final accountCount =
@@ -106,11 +126,69 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
               AppSpacing.screenH,
               0,
             ),
-            child: Text(
-              _rangeLabel(_range),
-              style: Theme.of(context).textTheme.bodySmall,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _rangeLabel(_range, _period),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('analytics-filter'),
+                  onPressed: () => _openFilters(
+                    accounts,
+                    categories,
+                    accountId: accountId,
+                    categoryId: categoryId,
+                  ),
+                  icon: const Icon(Icons.filter_list, size: 18),
+                  label: Text(
+                    filter.hasTransactionFilter
+                        ? 'Filter (${[accountId, categoryId].whereType<int>().length})'
+                        : 'Filter',
+                  ),
+                ),
+              ],
             ),
           ),
+          if (filter.hasTransactionFilter)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                AppSpacing.sm,
+                AppSpacing.screenH,
+                0,
+              ),
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (accountId != null)
+                    InputChip(
+                      label: Text(
+                        'Akun: ${_accountLabel(accounts.firstWhere((item) => item.id == accountId))}',
+                      ),
+                      onDeleted: () => setState(() => _accountId = null),
+                    ),
+                  if (categoryId != null)
+                    InputChip(
+                      label: Text(
+                        'Kategori: ${_categoryLabel(categories.firstWhere((item) => item.id == categoryId))}',
+                      ),
+                      onDeleted: () => setState(() => _categoryId = null),
+                    ),
+                  TextButton(
+                    onPressed: _resetFilters,
+                    child: const Text('Reset'),
+                  ),
+                  const Text(
+                    'Filter akun dan kategori tidak mengubah Saldo per Akun.',
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenH,
@@ -132,12 +210,15 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   subtitle: 'Perbandingan berdasarkan periode analisis',
                   data: trend,
                   isEmpty: (points) => !hasIncomeExpenseData(points),
-                  onRetry: () => ref.invalidate(financialTrendProvider(_range)),
+                  onRetry: () => ref.invalidate(financialTrendProvider(filter)),
                   height: 340,
-                  emptyMessage: 'Belum ada transaksi pada periode ini.',
+                  emptyMessage: filter.hasTransactionFilter
+                      ? 'Tidak ada data untuk filter ini.'
+                      : 'Belum ada transaksi pada periode ini.',
                   builder: (context, points) => IncomeExpenseChart(
                     points: points,
                     granularity: granularity,
+                    range: _range,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -153,9 +234,11 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   data: expenseCategories,
                   isEmpty: (points) => points.isEmpty,
                   onRetry: () =>
-                      ref.invalidate(expenseCategoryChartProvider(_range)),
+                      ref.invalidate(expenseCategoryChartProvider(filter)),
                   height: _categoryChartHeight(categoryCount),
-                  emptyMessage: 'Belum ada pengeluaran pada periode ini.',
+                  emptyMessage: filter.hasTransactionFilter
+                      ? 'Tidak ada data untuk filter ini.'
+                      : 'Belum ada pengeluaran pada periode ini.',
                   builder: (context, points) => ExpenseCategoryChart(
                     points: visibleExpenseCategories(points),
                   ),
@@ -172,12 +255,15 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   subtitle: 'Pergerakan pemasukan, pengeluaran, dan net',
                   data: trend,
                   isEmpty: (points) => !hasFinancialTrendData(points),
-                  onRetry: () => ref.invalidate(financialTrendProvider(_range)),
+                  onRetry: () => ref.invalidate(financialTrendProvider(filter)),
                   height: 360,
-                  emptyMessage: 'Belum ada data tren pada periode ini.',
+                  emptyMessage: filter.hasTransactionFilter
+                      ? 'Tidak ada data untuk filter ini.'
+                      : 'Belum ada data tren pada periode ini.',
                   builder: (context, points) => FinancialTrendChart(
                     points: points,
                     granularity: granularity,
+                    range: _range,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -240,7 +326,156 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
       _range = resolveReportRange(ReportPeriod.custom, customRange: selected);
     });
   }
+
+  Future<void> _openFilters(
+    List<AccountRecord> accounts,
+    List<CategoryRecord> categories, {
+    required int? accountId,
+    required int? categoryId,
+  }) async {
+    final result =
+        await showModalBottomSheet<({int? accountId, int? categoryId})>(
+          context: context,
+          isScrollControlled: true,
+          builder: (context) => _AnalyticsFilterSheet(
+            accounts: accounts,
+            categories: categories,
+            accountId: accountId,
+            categoryId: categoryId,
+          ),
+        );
+    if (result == null || !mounted) return;
+    setState(() {
+      _accountId = result.accountId;
+      _categoryId = result.categoryId;
+    });
+  }
+
+  void _resetFilters() => setState(() {
+    _period = ReportPeriod.month;
+    _customRange = null;
+    _range = resolveReportRange(ReportPeriod.month);
+    _accountId = null;
+    _categoryId = null;
+  });
 }
+
+class _AnalyticsFilterSheet extends StatefulWidget {
+  const _AnalyticsFilterSheet({
+    required this.accounts,
+    required this.categories,
+    required this.accountId,
+    required this.categoryId,
+  });
+
+  final List<AccountRecord> accounts;
+  final List<CategoryRecord> categories;
+  final int? accountId;
+  final int? categoryId;
+
+  @override
+  State<_AnalyticsFilterSheet> createState() => _AnalyticsFilterSheetState();
+}
+
+class _AnalyticsFilterSheetState extends State<_AnalyticsFilterSheet> {
+  late int? _accountId = widget.accountId;
+  late int? _categoryId = widget.categoryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = widget.accounts
+        .where((account) => account.isActive || account.id == _accountId)
+        .toList(growable: false);
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          AppSpacing.lg,
+          AppSpacing.screenH,
+          AppSpacing.lg + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Filter Analisis',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            DropdownButtonFormField<int?>(
+              key: const Key('analytics-account-filter'),
+              initialValue: _accountId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Akun'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Semua Akun')),
+                for (final account in accounts)
+                  DropdownMenuItem(
+                    value: account.id,
+                    child: Text(
+                      '${_accountLabel(account)}${account.isActive ? '' : ' (diarsipkan)'}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _accountId = value),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            DropdownButtonFormField<int?>(
+              key: const Key('analytics-category-filter'),
+              initialValue: _categoryId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Kategori'),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Semua Kategori'),
+                ),
+                for (final category in widget.categories)
+                  DropdownMenuItem(
+                    value: category.id,
+                    child: Text(
+                      _categoryLabel(category),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _categoryId = value),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => setState(() {
+                    _accountId = null;
+                    _categoryId = null;
+                  }),
+                  child: const Text('Reset'),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, (
+                    accountId: _accountId,
+                    categoryId: _categoryId,
+                  )),
+                  child: const Text('Terapkan'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _accountLabel(AccountRecord account) =>
+    '${account.name} - ${account.type.label}';
+
+String _categoryLabel(CategoryRecord category) =>
+    '${category.name} - ${category.type == TransactionType.income ? 'Pemasukan' : 'Pengeluaran'}';
 
 double _categoryChartHeight(int categoryCount) {
   final visibleCount = categoryCount > maxVisibleExpenseCategories
@@ -252,7 +487,12 @@ double _categoryChartHeight(int categoryCount) {
 double _accountChartHeight(int accountCount) =>
     max(270, accountCount * 80 + 130).toDouble();
 
-String _rangeLabel(ReportRange range) {
+String _rangeLabel(ReportRange range, ReportPeriod period) {
+  if (period == ReportPeriod.all) return 'Semua transaksi';
+  if (period == ReportPeriod.month) {
+    return DateFormat('MMMM y', 'id_ID').format(range.start);
+  }
+  if (period == ReportPeriod.year) return '${range.start.year}';
   final format = DateFormat('d MMM y', 'id_ID');
   if (range.start == range.end) return format.format(range.start);
   return '${format.format(range.start)} - ${format.format(range.end)}';

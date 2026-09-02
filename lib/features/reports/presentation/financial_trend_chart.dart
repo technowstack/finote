@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
 import 'report_chart_formatters.dart';
 
@@ -15,10 +16,12 @@ class FinancialTrendChart extends StatelessWidget {
     super.key,
     required this.points,
     required this.granularity,
+    this.range,
   });
 
   final List<FinancialTrendPoint> points;
   final ChartGranularity granularity;
+  final ReportRange? range;
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +203,7 @@ class FinancialTrendChart extends StatelessWidget {
                               .copyWith(color: colors.onInverseSurface);
                           return [
                             LineTooltipItem(
-                              '${formatChartTooltipPeriod(point.period, granularity)}\n',
+                              '${formatChartTooltipPeriod(point.period, granularity, range: range)}\n',
                               style.copyWith(fontWeight: FontWeight.w700),
                               children: [
                                 TextSpan(
@@ -244,7 +247,7 @@ class FinancialTrendChart extends StatelessWidget {
         .where((point) => point.income != 0 || point.expense != 0)
         .map(
           (point) =>
-              '${formatChartTooltipPeriod(point.period, granularity)}: '
+              '${formatChartTooltipPeriod(point.period, granularity, range: range)}: '
               'Pemasukan ${formatIdr(point.income)}, '
               'Pengeluaran ${formatIdr(point.expense)}, '
               'Net ${formatIdr(point.net)}',

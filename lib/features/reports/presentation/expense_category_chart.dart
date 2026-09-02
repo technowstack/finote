@@ -45,6 +45,7 @@ class ExpenseCategoryChart extends StatelessWidget {
       0,
       (value, point) => max(value, point.amount),
     );
+    final total = points.fold<int>(0, (sum, point) => sum + point.amount);
     if (maxAmount <= 0) {
       return const AppEmptyState(
         icon: Icons.bar_chart_outlined,
@@ -57,7 +58,7 @@ class ExpenseCategoryChart extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           for (final point in points)
-            _CategoryBar(point: point, maxAmount: maxAmount),
+            _CategoryBar(point: point, maxAmount: maxAmount, total: total),
         ],
       ),
     );
@@ -65,19 +66,27 @@ class ExpenseCategoryChart extends StatelessWidget {
 }
 
 class _CategoryBar extends StatelessWidget {
-  const _CategoryBar({required this.point, required this.maxAmount});
+  const _CategoryBar({
+    required this.point,
+    required this.maxAmount,
+    required this.total,
+  });
 
   final CategoryChartPoint point;
   final int maxAmount;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Semantics(
       container: true,
-      label: '${point.categoryName}, ${formatIdr(point.amount)}',
+      label:
+          '${point.categoryName}, ${formatIdr(point.amount)}, ${(point.amount * 100 / total).round()} persen',
       child: Tooltip(
-        message: '${point.categoryName}\n${formatIdr(point.amount)}',
+        triggerMode: TooltipTriggerMode.tap,
+        message:
+            '${point.categoryName}\n${formatIdr(point.amount)}\n${(point.amount * 100 / total).round()}%',
         child: ExcludeSemantics(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

@@ -11,15 +11,24 @@ class ReportRepository {
 
   final AppDatabase _database;
 
-  Stream<ReportData> watchReport(ReportRange range) {
+  Stream<ReportData> watchReport(
+    ReportRange range, {
+    int? accountId,
+    int? categoryId,
+  }) {
+    final transactionFilter = _transactionFilter(
+      range,
+      accountId: accountId,
+      categoryId: categoryId,
+    );
     const converter = DateOnlyConverter();
     return _database
         .customSelect(
           '''
 WITH filtered AS (
-  SELECT type, amount, category_id, transaction_date
-  FROM transactions
-  WHERE deleted_at IS NULL AND transaction_date BETWEEN ? AND ?
+  SELECT t.type, t.amount, t.category_id, t.transaction_date
+  FROM transactions t
+  WHERE ${transactionFilter.sql}
 ),
 filtered_transfers AS (
   SELECT amount
@@ -87,8 +96,7 @@ ORDER BY
   label ASC
 ''',
           variables: [
-            Variable.withString(converter.toSql(range.start)),
-            Variable.withString(converter.toSql(range.end)),
+            ...transactionFilter.variables,
             Variable.withString(converter.toSql(range.start)),
             Variable.withString(converter.toSql(range.end)),
           ],
@@ -102,8 +110,17 @@ ORDER BY
         .map(_mapRows);
   }
 
-  Stream<List<FinancialTrendPoint>> watchFinancialTrend(ReportRange range) {
+  Stream<List<FinancialTrendPoint>> watchFinancialTrend(
+    ReportRange range, {
+    int? accountId,
+    int? categoryId,
+  }) {
     final granularity = chartGranularityFor(range);
+    final transactionFilter = _transactionFilter(
+      range,
+      accountId: accountId,
+      categoryId: categoryId,
+    );
     final bucket = switch (granularity) {
       ChartGranularity.day => 'transaction_date',
       ChartGranularity.week =>
@@ -121,15 +138,12 @@ SELECT $bucket AS period,
          AS income,
        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)
          AS expense
-FROM transactions
-WHERE deleted_at IS NULL AND transaction_date BETWEEN ? AND ?
+FROM transactions t
+WHERE ${transactionFilter.sql}
 GROUP BY period
 ORDER BY period ASC
 ''',
-          variables: [
-            Variable.withString(converter.toSql(range.start)),
-            Variable.withString(converter.toSql(range.end)),
-          ],
+          variables: transactionFilter.variables,
           readsFrom: {_database.transactions},
         )
         .watch()
@@ -144,8 +158,16 @@ ORDER BY period ASC
         );
   }
 
-  Stream<List<CategoryChartPoint>> watchExpenseCategories(ReportRange range) {
-    const converter = DateOnlyConverter();
+  Stream<List<CategoryChartPoint>> watchExpenseCategories(
+    ReportRange range, {
+    int? accountId,
+    int? categoryId,
+  }) {
+    final transactionFilter = _transactionFilter(
+      range,
+      accountId: accountId,
+      categoryId: categoryId,
+    );
     return _database
         .customSelect(
           '''
@@ -155,16 +177,12 @@ SELECT t.category_id AS category_id,
        SUM(t.amount) AS amount
 FROM transactions t
 LEFT JOIN categories c ON c.id = t.category_id
-WHERE t.deleted_at IS NULL
+WHERE ${transactionFilter.sql}
   AND t.type = 'expense'
-  AND t.transaction_date BETWEEN ? AND ?
 GROUP BY t.category_id, c.name
 ORDER BY amount DESC, category_name COLLATE NOCASE ASC, t.category_id ASC
 ''',
-          variables: [
-            Variable.withString(converter.toSql(range.start)),
-            Variable.withString(converter.toSql(range.end)),
-          ],
+          variables: transactionFilter.variables,
           readsFrom: {_database.transactions, _database.categories},
         )
         .watch()
@@ -254,13 +272,24 @@ List<FinancialTrendPoint> _completeTrend(
   ChartGranularity granularity,
   Map<DateTime, ({int income, int expense})> values,
 ) {
-  final end = _dateOnly(range.end);
+  if (values.isEmpty && range.isAll) return const [];
+  final end = range.isAll
+      ? values.keys.reduce((a, b) => a.isAfter(b) ? a : b)
+      : _dateOnly(range.end);
   var period = switch (granularity) {
-    ChartGranularity.day => _dateOnly(range.start),
-    ChartGranularity.week => _dateOnly(
-      range.start,
-    ).subtract(Duration(days: range.start.weekday - 1)),
-    ChartGranularity.month => DateTime(range.start.year, range.start.month),
+    ChartGranularity.day =>
+      range.isAll
+          ? values.keys.reduce((a, b) => a.isBefore(b) ? a : b)
+          : _dateOnly(range.start),
+    ChartGranularity.week =>
+      range.isAll
+          ? values.keys.reduce((a, b) => a.isBefore(b) ? a : b)
+          : _dateOnly(range.start)
+                .subtract(Duration(days: range.start.weekday - 1)),
+    ChartGranularity.month =>
+      range.isAll
+          ? values.keys.reduce((a, b) => a.isBefore(b) ? a : b)
+          : DateTime(range.start.year, range.start.month),
   };
   final points = <FinancialTrendPoint>[];
   while (!period.isAfter(end)) {
@@ -337,6 +366,8 @@ class ReportRange {
   final DateTime start;
   final DateTime end;
 
+  bool get isAll => start == DateTime(2000) && end == DateTime(2100, 12, 31);
+
   @override
   bool operator ==(Object other) =>
       other is ReportRange && other.start == start && other.end == end;
@@ -345,11 +376,72 @@ class ReportRange {
   int get hashCode => Object.hash(start, end);
 }
 
+class ReportFilter {
+  ReportFilter({required ReportRange range, this.accountId, this.categoryId})
+    : range = _normalizedRange(range);
+
+  final ReportRange range;
+  final int? accountId;
+  final int? categoryId;
+
+  bool get hasTransactionFilter => accountId != null || categoryId != null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReportFilter &&
+      other.range == range &&
+      other.accountId == accountId &&
+      other.categoryId == categoryId;
+
+  @override
+  int get hashCode => Object.hash(range, accountId, categoryId);
+}
+
+ReportRange _normalizedRange(ReportRange range) {
+  final normalized = ReportRange(
+    start: _dateOnly(range.start),
+    end: _dateOnly(range.end),
+  );
+  if (normalized.start.isAfter(normalized.end)) {
+    throw ArgumentError('Invalid report range');
+  }
+  return normalized;
+}
+
+({String sql, List<Variable<Object>> variables}) _transactionFilter(
+  ReportRange range, {
+  int? accountId,
+  int? categoryId,
+}) {
+  const converter = DateOnlyConverter();
+  final conditions = [
+    't.deleted_at IS NULL',
+    't.transaction_date BETWEEN ? AND ?',
+    if (accountId != null) 't.account_id = ?',
+    if (categoryId != null) 't.category_id = ?',
+  ];
+  return (
+    sql: conditions.join(' AND '),
+    variables: <Variable<Object>>[
+      Variable.withString(converter.toSql(range.start)),
+      Variable.withString(converter.toSql(range.end)),
+      if (accountId != null) Variable.withInt(accountId),
+      if (categoryId != null) Variable.withInt(categoryId),
+    ],
+  );
+}
+
 final reportRepositoryProvider = Provider<ReportRepository>(
   (ref) => ReportRepository(ref.watch(databaseProvider)),
 );
 
 final reportProvider = StreamProvider.autoDispose
-    .family<ReportData, ReportRange>(
-      (ref, range) => ref.watch(reportRepositoryProvider).watchReport(range),
+    .family<ReportData, ReportFilter>(
+      (ref, filter) => ref
+          .watch(reportRepositoryProvider)
+          .watchReport(
+            filter.range,
+            accountId: filter.accountId,
+            categoryId: filter.categoryId,
+          ),
     );

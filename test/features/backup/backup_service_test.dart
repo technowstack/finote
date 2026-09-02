@@ -987,9 +987,11 @@ void main() {
         );
         final report = await container.read(
           reportProvider(
-            ReportRange(
-              start: DateTime(2026, 8, 1),
-              end: DateTime(2026, 8, 31),
+            ReportFilter(
+              range: ReportRange(
+                start: DateTime(2026, 8, 1),
+                end: DateTime(2026, 8, 31),
+              ),
             ),
           ).future,
         );

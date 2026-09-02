@@ -5,15 +5,25 @@ import '../domain/report_chart_data.dart';
 import 'report_repository.dart';
 
 final financialTrendProvider = StreamProvider.autoDispose
-    .family<List<FinancialTrendPoint>, ReportRange>(
-      (ref, range) =>
-          ref.watch(reportRepositoryProvider).watchFinancialTrend(range),
+    .family<List<FinancialTrendPoint>, ReportFilter>(
+      (ref, filter) => ref
+          .watch(reportRepositoryProvider)
+          .watchFinancialTrend(
+            filter.range,
+            accountId: filter.accountId,
+            categoryId: filter.categoryId,
+          ),
     );
 
 final expenseCategoryChartProvider = StreamProvider.autoDispose
-    .family<List<CategoryChartPoint>, ReportRange>(
-      (ref, range) =>
-          ref.watch(reportRepositoryProvider).watchExpenseCategories(range),
+    .family<List<CategoryChartPoint>, ReportFilter>(
+      (ref, filter) => ref
+          .watch(reportRepositoryProvider)
+          .watchExpenseCategories(
+            filter.range,
+            accountId: filter.accountId,
+            categoryId: filter.categoryId,
+          ),
     );
 
 final accountBalanceChartProvider =

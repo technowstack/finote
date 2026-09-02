@@ -140,6 +140,7 @@ class _AccountBar extends StatelessWidget {
       label:
           '${point.accountName}, ${point.accountType.label}, ${formatIdr(point.balance)}',
       child: Tooltip(
+        triggerMode: TooltipTriggerMode.tap,
         message:
             '${point.accountName}\n${point.accountType.label}\n${formatIdr(point.balance)}',
         child: ExcludeSemantics(

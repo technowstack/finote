@@ -165,6 +165,16 @@ void main() {
             .selected,
         isTrue,
       );
+      await tester.tap(find.text('Tahun ini'));
+      await tester.tap(find.text('Minggu ini'));
+      await tester.tap(find.text('Bulan ini'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bulan ini'))
+            .selected,
+        isTrue,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 1));
@@ -331,6 +341,148 @@ void main() {
         500000.0,
         9500000.0,
       ));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 1));
+    },
+  );
+
+  testWidgets(
+    'account and category filters apply together and reset without filtering assets',
+    (tester) async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final accountRepository = AccountRepository(database);
+      final bca = await accountRepository.create(
+        name: 'BCA Filter',
+        type: AccountType.bank,
+        initialBalance: 5000000,
+      );
+      final cash = await accountRepository.create(
+        name: 'Cash Filter',
+        type: AccountType.cash,
+        initialBalance: 500000,
+      );
+      final categoryRepository = CategoryRepository(database);
+      final salary = await categoryRepository.create(
+        name: 'Gaji Filter',
+        type: TransactionType.income,
+      );
+      final food = await categoryRepository.create(
+        name: 'Makanan Filter',
+        type: TransactionType.expense,
+      );
+      final transport = await categoryRepository.create(
+        name: 'Transport Filter',
+        type: TransactionType.expense,
+      );
+      final transactions = TransactionRepository(database);
+      for (final entry in [
+        (bca.id, salary.id, TransactionType.income, 5000000),
+        (bca.id, food.id, TransactionType.expense, 1000000),
+        (bca.id, transport.id, TransactionType.expense, 500000),
+        (cash.id, salary.id, TransactionType.income, 1000000),
+        (cash.id, food.id, TransactionType.expense, 300000),
+      ]) {
+        await transactions.create(
+          accountId: entry.$1,
+          categoryId: entry.$2,
+          type: entry.$3,
+          amount: entry.$4,
+          transactionDate: DateTime(2026, 9, 12),
+        );
+      }
+      await TransferRepository(database).create(
+        fromAccountId: bca.id,
+        toAccountId: cash.id,
+        amount: 2000000,
+        transferDate: DateTime(2026, 9, 12),
+      );
+      final range = ReportRange(
+        start: DateTime(2026, 9, 1),
+        end: DateTime(2026, 9, 30),
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [databaseProvider.overrideWithValue(database)],
+          child: MaterialApp(home: AnalyticsChartPage(initialRange: range)),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_chartTotals(tester.widget<BarChart>(find.byType(BarChart))), (
+        6000000.0,
+        1800000.0,
+      ));
+      final totalAssets = tester
+          .widget<AccountBalanceChart>(find.byType(AccountBalanceChart))
+          .totalAssets;
+
+      await tester.tap(find.byKey(const Key('analytics-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('analytics-account-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('BCA Filter - Bank').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('analytics-category-filter')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Makanan Filter - Pengeluaran').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Terapkan'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Akun: BCA Filter - Bank'), findsOneWidget);
+      expect(
+        find.text('Kategori: Makanan Filter - Pengeluaran'),
+        findsOneWidget,
+      );
+      expect(_chartTotals(tester.widget<BarChart>(find.byType(BarChart))), (
+        0.0,
+        1000000.0,
+      ));
+      final categoryChart = tester.widget<ExpenseCategoryChart>(
+        find.byType(ExpenseCategoryChart),
+      );
+      expect(
+        categoryChart.points.map((point) => (point.categoryName, point.amount)),
+        [('Makanan Filter', 1000000)],
+      );
+      expect(_trendTotals(tester.widget<LineChart>(find.byType(LineChart))), (
+        0.0,
+        1000000.0,
+        -1000000.0,
+      ));
+      expect(
+        tester
+            .widget<AccountBalanceChart>(find.byType(AccountBalanceChart))
+            .totalAssets,
+        totalAssets,
+      );
+
+      await accountRepository.archive(bca.id);
+      await tester.pumpAndSettle();
+      expect(find.text('Akun: BCA Filter - Bank'), findsOneWidget);
+      expect(_chartTotals(tester.widget<BarChart>(find.byType(BarChart))), (
+        0.0,
+        1000000.0,
+      ));
+      await tester.tap(find.byKey(const Key('analytics-filter')));
+      await tester.pumpAndSettle();
+      expect(find.text('BCA Filter - Bank (diarsipkan)'), findsOneWidget);
+      await tester.tap(find.text('Terapkan'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(find.text('Akun: BCA Filter - Bank'), findsNothing);
+      expect(find.text('Kategori: Makanan Filter - Pengeluaran'), findsNothing);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bulan ini'))
+            .selected,
+        isTrue,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 1));

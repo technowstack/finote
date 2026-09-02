@@ -58,7 +58,7 @@ void main() {
 
       final semantics = tester.getSemantics(find.byType(AccountBalanceChart));
       expect(semantics.label, contains('Dompet Minus, E-Wallet, -Rp500.000'));
-      await tester.longPress(find.text('Dompet Minus'));
+      await tester.tap(find.text('Dompet Minus'));
       await tester.pumpAndSettle();
       expect(find.text('Dompet Minus\nE-Wallet\n-Rp500.000'), findsOneWidget);
       expect(tester.takeException(), isNull);
