@@ -25,7 +25,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('fresh database creates version 9 tables and indexes', () async {
+  test('fresh database creates version 10 tables and indexes', () async {
     final schema = await database
         .customSelect(
           "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -33,7 +33,7 @@ void main() {
         .get();
     final names = schema.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 9);
+    expect(database.schemaVersion, 10);
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
         .getSingle();
@@ -47,6 +47,7 @@ void main() {
         'settings',
         'assets',
         'asset_transactions',
+        'asset_prices',
       ]),
     );
     expect(
@@ -70,6 +71,8 @@ void main() {
         'asset_transactions_date',
         'asset_transactions_deleted_at',
         'asset_transactions_source_transaction_id',
+        'asset_prices_asset_id',
+        'asset_prices_fetched_at',
       ]),
     );
     final defaultAccount = await database.select(database.accounts).getSingle();
@@ -215,44 +218,49 @@ void main() {
     await expectLater(insert(), throwsA(isA<Exception>()));
   });
 
-  test('version 1 database migrates to version 9 without recreation', () async {
-    await database.close();
-    database = AppDatabase(
-      NativeDatabase.memory(
-        setup: (sqlite) {
-          sqlite.execute(
-            'CREATE TABLE phase_zero_marker (value TEXT NOT NULL)',
-          );
-          sqlite.execute("INSERT INTO phase_zero_marker VALUES ('preserved')");
-          sqlite.userVersion = 1;
-        },
-      ),
-    );
+  test(
+    'version 1 database migrates to version 10 without recreation',
+    () async {
+      await database.close();
+      database = AppDatabase(
+        NativeDatabase.memory(
+          setup: (sqlite) {
+            sqlite.execute(
+              'CREATE TABLE phase_zero_marker (value TEXT NOT NULL)',
+            );
+            sqlite.execute(
+              "INSERT INTO phase_zero_marker VALUES ('preserved')",
+            );
+            sqlite.userVersion = 1;
+          },
+        ),
+      );
 
-    final tables = await database
-        .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
-        .get();
-    final version = await database
-        .customSelect('PRAGMA user_version')
-        .getSingle();
-    final marker = await database
-        .customSelect('SELECT value FROM phase_zero_marker')
-        .getSingle();
+      final tables = await database
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .get();
+      final version = await database
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      final marker = await database
+          .customSelect('SELECT value FROM phase_zero_marker')
+          .getSingle();
 
-    expect(version.read<int>('user_version'), 9);
-    expect(marker.read<String>('value'), 'preserved');
-    expect(
-      tables.map((row) => row.read<String>('name')),
-      containsAll([
-        'accounts',
-        'categories',
-        'transactions',
-        'settings',
-        'assets',
-        'asset_transactions',
-      ]),
-    );
-  });
+      expect(version.read<int>('user_version'), 10);
+      expect(marker.read<String>('value'), 'preserved');
+      expect(
+        tables.map((row) => row.read<String>('name')),
+        containsAll([
+          'accounts',
+          'categories',
+          'transactions',
+          'settings',
+          'assets',
+          'asset_transactions',
+        ]),
+      );
+    },
+  );
 
   test('populated version 2 database preserves financial rows', () async {
     await database.close();
@@ -314,7 +322,7 @@ void main() {
         .customSelect('PRAGMA table_info(transactions)')
         .get();
 
-    expect(database.schemaVersion, 9);
+    expect(database.schemaVersion, 10);
     expect(transaction.uuid, 'transaction-v2');
     expect(transaction.amount, 25000);
     expect(transaction.transactionDate, DateTime(2026, 8, 29));

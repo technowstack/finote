@@ -35,7 +35,9 @@
 
 ## Current
 
-Finote v1.3.0 Phase 7A Asset Domain Foundation is complete through holdings calculation. Market Data remains unimplemented.
+Finote v1.3.0 Phase 7A is complete. Phase 7B.1 through 7B.5 now provide the
+market client, batch quotes, local last-known prices, manual pricing, and
+current market value.
 
 Current focus:
 
@@ -49,13 +51,19 @@ Current focus:
 - [x] Define Market API client / batch quote / offline-price-cache architecture
 - [x] Define Backup/Restore and backward compatibility impact
 - [x] Produce implementation plan before Phase 7A.2
+- [x] Phase 7B.1 — Market API Client Foundation
+- [x] Phase 7B.2 — Batch Quote Integration
+- [x] Phase 7B.3 — Local Last-Known Price Cache
+- [x] Phase 7B.4 — Manual Asset Pricing
+- [x] Phase 7B.5 — Current Market Value
+- [ ] Market API end-to-end integration audit and runtime stabilization
 
 ## Current Product State
 
 ```text
 Finote v1.2.0
 REPORTS VISUALIZATION & ANALYTICS COMPLETE
-FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A COMPLETE
+FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7B COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -93,11 +101,11 @@ These external tasks do not reopen the v1.0 feature scope.
 
 ### Phase 7B — Market Data
 
-- [ ] 7B.1 Market API Client Foundation
-- [ ] 7B.2 Batch Quote Integration
-- [ ] 7B.3 Local Last-Known Price Cache
-- [ ] 7B.4 Manual Asset Pricing
-- [ ] 7B.5 Current Market Value
+- [x] 7B.1 Market API Client Foundation
+- [x] 7B.2 Batch Quote Integration
+- [x] 7B.3 Local Last-Known Price Cache
+- [x] 7B.4 Manual Asset Pricing
+- [x] 7B.5 Current Market Value
 
 ### Phase 7C — Portfolio
 
@@ -442,8 +450,8 @@ AI:
 
 ## Immediate Action
 
-Finote v1.3.0 Phase 7A Asset Domain Foundation is complete through holdings
-calculation. Market Data remains unimplemented.
+Finote v1.3.0 Phase 7A is complete and Phase 7B Market Data is complete
+through current market value.
 
 Current rules:
 
@@ -460,7 +468,7 @@ Current rules:
 
 Next active implementation:
 
-> **Phase 7B.1 — Market API Client Foundation**
+> **Market API end-to-end integration audit and runtime stabilization**
 
 
 ---
@@ -487,6 +495,7 @@ Next active implementation:
 
 ### Current active task
 
-> **7B.1 — Market API Client Foundation** (not started)
+> **Market API end-to-end integration audit and runtime stabilization**
 
-7A.1 through 7A.6 are complete. Do not start 7B.1 automatically.
+7A.1 through 7A.6 and 7B.1 through 7B.5 are complete. The next approved
+phase is 7C.1 Portfolio Screen Foundation, treated as a UI audit/polish phase.

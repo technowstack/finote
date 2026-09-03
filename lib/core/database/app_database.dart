@@ -14,6 +14,7 @@ import 'converters.dart';
 import 'tables/categories.dart';
 import 'tables/accounts.dart';
 import 'tables/asset_transactions.dart';
+import 'tables/asset_prices.dart';
 import 'tables/assets.dart';
 import 'tables/settings.dart';
 import 'tables/transactions.dart';
@@ -30,6 +31,7 @@ part 'app_database.g.dart';
     Settings,
     Assets,
     AssetTransactions,
+    AssetPrices,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -37,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -86,6 +88,17 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(assets);
         await migrator.createTable(assetTransactions);
         await _ensureAssetIndexes();
+      }
+      if (from < 10) {
+        await migrator.createTable(assetPrices);
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS asset_prices_asset_id '
+          'ON asset_prices (asset_id)',
+        );
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS asset_prices_fetched_at '
+          'ON asset_prices (fetched_at)',
+        );
       }
     },
     onCreate: (migrator) async {

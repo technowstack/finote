@@ -4287,6 +4287,484 @@ class AssetTransactionsCompanion
   }
 }
 
+class $AssetPricesTable extends AssetPrices
+    with TableInfo<$AssetPricesTable, AssetPriceRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetPricesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<int> assetId = GeneratedColumn<int>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES assets (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _priceAmountMeta = const VerificationMeta(
+    'priceAmount',
+  );
+  @override
+  late final GeneratedColumn<int> priceAmount = GeneratedColumn<int>(
+    'price_amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _marketUpdatedAtMeta = const VerificationMeta(
+    'marketUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> marketUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'market_updated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> fetchedAt = GeneratedColumn<DateTime>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isBackendStaleMeta = const VerificationMeta(
+    'isBackendStale',
+  );
+  @override
+  late final GeneratedColumn<bool> isBackendStale = GeneratedColumn<bool>(
+    'is_backend_stale',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_backend_stale" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    assetId,
+    priceAmount,
+    currency,
+    marketUpdatedAt,
+    fetchedAt,
+    isBackendStale,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_prices';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetPriceRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('price_amount')) {
+      context.handle(
+        _priceAmountMeta,
+        priceAmount.isAcceptableOrUnknown(
+          data['price_amount']!,
+          _priceAmountMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_priceAmountMeta);
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyMeta);
+    }
+    if (data.containsKey('market_updated_at')) {
+      context.handle(
+        _marketUpdatedAtMeta,
+        marketUpdatedAt.isAcceptableOrUnknown(
+          data['market_updated_at']!,
+          _marketUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    if (data.containsKey('is_backend_stale')) {
+      context.handle(
+        _isBackendStaleMeta,
+        isBackendStale.isAcceptableOrUnknown(
+          data['is_backend_stale']!,
+          _isBackendStaleMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AssetPriceRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetPriceRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      priceAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}price_amount'],
+      )!,
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
+      marketUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}market_updated_at'],
+      ),
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+      isBackendStale: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_backend_stale'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetPricesTable createAlias(String alias) {
+    return $AssetPricesTable(attachedDatabase, alias);
+  }
+}
+
+class AssetPriceRecord extends DataClass
+    implements Insertable<AssetPriceRecord> {
+  final int id;
+  final int assetId;
+  final int priceAmount;
+  final String currency;
+  final DateTime? marketUpdatedAt;
+  final DateTime fetchedAt;
+  final bool isBackendStale;
+  const AssetPriceRecord({
+    required this.id,
+    required this.assetId,
+    required this.priceAmount,
+    required this.currency,
+    this.marketUpdatedAt,
+    required this.fetchedAt,
+    required this.isBackendStale,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['asset_id'] = Variable<int>(assetId);
+    map['price_amount'] = Variable<int>(priceAmount);
+    map['currency'] = Variable<String>(currency);
+    if (!nullToAbsent || marketUpdatedAt != null) {
+      map['market_updated_at'] = Variable<DateTime>(marketUpdatedAt);
+    }
+    map['fetched_at'] = Variable<DateTime>(fetchedAt);
+    map['is_backend_stale'] = Variable<bool>(isBackendStale);
+    return map;
+  }
+
+  AssetPricesCompanion toCompanion(bool nullToAbsent) {
+    return AssetPricesCompanion(
+      id: Value(id),
+      assetId: Value(assetId),
+      priceAmount: Value(priceAmount),
+      currency: Value(currency),
+      marketUpdatedAt: marketUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(marketUpdatedAt),
+      fetchedAt: Value(fetchedAt),
+      isBackendStale: Value(isBackendStale),
+    );
+  }
+
+  factory AssetPriceRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetPriceRecord(
+      id: serializer.fromJson<int>(json['id']),
+      assetId: serializer.fromJson<int>(json['assetId']),
+      priceAmount: serializer.fromJson<int>(json['priceAmount']),
+      currency: serializer.fromJson<String>(json['currency']),
+      marketUpdatedAt: serializer.fromJson<DateTime?>(json['marketUpdatedAt']),
+      fetchedAt: serializer.fromJson<DateTime>(json['fetchedAt']),
+      isBackendStale: serializer.fromJson<bool>(json['isBackendStale']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'assetId': serializer.toJson<int>(assetId),
+      'priceAmount': serializer.toJson<int>(priceAmount),
+      'currency': serializer.toJson<String>(currency),
+      'marketUpdatedAt': serializer.toJson<DateTime?>(marketUpdatedAt),
+      'fetchedAt': serializer.toJson<DateTime>(fetchedAt),
+      'isBackendStale': serializer.toJson<bool>(isBackendStale),
+    };
+  }
+
+  AssetPriceRecord copyWith({
+    int? id,
+    int? assetId,
+    int? priceAmount,
+    String? currency,
+    Value<DateTime?> marketUpdatedAt = const Value.absent(),
+    DateTime? fetchedAt,
+    bool? isBackendStale,
+  }) => AssetPriceRecord(
+    id: id ?? this.id,
+    assetId: assetId ?? this.assetId,
+    priceAmount: priceAmount ?? this.priceAmount,
+    currency: currency ?? this.currency,
+    marketUpdatedAt: marketUpdatedAt.present
+        ? marketUpdatedAt.value
+        : this.marketUpdatedAt,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+    isBackendStale: isBackendStale ?? this.isBackendStale,
+  );
+  AssetPriceRecord copyWithCompanion(AssetPricesCompanion data) {
+    return AssetPriceRecord(
+      id: data.id.present ? data.id.value : this.id,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      priceAmount: data.priceAmount.present
+          ? data.priceAmount.value
+          : this.priceAmount,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      marketUpdatedAt: data.marketUpdatedAt.present
+          ? data.marketUpdatedAt.value
+          : this.marketUpdatedAt,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+      isBackendStale: data.isBackendStale.present
+          ? data.isBackendStale.value
+          : this.isBackendStale,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetPriceRecord(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('priceAmount: $priceAmount, ')
+          ..write('currency: $currency, ')
+          ..write('marketUpdatedAt: $marketUpdatedAt, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('isBackendStale: $isBackendStale')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    assetId,
+    priceAmount,
+    currency,
+    marketUpdatedAt,
+    fetchedAt,
+    isBackendStale,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetPriceRecord &&
+          other.id == this.id &&
+          other.assetId == this.assetId &&
+          other.priceAmount == this.priceAmount &&
+          other.currency == this.currency &&
+          other.marketUpdatedAt == this.marketUpdatedAt &&
+          other.fetchedAt == this.fetchedAt &&
+          other.isBackendStale == this.isBackendStale);
+}
+
+class AssetPricesCompanion extends UpdateCompanion<AssetPriceRecord> {
+  final Value<int> id;
+  final Value<int> assetId;
+  final Value<int> priceAmount;
+  final Value<String> currency;
+  final Value<DateTime?> marketUpdatedAt;
+  final Value<DateTime> fetchedAt;
+  final Value<bool> isBackendStale;
+  const AssetPricesCompanion({
+    this.id = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.priceAmount = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.marketUpdatedAt = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.isBackendStale = const Value.absent(),
+  });
+  AssetPricesCompanion.insert({
+    this.id = const Value.absent(),
+    required int assetId,
+    required int priceAmount,
+    required String currency,
+    this.marketUpdatedAt = const Value.absent(),
+    required DateTime fetchedAt,
+    this.isBackendStale = const Value.absent(),
+  }) : assetId = Value(assetId),
+       priceAmount = Value(priceAmount),
+       currency = Value(currency),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<AssetPriceRecord> custom({
+    Expression<int>? id,
+    Expression<int>? assetId,
+    Expression<int>? priceAmount,
+    Expression<String>? currency,
+    Expression<DateTime>? marketUpdatedAt,
+    Expression<DateTime>? fetchedAt,
+    Expression<bool>? isBackendStale,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (assetId != null) 'asset_id': assetId,
+      if (priceAmount != null) 'price_amount': priceAmount,
+      if (currency != null) 'currency': currency,
+      if (marketUpdatedAt != null) 'market_updated_at': marketUpdatedAt,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (isBackendStale != null) 'is_backend_stale': isBackendStale,
+    });
+  }
+
+  AssetPricesCompanion copyWith({
+    Value<int>? id,
+    Value<int>? assetId,
+    Value<int>? priceAmount,
+    Value<String>? currency,
+    Value<DateTime?>? marketUpdatedAt,
+    Value<DateTime>? fetchedAt,
+    Value<bool>? isBackendStale,
+  }) {
+    return AssetPricesCompanion(
+      id: id ?? this.id,
+      assetId: assetId ?? this.assetId,
+      priceAmount: priceAmount ?? this.priceAmount,
+      currency: currency ?? this.currency,
+      marketUpdatedAt: marketUpdatedAt ?? this.marketUpdatedAt,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      isBackendStale: isBackendStale ?? this.isBackendStale,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<int>(assetId.value);
+    }
+    if (priceAmount.present) {
+      map['price_amount'] = Variable<int>(priceAmount.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (marketUpdatedAt.present) {
+      map['market_updated_at'] = Variable<DateTime>(marketUpdatedAt.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<DateTime>(fetchedAt.value);
+    }
+    if (isBackendStale.present) {
+      map['is_backend_stale'] = Variable<bool>(isBackendStale.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetPricesCompanion(')
+          ..write('id: $id, ')
+          ..write('assetId: $assetId, ')
+          ..write('priceAmount: $priceAmount, ')
+          ..write('currency: $currency, ')
+          ..write('marketUpdatedAt: $marketUpdatedAt, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('isBackendStale: $isBackendStale')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   late final $AccountsTable accounts = $AccountsTable(this);
@@ -4297,6 +4775,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $AssetsTable assets = $AssetsTable(this);
   late final $AssetTransactionsTable assetTransactions =
       $AssetTransactionsTable(this);
+  late final $AssetPricesTable assetPrices = $AssetPricesTable(this);
   late final Index accountsActive = Index(
     'accounts_active',
     'CREATE INDEX accounts_active ON accounts (is_active)',
@@ -4377,6 +4856,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'asset_transactions_source_transaction_id',
     'CREATE UNIQUE INDEX asset_transactions_source_transaction_id ON asset_transactions (source_transaction_id)',
   );
+  late final Index assetPricesAssetId = Index(
+    'asset_prices_asset_id',
+    'CREATE UNIQUE INDEX asset_prices_asset_id ON asset_prices (asset_id)',
+  );
+  late final Index assetPricesFetchedAt = Index(
+    'asset_prices_fetched_at',
+    'CREATE INDEX asset_prices_fetched_at ON asset_prices (fetched_at)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4389,6 +4876,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     settings,
     assets,
     assetTransactions,
+    assetPrices,
     accountsActive,
     categoriesType,
     categoriesDeletedAt,
@@ -4409,5 +4897,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     assetTransactionsDate,
     assetTransactionsDeletedAt,
     assetTransactionsSourceTransactionId,
+    assetPricesAssetId,
+    assetPricesFetchedAt,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'assets',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('asset_prices', kind: UpdateKind.delete)],
+    ),
+  ]);
 }

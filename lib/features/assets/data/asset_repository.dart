@@ -55,6 +55,9 @@ class AssetRepository {
     return _database.transaction(() async {
       final usage = await getUsage(id);
       if (usage == null || !usage.canDelete) return false;
+      await (_database.delete(
+        _database.assetPrices,
+      )..where((price) => price.assetId.equals(id))).go();
       final deleted = await (_database.delete(
         _database.assets,
       )..where((asset) => asset.id.equals(id))).go();
@@ -75,22 +78,38 @@ class AssetRepository {
     final normalizedCurrency = _validateCurrency(currency);
     final normalizedSymbol = _normalizeSymbol(symbol);
     await _requireUniqueSymbol(assetType, normalizedSymbol, excludingId: id);
-    final count =
-        await (_database.update(
-          _database.assets,
-        )..where((asset) => asset.id.equals(id))).write(
-          AssetsCompanion(
-            symbol: Value(symbol?.trim()),
-            normalizedSymbol: Value(normalizedSymbol),
-            name: Value(normalizedName),
-            assetType: Value(assetType),
-            pricingMode: Value(pricingMode),
-            currency: Value(normalizedCurrency),
-            unitLabel: Value(unitLabel?.trim()),
-            updatedAt: Value(DateTime.now().toUtc()),
-          ),
-        );
-    return count == 1;
+    return _database.transaction(() async {
+      final existing = await findById(id);
+      if (existing == null) return false;
+      final pricingSemanticsChanged =
+          existing.assetType != assetType ||
+          existing.pricingMode != pricingMode ||
+          existing.currency != normalizedCurrency;
+      final apiSymbolChanged =
+          existing.pricingMode == AssetPricingMode.api &&
+          existing.normalizedSymbol != normalizedSymbol;
+      final count =
+          await (_database.update(
+            _database.assets,
+          )..where((asset) => asset.id.equals(id))).write(
+            AssetsCompanion(
+              symbol: Value(symbol?.trim()),
+              normalizedSymbol: Value(normalizedSymbol),
+              name: Value(normalizedName),
+              assetType: Value(assetType),
+              pricingMode: Value(pricingMode),
+              currency: Value(normalizedCurrency),
+              unitLabel: Value(unitLabel?.trim()),
+              updatedAt: Value(DateTime.now().toUtc()),
+            ),
+          );
+      if (pricingSemanticsChanged || apiSymbolChanged) {
+        await (_database.delete(
+          _database.assetPrices,
+        )..where((price) => price.assetId.equals(id))).go();
+      }
+      return count == 1;
+    });
   }
 
   Future<AssetRecord> create({
