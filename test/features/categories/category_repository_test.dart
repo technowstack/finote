@@ -26,7 +26,7 @@ void main() {
         .first;
     final incomes = await repository.watchByType(TransactionType.income).first;
 
-    expect(all, hasLength(16));
+    expect(all, hasLength(18));
     expect(
       expenses.map((category) => category.name),
       containsAll([

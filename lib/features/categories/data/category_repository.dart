@@ -35,8 +35,6 @@ class CategoryRepository {
           await (_database.select(_database.settings)
                 ..where((setting) => setting.key.equals(_defaultsSettingKey)))
               .getSingleOrNull();
-      if (initialized != null) return;
-
       for (final category in _defaultCategories) {
         final existing =
             await (_database.select(_database.categories)..where(
@@ -57,11 +55,13 @@ class CategoryRepository {
         }
       }
 
-      await _database
-          .into(_database.settings)
-          .insert(
-            SettingsCompanion.insert(key: _defaultsSettingKey, value: '1'),
-          );
+      if (initialized == null) {
+        await _database
+            .into(_database.settings)
+            .insert(
+              SettingsCompanion.insert(key: _defaultsSettingKey, value: '1'),
+            );
+      }
     });
   }
 
@@ -199,5 +199,7 @@ const _defaultCategories = [
   (name: 'Bisnis', type: TransactionType.income),
   (name: 'Hadiah', type: TransactionType.income),
   (name: 'Investasi', type: TransactionType.income),
+  (name: 'Pembelian Aset', type: TransactionType.expense),
+  (name: 'Penjualan Aset', type: TransactionType.income),
   (name: 'Lainnya', type: TransactionType.income),
 ];

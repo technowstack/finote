@@ -18,9 +18,9 @@ class AssetTransactionRepository {
                 activity.assetId.equals(assetId) & activity.deletedAt.isNull(),
           )
           ..orderBy([
-            (activity) => OrderingTerm.asc(activity.transactionDate),
-            (activity) => OrderingTerm.asc(activity.createdAt),
-            (activity) => OrderingTerm.asc(activity.id),
+            (activity) => OrderingTerm.desc(activity.transactionDate),
+            (activity) => OrderingTerm.desc(activity.createdAt),
+            (activity) => OrderingTerm.desc(activity.id),
           ]))
         .watch();
   }

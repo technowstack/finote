@@ -30,6 +30,7 @@
 - [x] Phase 6B — Reports Visualization & Analytics v1.2.0
 - [x] v1.3 Portfolio primary navigation and asset UI cleanup
 - [x] v1.3 Opening Portfolio Snapshot / Opening Position
+- [x] v1.3 Asset Activity / Buy-Sell-Adjustment
 
 ## Current
 
@@ -53,7 +54,7 @@ Current focus:
 ```text
 Finote v1.2.0
 REPORTS VISUALIZATION & ANALYTICS COMPLETE
-FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A.4 COMPLETE
+FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A.5 COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -86,7 +87,7 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 7A.2 Asset Database Schema & Migration
 - [x] 7A.3 Asset CRUD & Asset Types
 - [x] 7A.4 Opening Portfolio Snapshot
-- [ ] 7A.5 Asset Activity / Buy-Sell-Adjustment
+- [x] 7A.5 Asset Activity / Buy-Sell-Adjustment
 - [ ] 7A.6 Holdings Calculation
 
 ### Phase 7B — Market Data

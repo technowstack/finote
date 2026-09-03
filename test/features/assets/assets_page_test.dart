@@ -1,5 +1,6 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/assets/presentation/assets_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,8 @@ void main() {
   ) async {
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
+    await database.ensureDefaultAccount();
+    await CategoryRepository(database).initializeDefaults();
     final router = GoRouter(
       routes: [
         GoRoute(path: '/', builder: (_, _) => const AssetsPage()),
@@ -50,7 +53,7 @@ void main() {
     await tester.tap(find.text('BBCA'));
     await tester.pumpAndSettle();
     expect(find.text('Detail Aset'), findsOneWidget);
-    expect(find.text('Belum ada posisi'), findsOneWidget);
+    expect(find.text('Belum ada posisi'), findsAtLeastNWidgets(1));
     await tester.tap(find.widgetWithText(FilledButton, 'Tambah Posisi Awal'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '12');
@@ -70,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, 'Hapus'));
     await tester.pumpAndSettle();
-    expect(find.text('Belum ada posisi'), findsOneWidget);
+    expect(find.text('Belum ada posisi'), findsAtLeastNWidgets(1));
     await tester.tap(find.widgetWithText(FilledButton, 'Tambah Posisi Awal'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, '12');

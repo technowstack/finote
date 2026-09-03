@@ -230,6 +230,18 @@ class TransactionRepository {
     }
 
     return _database.transaction(() async {
+      final linked =
+          await (_database.select(_database.assetTransactions)..where(
+                (activity) =>
+                    activity.sourceTransactionId.equals(transaction.id) &
+                    activity.deletedAt.isNull(),
+              ))
+              .getSingleOrNull();
+      if (linked != null) {
+        throw StateError(
+          'Edit linked investment transaction from asset activity',
+        );
+      }
       await _requireMatchingCategory(transaction.categoryId, transaction.type);
       await _requireAccountForUpdate(transaction);
       final updated = transaction.copyWith(updatedAt: DateTime.now().toUtc());
@@ -243,19 +255,32 @@ class TransactionRepository {
   }
 
   Future<bool> softDelete(int id) async {
-    final now = DateTime.now().toUtc();
-    final count =
-        await (_database.update(_database.transactions)..where(
-              (transaction) =>
-                  transaction.id.equals(id) & transaction.deletedAt.isNull(),
-            ))
-            .write(
-              TransactionsCompanion(
-                updatedAt: Value(now),
-                deletedAt: Value(now),
-              ),
-            );
-    return count == 1;
+    return _database.transaction(() async {
+      final now = DateTime.now().toUtc();
+      await (_database.update(_database.assetTransactions)..where(
+            (activity) =>
+                activity.sourceTransactionId.equals(id) &
+                activity.deletedAt.isNull(),
+          ))
+          .write(
+            AssetTransactionsCompanion(
+              updatedAt: Value(now),
+              deletedAt: Value(now),
+            ),
+          );
+      final count =
+          await (_database.update(_database.transactions)..where(
+                (transaction) =>
+                    transaction.id.equals(id) & transaction.deletedAt.isNull(),
+              ))
+              .write(
+                TransactionsCompanion(
+                  updatedAt: Value(now),
+                  deletedAt: Value(now),
+                ),
+              );
+      return count == 1;
+    });
   }
 
   Future<TransactionRecord?> findActiveById(int id) {

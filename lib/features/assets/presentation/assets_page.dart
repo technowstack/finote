@@ -7,10 +7,12 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/asset_repository.dart';
+import '../data/asset_activity_service.dart';
 import '../data/asset_transaction_repository.dart';
 import '../domain/asset_quantity.dart';
 import '../domain/asset_transaction_action.dart';
 import '../domain/asset_type.dart';
+import '../../accounts/data/account_repository.dart';
 
 class AssetsPage extends ConsumerStatefulWidget {
   const AssetsPage({super.key, this.routePrefix = '/portfolio/assets'});
@@ -273,6 +275,11 @@ class _AssetDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final activities = ref.watch(assetActivitiesProvider(asset.id));
+    final holding = ref
+        .watch(assetHoldingsProvider)
+        .valueOrNull
+        ?.where((item) => item.asset.id == asset.id)
+        .firstOrNull;
     final opening = activities.valueOrNull
         ?.where(
           (activity) =>
@@ -296,6 +303,13 @@ class _AssetDetail extends ConsumerWidget {
                 const Divider(height: AppSpacing.xl),
                 _DetailRow(label: 'Jenis', value: asset.assetType.label),
                 _DetailRow(
+                  label: 'Posisi',
+                  value: _formatAssetQuantity(
+                    asset,
+                    holding?.quantity ?? AssetQuantity.fromScaled(0),
+                  ),
+                ),
+                _DetailRow(
                   label: 'Harga',
                   value: asset.pricingMode == AssetPricingMode.api
                       ? 'Otomatis'
@@ -312,7 +326,7 @@ class _AssetDetail extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        if (opening == null) ...[
+        if (opening == null && (holding?.quantity.isZero ?? true)) ...[
           const Text('Belum ada posisi'),
           const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
@@ -333,7 +347,7 @@ class _AssetDetail extends ConsumerWidget {
                   Text(
                     _formatAssetQuantity(
                       asset,
-                      AssetQuantity.fromScaled(opening.quantityScaled),
+                      AssetQuantity.fromScaled(opening!.quantityScaled),
                     ),
                   ),
                   _DetailRow(
@@ -385,6 +399,30 @@ class _AssetDetail extends ConsumerWidget {
               ),
             ),
           ),
+        if (activities.valueOrNull case final activityItems?)
+          if (activityItems.any(
+            (activity) =>
+                activity.action != AssetTransactionAction.openingPosition,
+          )) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text('Aktivitas', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            for (final activity in activityItems)
+              if (activity.action != AssetTransactionAction.openingPosition)
+                _ActivityTile(
+                  asset: asset,
+                  activity: activity,
+                  onEdit: () =>
+                      _showActivityForm(context, ref, asset, activity),
+                  onDelete: () => _deleteActivity(context, ref, activity.id),
+                ),
+          ],
+        const SizedBox(height: AppSpacing.lg),
+        FilledButton.icon(
+          onPressed: () => _showActivityMenu(context, ref, asset),
+          icon: const Icon(Icons.add),
+          label: const Text('Tambah Aktivitas'),
+        ),
       ],
     );
   }
@@ -729,6 +767,468 @@ int _parseMoney(String value) =>
 
 String _formatPositionDate(BuildContext context, DateTime date) =>
     MaterialLocalizations.of(context).formatMediumDate(date);
+
+Future<void> _showActivityMenu(
+  BuildContext context,
+  WidgetRef ref,
+  AssetRecord asset,
+) async {
+  final action = await showModalBottomSheet<AssetTransactionAction>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.add_shopping_cart),
+            title: const Text('Beli'),
+            onTap: () => Navigator.pop(context, AssetTransactionAction.buy),
+          ),
+          ListTile(
+            leading: const Icon(Icons.sell_outlined),
+            title: const Text('Jual'),
+            onTap: () => Navigator.pop(context, AssetTransactionAction.sell),
+          ),
+          ListTile(
+            leading: const Icon(Icons.tune),
+            title: const Text('Penyesuaian'),
+            onTap: () =>
+                Navigator.pop(context, AssetTransactionAction.adjustment),
+          ),
+        ],
+      ),
+    ),
+  );
+  if (action != null && context.mounted) {
+    await _showActivityForm(context, ref, asset, null, action: action);
+  }
+}
+
+Future<void> _showActivityForm(
+  BuildContext context,
+  WidgetRef ref,
+  AssetRecord asset,
+  AssetTransactionRecord? activity, {
+  AssetTransactionAction? action,
+}) async {
+  final selectedAction = action ?? activity?.action;
+  if (selectedAction == null) return;
+  final data = await showDialog<_ActivityFormData>(
+    context: context,
+    builder: (_) => _ActivityFormDialog(
+      asset: asset,
+      action: selectedAction,
+      activity: activity,
+    ),
+  );
+  if (data == null || !context.mounted) return;
+  try {
+    final service = ref.read(assetActivityServiceProvider);
+    final id = activity?.id;
+    if (id == null) {
+      switch (selectedAction) {
+        case AssetTransactionAction.buy:
+          await service.createBuy(
+            assetId: asset.id,
+            quantity: data.quantity,
+            priceAmount: data.priceAmount!,
+            accountId: data.accountId!,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.sell:
+          await service.createSell(
+            assetId: asset.id,
+            quantity: data.quantity,
+            priceAmount: data.priceAmount!,
+            accountId: data.accountId!,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.adjustment:
+          await service.createAdjustment(
+            assetId: asset.id,
+            quantity: data.quantity,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.openingPosition:
+          return;
+      }
+    } else {
+      switch (selectedAction) {
+        case AssetTransactionAction.buy:
+          await service.updateBuy(
+            activityId: id,
+            quantity: data.quantity,
+            priceAmount: data.priceAmount!,
+            accountId: data.accountId!,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.sell:
+          await service.updateSell(
+            activityId: id,
+            quantity: data.quantity,
+            priceAmount: data.priceAmount!,
+            accountId: data.accountId!,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.adjustment:
+          await service.updateAdjustment(
+            activityId: id,
+            quantity: data.quantity,
+            date: data.date,
+            note: data.note,
+          );
+        case AssetTransactionAction.openingPosition:
+          return;
+      }
+    }
+  } catch (error) {
+    if (context.mounted) {
+      final message =
+          error is StateError &&
+              error.message == 'Sell quantity exceeds holdings'
+          ? 'Jumlah yang dijual melebihi aset yang dimiliki.'
+          : 'Aktivitas gagal disimpan. Coba lagi.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+}
+
+Future<void> _deleteActivity(
+  BuildContext context,
+  WidgetRef ref,
+  int id,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Hapus aktivitas?'),
+      content: const Text('Transaksi kas yang terhubung juga akan dihapus.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Hapus'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  try {
+    await ref.read(assetActivityServiceProvider).delete(id);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Aktivitas gagal dihapus.')));
+    }
+  }
+}
+
+class _ActivityTile extends StatelessWidget {
+  const _ActivityTile({
+    required this.asset,
+    required this.activity,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final AssetRecord asset;
+  final AssetTransactionRecord activity;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final quantity = AssetQuantity.fromScaled(activity.quantityScaled);
+    final label = switch (activity.action) {
+      AssetTransactionAction.buy => 'Beli',
+      AssetTransactionAction.sell => 'Jual',
+      AssetTransactionAction.adjustment => 'Penyesuaian',
+      AssetTransactionAction.openingPosition => 'Posisi Awal',
+    };
+    final prefix = activity.action == AssetTransactionAction.sell
+        ? ''
+        : activity.action == AssetTransactionAction.adjustment &&
+              quantity.isNegative
+        ? ''
+        : '+';
+    return Card(
+      child: ListTile(
+        title: Text(label),
+        subtitle: Text(
+          '${_formatPositionDate(context, activity.transactionDate)}\n'
+          '$prefix${_formatAssetQuantity(asset, quantity)}',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (activity.totalAmount != null)
+              Text(formatIdr(activity.totalAmount!)),
+            PopupMenuButton<String>(
+              tooltip: 'Tindakan aktivitas',
+              onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'edit', child: Text('Ubah')),
+                PopupMenuItem(value: 'delete', child: Text('Hapus')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActivityFormData {
+  const _ActivityFormData({
+    required this.quantity,
+    required this.priceAmount,
+    required this.accountId,
+    required this.date,
+    required this.note,
+  });
+
+  final AssetQuantity quantity;
+  final int? priceAmount;
+  final int? accountId;
+  final DateTime date;
+  final String? note;
+}
+
+class _ActivityFormDialog extends ConsumerStatefulWidget {
+  const _ActivityFormDialog({
+    required this.asset,
+    required this.action,
+    this.activity,
+  });
+
+  final AssetRecord asset;
+  final AssetTransactionAction action;
+  final AssetTransactionRecord? activity;
+
+  @override
+  ConsumerState<_ActivityFormDialog> createState() =>
+      _ActivityFormDialogState();
+}
+
+class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
+  late final TextEditingController _quantity;
+  late final TextEditingController _price;
+  late final TextEditingController _note;
+  late DateTime _date;
+  late bool _increase;
+  int? _accountId;
+  final _formKey = GlobalKey<FormState>();
+
+  bool get isAdjustment => widget.action == AssetTransactionAction.adjustment;
+  bool get isStock => widget.asset.assetType == AssetType.stock;
+
+  @override
+  void initState() {
+    super.initState();
+    final activity = widget.activity;
+    final quantity = activity == null
+        ? ''
+        : _inputActivityQuantity(
+            widget.asset,
+            AssetQuantity.fromScaled(activity.quantityScaled),
+          );
+    _quantity = TextEditingController(text: quantity);
+    _price = TextEditingController(
+      text: activity?.priceAmount?.toString() ?? '',
+    );
+    _note = TextEditingController(text: activity?.note ?? '');
+    _date = activity?.transactionDate ?? DateTime.now();
+    _increase = activity?.quantityScaled.isNegative != true;
+  }
+
+  @override
+  void dispose() {
+    _quantity.dispose();
+    _price.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = ref.watch(accountsProvider);
+    final title = switch (widget.action) {
+      AssetTransactionAction.buy =>
+        'Beli ${widget.asset.symbol ?? widget.asset.name}',
+      AssetTransactionAction.sell =>
+        'Jual ${widget.asset.symbol ?? widget.asset.name}',
+      AssetTransactionAction.adjustment =>
+        'Penyesuaian ${widget.asset.symbol ?? widget.asset.name}',
+      AssetTransactionAction.openingPosition => 'Posisi Awal',
+    };
+    return AlertDialog(
+      title: Text(title),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _quantity,
+                keyboardType: TextInputType.numberWithOptions(
+                  decimal: !isStock,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'Jumlah ${_unitLabel(widget.asset)}',
+                ),
+                validator: (value) {
+                  try {
+                    final quantity = _parseActivityQuantity(
+                      widget.asset,
+                      value ?? '',
+                      _increase,
+                    );
+                    return quantity.isZero ? 'Jumlah harus lebih dari 0' : null;
+                  } catch (_) {
+                    return isStock
+                        ? 'Masukkan jumlah lot bulat yang valid'
+                        : 'Jumlah maksimal 8 angka desimal';
+                  }
+                },
+              ),
+              if (isAdjustment)
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(_increase ? 'Tambah jumlah' : 'Kurangi jumlah'),
+                  value: _increase,
+                  onChanged: (value) => setState(() => _increase = value),
+                ),
+              if (!isAdjustment) ...[
+                TextFormField(
+                  controller: _price,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Harga per unit (IDR)',
+                  ),
+                  validator: (value) => _parseMoney(value ?? '') <= 0
+                      ? 'Harga harus lebih dari 0'
+                      : null,
+                ),
+                accounts.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: CircularProgressIndicator(),
+                  ),
+                  error: (_, _) => const Text('Akun belum dapat dimuat.'),
+                  data: (items) {
+                    final active = items
+                        .where((item) => item.isActive)
+                        .toList();
+                    _accountId ??= active.firstOrNull?.id;
+                    return DropdownButtonFormField<int>(
+                      initialValue: active.any((item) => item.id == _accountId)
+                          ? _accountId
+                          : null,
+                      decoration: const InputDecoration(labelText: 'Akun'),
+                      items: [
+                        for (final account in active)
+                          DropdownMenuItem(
+                            value: account.id,
+                            child: Text(account.name),
+                          ),
+                      ],
+                      onChanged: (value) => setState(() => _accountId = value),
+                      validator: (value) =>
+                          value == null ? 'Akun wajib dipilih' : null,
+                    );
+                  },
+                ),
+              ] else
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Penyesuaian mengubah jumlah aset tanpa membuat transaksi pemasukan atau pengeluaran.',
+                  ),
+                ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Tanggal'),
+                subtitle: Text(_formatPositionDate(context, _date)),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (date != null) setState(() => _date = date);
+                },
+              ),
+              TextFormField(
+                controller: _note,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan (opsional)',
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: accounts.isLoading && !isAdjustment ? null : _save,
+          child: const Text('Simpan'),
+        ),
+      ],
+    );
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _ActivityFormData(
+        quantity: _parseActivityQuantity(
+          widget.asset,
+          _quantity.text,
+          _increase,
+        ),
+        priceAmount: isAdjustment ? null : _parseMoney(_price.text),
+        accountId: isAdjustment ? null : _accountId,
+        date: _date,
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      ),
+    );
+  }
+}
+
+String _inputActivityQuantity(AssetRecord asset, AssetQuantity quantity) {
+  final magnitude = quantity.isNegative
+      ? AssetQuantity.fromScaled(-quantity.scaled)
+      : quantity;
+  return _inputQuantity(asset, magnitude);
+}
+
+AssetQuantity _parseActivityQuantity(
+  AssetRecord asset,
+  String value,
+  bool increase,
+) {
+  final parsed = _parseOpeningQuantity(asset, value);
+  if (parsed.isZero) return parsed;
+  return increase ? parsed : AssetQuantity.fromScaled(-parsed.scaled);
+}
 
 class _AssetCard extends StatelessWidget {
   const _AssetCard({
