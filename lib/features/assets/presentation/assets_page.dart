@@ -4,8 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/asset_repository.dart';
+import '../data/asset_transaction_repository.dart';
+import '../domain/asset_quantity.dart';
+import '../domain/asset_transaction_action.dart';
 import '../domain/asset_type.dart';
 
 class AssetsPage extends ConsumerStatefulWidget {
@@ -134,7 +138,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final assets = ref.watch(allAssetsProvider);
+    final assets = ref.watch(assetHoldingsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Portofolio')),
       body: assets.when(
@@ -144,8 +148,12 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
           onRetry: () => ref.invalidate(allAssetsProvider),
         ),
         data: (items) {
-          final active = items.where((asset) => asset.isActive).toList();
-          final archived = items.where((asset) => !asset.isActive).toList();
+          final active = items
+              .where((holding) => holding.asset.isActive)
+              .toList();
+          final archived = items
+              .where((holding) => !holding.asset.isActive)
+              .toList();
           if (items.isEmpty) {
             return _EmptyAssets(onAdd: _openForm);
           }
@@ -167,14 +175,16 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                for (final asset in archived) ...[
+                for (final holding in archived) ...[
                   _AssetCard(
-                    asset: asset,
-                    onTap: () =>
-                        context.push('${widget.routePrefix}/${asset.id}'),
-                    onEdit: () => _openForm(asset),
-                    onArchive: () => _reactivate(asset),
-                    onDelete: () => _delete(asset),
+                    asset: holding.asset,
+                    quantity: holding.quantity,
+                    onTap: () => context.push(
+                      '${widget.routePrefix}/${holding.asset.id}',
+                    ),
+                    onEdit: () => _openForm(holding.asset),
+                    onArchive: () => _reactivate(holding.asset),
+                    onDelete: () => _delete(holding.asset),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
@@ -193,25 +203,29 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     );
   }
 
-  List<Widget> _groupedAssets(List<AssetRecord> assets) {
+  List<Widget> _groupedAssets(List<AssetHolding> holdings) {
     final widgets = <Widget>[];
     for (final type in AssetType.values) {
-      final group = assets.where((asset) => asset.assetType == type).toList();
+      final group = holdings
+          .where((holding) => holding.asset.assetType == type)
+          .toList();
       if (group.isEmpty) continue;
       widgets.add(
         Text(type.label, style: Theme.of(context).textTheme.titleMedium),
       );
       widgets.add(const SizedBox(height: AppSpacing.sm));
-      for (final asset in group) {
+      for (final holding in group) {
         widgets.add(
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: _AssetCard(
-              asset: asset,
-              onTap: () => context.push('${widget.routePrefix}/${asset.id}'),
-              onEdit: () => _openForm(asset),
-              onArchive: () => _archive(asset),
-              onDelete: () => _delete(asset),
+              asset: holding.asset,
+              quantity: holding.quantity,
+              onTap: () =>
+                  context.push('${widget.routePrefix}/${holding.asset.id}'),
+              onEdit: () => _openForm(holding.asset),
+              onArchive: () => _archive(holding.asset),
+              onDelete: () => _delete(holding.asset),
             ),
           ),
         );
@@ -250,14 +264,21 @@ class AssetDetailPage extends ConsumerWidget {
 
 void _noop() {}
 
-class _AssetDetail extends StatelessWidget {
+class _AssetDetail extends ConsumerWidget {
   const _AssetDetail({required this.asset});
 
   final AssetRecord asset;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final activities = ref.watch(assetActivitiesProvider(asset.id));
+    final opening = activities.valueOrNull
+        ?.where(
+          (activity) =>
+              activity.action == AssetTransactionAction.openingPosition,
+        )
+        .firstOrNull;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenH),
       children: [
@@ -291,9 +312,79 @@ class _AssetDetail extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        const Text(
-          'Posisi aset akan tersedia setelah Opening Position ditambahkan.',
-        ),
+        if (opening == null) ...[
+          const Text('Belum ada posisi'),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.icon(
+            onPressed: () =>
+                _showOpeningPositionForm(context, ref, asset, null),
+            icon: const Icon(Icons.add),
+            label: const Text('Tambah Posisi Awal'),
+          ),
+        ] else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Posisi', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    _formatAssetQuantity(
+                      asset,
+                      AssetQuantity.fromScaled(opening.quantityScaled),
+                    ),
+                  ),
+                  _DetailRow(
+                    label: 'Posisi awal',
+                    value: _formatAssetQuantity(
+                      asset,
+                      AssetQuantity.fromScaled(opening.quantityScaled),
+                    ),
+                  ),
+                  _DetailRow(
+                    label: 'Tanggal mulai',
+                    value: _formatPositionDate(
+                      context,
+                      opening.transactionDate,
+                    ),
+                  ),
+                  _DetailRow(
+                    label: 'Modal awal',
+                    value: opening.totalAmount == null
+                        ? 'Tidak diketahui'
+                        : formatIdr(opening.totalAmount!),
+                  ),
+                  if (opening.note?.isNotEmpty == true)
+                    _DetailRow(label: 'Catatan', value: opening.note!),
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => _showOpeningPositionForm(
+                            context,
+                            ref,
+                            asset,
+                            opening,
+                          ),
+                          child: const Text('Edit Posisi Awal'),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      IconButton(
+                        tooltip: 'Hapus Posisi Awal',
+                        onPressed: () =>
+                            _removeOpeningPosition(context, ref, opening.id),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -317,9 +408,332 @@ class _DetailRow extends StatelessWidget {
   );
 }
 
+Future<void> _showOpeningPositionForm(
+  BuildContext context,
+  WidgetRef ref,
+  AssetRecord asset,
+  AssetTransactionRecord? opening,
+) async {
+  final data = await showDialog<_OpeningPositionData>(
+    context: context,
+    builder: (_) => _OpeningPositionDialog(asset: asset, opening: opening),
+  );
+  if (data == null || !context.mounted) return;
+  try {
+    final repository = ref.read(assetTransactionRepositoryProvider);
+    if (opening == null) {
+      await repository.createOpeningPosition(
+        assetId: asset.id,
+        quantity: data.quantity,
+        transactionDate: data.date,
+        totalAmount: data.totalAmount,
+        note: data.note,
+      );
+    } else {
+      final updated = await repository.updateOpeningPosition(
+        id: opening.id,
+        quantity: data.quantity,
+        transactionDate: data.date,
+        totalAmount: data.totalAmount,
+        note: data.note,
+      );
+      if (!updated) throw StateError('Opening position is no longer available');
+    }
+  } catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is StateError &&
+                    error.message == 'Opening position already exists'
+                ? 'Posisi awal sudah tersedia. Edit posisi yang ada.'
+                : 'Posisi awal gagal disimpan. Coba lagi.',
+          ),
+        ),
+      );
+    }
+  }
+}
+
+Future<void> _removeOpeningPosition(
+  BuildContext context,
+  WidgetRef ref,
+  int id,
+) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Hapus Posisi Awal?'),
+      content: const Text('Aset akan kembali ke status Belum ada posisi.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Batal'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Hapus'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true || !context.mounted) return;
+  try {
+    await ref
+        .read(assetTransactionRepositoryProvider)
+        .removeOpeningPosition(id);
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Posisi awal tidak dapat dihapus.')),
+      );
+    }
+  }
+}
+
+String _formatAssetQuantity(AssetRecord asset, AssetQuantity quantity) {
+  if (quantity.isZero) return 'Belum ada posisi';
+  if (asset.assetType == AssetType.stock) {
+    final shares = quantity.scaled ~/ AssetQuantity.scale;
+    if (shares % 100 == 0) return '${shares ~/ 100} lot';
+    return '$quantity saham';
+  }
+  final unit = switch (asset.assetType) {
+    AssetType.crypto => 'coin/token',
+    AssetType.mutualFund => 'unit',
+    AssetType.gold => 'gram',
+    AssetType.other => asset.unitLabel ?? 'unit',
+    AssetType.stock => 'saham',
+  };
+  return '$quantity $unit';
+}
+
+class _OpeningPositionData {
+  const _OpeningPositionData({
+    required this.quantity,
+    required this.date,
+    required this.totalAmount,
+    required this.note,
+  });
+
+  final AssetQuantity quantity;
+  final DateTime date;
+  final int? totalAmount;
+  final String? note;
+}
+
+class _OpeningPositionDialog extends StatefulWidget {
+  const _OpeningPositionDialog({required this.asset, this.opening});
+
+  final AssetRecord asset;
+  final AssetTransactionRecord? opening;
+
+  @override
+  State<_OpeningPositionDialog> createState() => _OpeningPositionDialogState();
+}
+
+class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
+  late final TextEditingController _quantity;
+  late final TextEditingController _cost;
+  late final TextEditingController _note;
+  late DateTime _date;
+  late bool _hasCost;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    final opening = widget.opening;
+    final quantity = opening == null
+        ? ''
+        : _inputQuantity(
+            widget.asset,
+            AssetQuantity.fromScaled(opening.quantityScaled),
+          );
+    _quantity = TextEditingController(text: quantity);
+    _cost = TextEditingController(
+      text: opening?.totalAmount == null
+          ? ''
+          : formatIdr(opening!.totalAmount!),
+    );
+    _note = TextEditingController(text: opening?.note ?? '');
+    _date = opening?.transactionDate ?? DateTime.now();
+    _hasCost = opening?.totalAmount != null;
+  }
+
+  @override
+  void dispose() {
+    _quantity.dispose();
+    _cost.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isStock = widget.asset.assetType == AssetType.stock;
+    return AlertDialog(
+      title: const Text('Posisi Awal'),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '${widget.asset.symbol ?? widget.asset.name}\n${widget.asset.name}',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _quantity,
+                autofocus: true,
+                keyboardType: TextInputType.numberWithOptions(
+                  decimal: !isStock,
+                ),
+                decoration: InputDecoration(
+                  labelText: isStock
+                      ? 'Jumlah Lot'
+                      : 'Jumlah ${_unitLabel(widget.asset)}',
+                ),
+                validator: (value) {
+                  try {
+                    final quantity = _parseOpeningQuantity(
+                      widget.asset,
+                      value ?? '',
+                    );
+                    return quantity.isNegative || quantity.isZero
+                        ? 'Jumlah harus lebih dari 0'
+                        : null;
+                  } catch (_) {
+                    return isStock
+                        ? 'Masukkan jumlah lot bulat yang valid'
+                        : 'Masukkan jumlah dengan maksimal 8 angka desimal';
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Tanggal Posisi'),
+                subtitle: Text(_formatPositionDate(context, _date)),
+                trailing: const Icon(Icons.calendar_today_outlined),
+                onTap: () async {
+                  final selected = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (selected != null) setState(() => _date = selected);
+                },
+              ),
+              if (widget.opening == null)
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Tanggal ini menandai awal pencatatan aset di Finote, bukan tanggal pembelian asli.',
+                  ),
+                ),
+              const SizedBox(height: AppSpacing.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Saya tahu modal awal'),
+                subtitle: Text(
+                  _hasCost ? 'Modal akan disimpan' : 'Tidak diketahui',
+                ),
+                value: _hasCost,
+                onChanged: (value) => setState(() => _hasCost = value),
+              ),
+              if (_hasCost)
+                TextFormField(
+                  controller: _cost,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Modal Awal (IDR)',
+                  ),
+                  validator: (value) =>
+                      _hasCost && _parseMoney(value ?? '') <= 0
+                      ? 'Modal harus lebih dari 0'
+                      : null,
+                ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _note,
+                decoration: const InputDecoration(
+                  labelText: 'Catatan (opsional)',
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('Simpan Posisi')),
+      ],
+    );
+  }
+
+  void _save() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.pop(
+      context,
+      _OpeningPositionData(
+        quantity: _parseOpeningQuantity(widget.asset, _quantity.text),
+        date: _date,
+        totalAmount: _hasCost ? _parseMoney(_cost.text) : null,
+        note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      ),
+    );
+  }
+}
+
+String _unitLabel(AssetRecord asset) => switch (asset.assetType) {
+  AssetType.crypto => 'Coin/Token',
+  AssetType.mutualFund => 'Unit',
+  AssetType.gold => 'Gram',
+  AssetType.other => asset.unitLabel ?? 'Unit',
+  AssetType.stock => 'Lot',
+};
+
+String _inputQuantity(AssetRecord asset, AssetQuantity quantity) {
+  if (asset.assetType != AssetType.stock) return quantity.toString();
+  return (quantity.scaled ~/ AssetQuantity.scale ~/ 100).toString();
+}
+
+AssetQuantity _parseOpeningQuantity(AssetRecord asset, String value) {
+  if (asset.assetType != AssetType.stock) {
+    return AssetQuantity.parse(value.replaceAll(',', '.'));
+  }
+  if (!RegExp(r'^\d+$').hasMatch(value.trim())) {
+    throw const FormatException('Stock lot must be a whole number');
+  }
+  final scaled =
+      BigInt.parse(value.trim()) * BigInt.from(AssetQuantity.scale * 100);
+  if (scaled > BigInt.from(9223372036854775807)) {
+    throw const FormatException('Quantity is out of range');
+  }
+  return AssetQuantity.fromScaled(scaled.toInt());
+}
+
+int _parseMoney(String value) =>
+    int.tryParse(value.replaceAll(RegExp(r'\D'), '')) ?? 0;
+
+String _formatPositionDate(BuildContext context, DateTime date) =>
+    MaterialLocalizations.of(context).formatMediumDate(date);
+
 class _AssetCard extends StatelessWidget {
   const _AssetCard({
     required this.asset,
+    required this.quantity,
     required this.onTap,
     required this.onEdit,
     required this.onArchive,
@@ -327,6 +741,7 @@ class _AssetCard extends StatelessWidget {
   });
 
   final AssetRecord asset;
+  final AssetQuantity quantity;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
@@ -346,9 +761,8 @@ class _AssetCard extends StatelessWidget {
         ),
         title: Text(asset.symbol ?? asset.name),
         subtitle: Text(
-          asset.symbol == null
-              ? '${asset.name} • ${asset.pricingMode == AssetPricingMode.api ? 'Otomatis' : 'Manual'}'
-              : '${asset.name} • ${asset.pricingMode == AssetPricingMode.api ? 'Otomatis' : 'Manual'}',
+          '${asset.name} • ${_formatAssetQuantity(asset, quantity)} • '
+          '${asset.pricingMode == AssetPricingMode.api ? 'Otomatis' : 'Manual'}',
         ),
         trailing: PopupMenuButton<_AssetAction>(
           tooltip: 'Tindakan aset',
@@ -496,6 +910,7 @@ class _AssetFormDialogState extends State<_AssetFormDialog> {
                     ? null
                     : (value) => setState(() => _type = value!),
               ),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _symbol,
                 textCapitalization: TextCapitalization.characters,
@@ -509,6 +924,7 @@ class _AssetFormDialogState extends State<_AssetFormDialog> {
                     ? 'Symbol wajib diisi.'
                     : null,
               ),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _name,
                 autofocus: !requiresSymbol,

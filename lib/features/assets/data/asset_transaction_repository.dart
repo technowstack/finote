@@ -36,6 +36,10 @@ class AssetTransactionRepository {
     int? sourceTransactionId,
   }) async {
     _validate(action, quantity, priceAmount, totalAmount);
+    if (action == AssetTransactionAction.openingPosition &&
+        await getOpeningPosition(assetId) != null) {
+      throw StateError('Opening position already exists');
+    }
     return _database
         .into(_database.assetTransactions)
         .insertReturning(
@@ -50,6 +54,100 @@ class AssetTransactionRepository {
             sourceTransactionId: Value(sourceTransactionId),
           ),
         );
+  }
+
+  Future<AssetTransactionRecord?> getOpeningPosition(int assetId) {
+    return (_database.select(_database.assetTransactions)..where(
+          (activity) =>
+              activity.assetId.equals(assetId) &
+              activity.action.equals(
+                AssetTransactionAction.openingPosition.name,
+              ) &
+              activity.deletedAt.isNull(),
+        ))
+        .getSingleOrNull();
+  }
+
+  Future<AssetTransactionRecord> createOpeningPosition({
+    required int assetId,
+    required AssetQuantity quantity,
+    required DateTime transactionDate,
+    int? totalAmount,
+    String? note,
+  }) async {
+    return _database.transaction(() async {
+      if (await getOpeningPosition(assetId) != null) {
+        throw StateError('Opening position already exists');
+      }
+      return create(
+        assetId: assetId,
+        action: AssetTransactionAction.openingPosition,
+        quantity: quantity,
+        transactionDate: transactionDate,
+        totalAmount: totalAmount,
+        note: note,
+      );
+    });
+  }
+
+  Future<bool> updateOpeningPosition({
+    required int id,
+    required AssetQuantity quantity,
+    required DateTime transactionDate,
+    int? totalAmount,
+    String? note,
+  }) async {
+    _validate(
+      AssetTransactionAction.openingPosition,
+      quantity,
+      null,
+      totalAmount,
+    );
+    final count =
+        await (_database.update(_database.assetTransactions)..where(
+              (activity) =>
+                  activity.id.equals(id) &
+                  activity.action.equals(
+                    AssetTransactionAction.openingPosition.name,
+                  ) &
+                  activity.deletedAt.isNull(),
+            ))
+            .write(
+              AssetTransactionsCompanion(
+                quantityScaled: Value(quantity.scaled),
+                totalAmount: Value(totalAmount),
+                transactionDate: Value(transactionDate),
+                note: Value(note?.trim()),
+                updatedAt: Value(DateTime.now().toUtc()),
+              ),
+            );
+    return count == 1;
+  }
+
+  Future<bool> removeOpeningPosition(int id) async {
+    final opening =
+        await (_database.select(_database.assetTransactions)..where(
+              (activity) =>
+                  activity.id.equals(id) &
+                  activity.action.equals(
+                    AssetTransactionAction.openingPosition.name,
+                  ) &
+                  activity.deletedAt.isNull(),
+            ))
+            .getSingleOrNull();
+    if (opening == null) return false;
+    final laterActivities =
+        await (_database.select(_database.assetTransactions)..where(
+              (activity) =>
+                  activity.assetId.equals(opening.assetId) &
+                  activity.id.isNotIn([id]) &
+                  activity.deletedAt.isNull(),
+            ))
+            .get();
+    if (laterActivities.isNotEmpty) {
+      throw StateError('Opening position has later activities');
+    }
+    return softDelete(id);
   }
 
   Future<AssetQuantity> currentHolding(int assetId) async {

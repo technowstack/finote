@@ -50,12 +50,32 @@ void main() {
     await tester.tap(find.text('BBCA'));
     await tester.pumpAndSettle();
     expect(find.text('Detail Aset'), findsOneWidget);
-    expect(
-      find.text(
-        'Posisi aset akan tersedia setelah Opening Position ditambahkan.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Belum ada posisi'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Tambah Posisi Awal'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '12');
+    await tester.tap(find.widgetWithText(FilledButton, 'Simpan Posisi'));
+    await tester.pumpAndSettle();
+    expect(find.text('12 lot'), findsAtLeastNWidgets(1));
+
+    await tester.tap(find.text('Edit Posisi Awal'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '15');
+    await tester.tap(find.widgetWithText(FilledButton, 'Simpan Posisi'));
+    await tester.pumpAndSettle();
+    expect(find.text('15 lot'), findsAtLeastNWidgets(1));
+    expect(find.text('27 lot'), findsNothing);
+
+    await tester.tap(find.byTooltip('Hapus Posisi Awal'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, 'Hapus'));
+    await tester.pumpAndSettle();
+    expect(find.text('Belum ada posisi'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Tambah Posisi Awal'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, '12');
+    await tester.tap(find.widgetWithText(FilledButton, 'Simpan Posisi'));
+    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -99,6 +119,9 @@ void main() {
     await tester.tap(find.text('Aktifkan kembali'));
     await tester.pumpAndSettle();
     expect(find.text('Saham'), findsOneWidget);
+    await tester.tap(find.text('BBCA'));
+    await tester.pumpAndSettle();
+    expect(find.text('12 lot'), findsAtLeastNWidgets(1));
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
