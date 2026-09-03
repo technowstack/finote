@@ -27,43 +27,35 @@
 - [x] Phase 5I — LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0.0
 - [x] Phase 6A — Accounts & Transfers v1.1.0
 - [x] Safe Account Deletion Polish
+- [x] Phase 6B — Reports Visualization & Analytics v1.2.0
+- [x] v1.3 Portfolio primary navigation and asset UI cleanup
 
 ## Current
 
-Finote v1.2.0 development builds on the completed **Phase 6A — Accounts & Transfers** baseline.
+Finote v1.2.0 has completed **Phase 6B — Reports Visualization & Analytics**. Development has now moved to **Finote v1.3.0 — Assets / Investments**.
 
 Current focus:
 
-- [x] Phase 6B.1 — Report Chart Foundation
-- [x] Phase 6B.2 — Income vs Expense Preview Chart
-- [x] Phase 6B.3 — Analytics Chart Screen
-- [x] Phase 6B.4 — Category Expense Chart
-- [x] Phase 6B.4.1 — Category Expense Visualization Polish
-- [x] Phase 6B.5 — Financial Trend Chart
-- [x] Phase 6B.6 — Account Balance Visualization
-- [x] Phase 6B.7 — Chart Filters & Interaction
-- [x] Phase 6B.8 — Chart Testing & Polish
-- [x] Keep Reports concise: summary + one primary chart preview
-- [x] Move complete chart exploration to the dedicated Analytics screen
-- [x] Preserve Income / Expense / Net correctness
-- [x] Keep Transfer excluded from Income / Expense charts
-- [x] Keep Accounts & Transfers regression-safe
-- [x] Legacy import missing-data audit and row accounting fix
-- [x] Dashboard / Reports financial reconciliation audit and Home Total Assets fix
-- [x] Transaction history legacy/missing-row visibility audit and all-time filter fix
-- [x] Transaction Filter UX Polish
-- [x] Transaction FAB / Filter modal layering fix
-- [ ] Continue real usage and fix real bugs discovered during development
+- [x] Phase 7A.1 — Investment Architecture & Existing Code Audit
+- [x] Inspect actual Drift schema and migration history
+- [x] Inspect transaction / account / transfer / report architecture
+- [x] Inspect existing `Pembelian Aset` / `Penjualan Aset` semantics
+- [x] Define deterministic asset-quantity storage strategy
+- [x] Define Opening Portfolio Snapshot architecture
+- [x] Define asset activity ↔ cashflow relation without duplicate cashflow
+- [x] Define Market API client / batch quote / offline-price-cache architecture
+- [x] Define Backup/Restore and backward compatibility impact
+- [x] Produce implementation plan before Phase 7A.2
 
 ## Current Product State
 
 ```text
 Finote v1.2.0
-PHASE 6B REPORTS VISUALIZATION & ANALYTICS — COMPLETE
-PHASE 6B.8 CHART TESTING & POLISH COMPLETE
+REPORTS VISUALIZATION & ANALYTICS COMPLETE
+FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A.3 COMPLETE
 ```
 
-Finote v1.0.0 remains the first local production-final baseline. v1.1.0 extends it with Accounts & Transfers. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
+Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
 
 ## External Release When Ready
 
@@ -84,16 +76,48 @@ These external tasks do not reopen the v1.0 feature scope.
 ## Next Development
 
 - [x] v1.1.0 — Phase 6A Accounts & Transfers
-- [x] Safe Account Deletion polish
 - [x] v1.2.0 — Phase 6B Reports Visualization & Analytics
-- [x] 6B.1 Report Chart Foundation
-- [x] 6B.2 Income vs Expense Preview Chart
-- [x] 6B.3 Analytics Chart Screen
-- [x] 6B.4 Category Expense Chart
-- [x] 6B.5 Financial Trend Chart
-- [x] 6B.6 Account Balance Visualization
-- [x] 6B.7 Chart Filters & Interaction
-- [x] 6B.8 Chart Testing & Polish
+- [ ] v1.3.0 — Phase 7 Assets / Investments
+
+### Phase 7A — Asset Domain Foundation
+
+- [x] 7A.1 Investment Architecture & Existing Code Audit
+- [x] 7A.2 Asset Database Schema & Migration
+- [x] 7A.3 Asset CRUD & Asset Types
+- [ ] 7A.4 Opening Portfolio Snapshot
+- [ ] 7A.5 Asset Activity / Buy-Sell-Adjustment
+- [ ] 7A.6 Holdings Calculation
+
+### Phase 7B — Market Data
+
+- [ ] 7B.1 Market API Client Foundation
+- [ ] 7B.2 Batch Quote Integration
+- [ ] 7B.3 Local Last-Known Price Cache
+- [ ] 7B.4 Manual Asset Pricing
+- [ ] 7B.5 Current Market Value
+
+### Phase 7C — Portfolio
+
+- [ ] 7C.1 Portfolio Screen Foundation
+- [ ] 7C.2 Stock Holdings UI
+- [ ] 7C.3 Crypto Holdings UI
+- [ ] 7C.4 Mutual Fund / Gold / Manual Assets
+- [ ] 7C.5 Portfolio Summary & Refresh UX
+
+### Phase 7D — Finance Integration
+
+- [ ] 7D.1 Historical Investment Cashflow
+- [ ] 7D.2 Net Worth Integration
+- [ ] 7D.3 Reports Integration
+- [ ] 7D.4 Dashboard Integration
+
+### Phase 7E — Reliability & Release
+
+- [ ] 7E.1 Backup / Restore Integration
+- [ ] 7E.2 Backward Compatibility & Migration Tests
+- [ ] 7E.3 Portfolio Performance & Offline Audit
+- [ ] 7E.4 UI/UX Polish
+- [ ] 7E.5 v1.3.0 Final Audit & Release Preparation
 
 ---
 
@@ -276,7 +300,7 @@ Legacy transactions without account information are assigned to the Default Acco
 Safe Account Deletion polish is complete: only unused non-default accounts may be hard-deleted; used/default accounts remain protected and may be archived/deactivated as appropriate.
 
 
-### Planned v1.2.0 — Phase 6B Reports Visualization & Analytics
+### Completed v1.2.0 — Phase 6B Reports Visualization & Analytics
 
 - [x] 6B.1 Report Chart Foundation
 - [x] 6B.2 Income vs Expense Preview Chart
@@ -323,9 +347,9 @@ Reports = quick financial summary
 Analytics Chart Screen = deeper visual analysis
 ```
 
-Phase 6B readiness:
+Current next task:
 
-> **PASS — Reports Visualization & Analytics complete; stabilization and real usage remain.**
+> **Phase 7A.1 — Investment Architecture & Existing Code Audit**
 
 ### Other Post-v1 Candidate Features
 
@@ -415,21 +439,53 @@ AI:
 
 ## Immediate Action
 
-Finote v1.2.0 development is completing Phase 6B — Reports Visualization & Analytics.
+Finote v1.2.0 has completed **Reports Visualization & Analytics** and the
+Finote v1.3.0 Phase 7A.1 Assets / Investments audit is complete.
 
 Current rules:
 
-1. Phase 6B.1 Report Chart Foundation through 6B.8 Chart Testing & Polish are complete.
-2. Continue only with real bug, data-integrity, compatibility, or release fixes.
-3. Keep Reports concise: Financial Summary + one primary Income vs Expense preview + entry point to Analytics.
-4. Place the complete chart experience on the dedicated Analytics Chart Screen.
-5. Reuse existing Reports aggregation as financial source of truth.
-6. Keep Income / Expense / Net semantics unchanged.
-7. Never include Transfer in Income or Expense charts.
-8. Keep Account Balance derived from initial balance + transactions + transfers.
-9. Preserve Reports = Charts = Export consistency for equivalent financial metrics/filters.
-10. Keep AI, Cloud, Budget, and Recurring features deferred unless explicitly requested.
+1. Keep Phase 7A.1 audit decisions authoritative for the next implementation.
+2. Do not create Portfolio UI or Market API integration during Phase 7A.2.
+3. Keep historical `Pembelian Aset` / `Penjualan Aset` as investment cashflow only.
+4. Do not reconstruct holdings, cost basis, or historical P/L from old cashflow.
+5. Use Opening Portfolio Snapshot / Opening Asset Position for existing holdings.
+6. Preserve deterministic money handling and define a safe fractional-quantity strategy before schema implementation.
+7. Keep portfolio source records local in Drift/SQLite.
+8. Use Finote Market API only for normalized market prices; prefer batch quotes and local last-known-price fallback.
+9. Net Worth = Cash / Wallet Assets + Current Portfolio Value.
+10. Keep AI, realtime trading, WebSocket, automated trading, and unrelated feature expansion out of v1.3.0.
 
-Current post-6B state:
+Next active implementation:
 
-> **Reports Visualization & Analytics complete; no new phase started automatically.**
+> **Phase 7A.2 — Asset Database Schema & Migration**
+
+
+---
+
+## Finote v1.3.0 — Assets / Investments
+
+### Core product rules
+
+- Historical `Pembelian Aset` / `Penjualan Aset` remain historical investment cashflow.
+- Do not reconstruct current holdings from historical investment cashflow.
+- Existing users start portfolio tracking through an Opening Portfolio Snapshot / Opening Asset Position.
+- Current Holdings = Opening Position + Buy - Sell + Adjustment.
+- Current Portfolio Value is derived from current holdings × current/last-known/manual price.
+- Net Worth = Cash / Wallet Assets + Current Portfolio Value.
+- Net Cash Invested is historical cashflow only and must not be treated as portfolio value, cost basis, or P/L.
+- Unknown cost basis remains unknown; do not substitute zero.
+- Money remains deterministic integer source-of-truth; fractional asset quantity requires a deterministic non-binary-floating-point representation.
+- Portfolio data remains in Flutter + Drift/SQLite.
+- Market API stores no portfolio/holding data and is used only for normalized market quotes.
+- Portfolio must render local holdings + last-known price before attempting network refresh.
+- Portfolio uses `POST /api/v1/market/quotes` for batch quotes whenever possible.
+- Market API failure must not block portfolio/history/reports/offline usage.
+- AI, realtime trading, WebSocket, candlestick charts, automated trading, and complex portfolio analytics are out of scope for v1.3.0.
+
+### Current active task
+
+> **7A.3 — Asset CRUD & Asset Types**
+
+7A.1 audit is complete in `docs/assets_phase_7a1_architecture_audit.md` and
+7A.2 schema/migration is complete in
+`docs/assets_phase_7a2_schema_migration.md`. Do not start 7A.3 automatically.

@@ -7,6 +7,7 @@ import '../features/categories/presentation/category_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/legacy_import/presentation/legacy_import_page.dart';
 import '../features/accounts/presentation/accounts_page.dart';
+import '../features/assets/presentation/assets_page.dart';
 import '../features/reports/presentation/reports_page.dart';
 import '../features/reports/presentation/analytics_chart_page.dart';
 import '../features/receipt_scanner/presentation/receipt_scanner_page.dart';
@@ -41,6 +42,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/transactions',
                 builder: (context, state) => const TransactionsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/portfolio',
+                builder: (context, state) => const AssetsPage(),
               ),
             ],
           ),
@@ -112,6 +121,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/accounts',
         builder: (context, state) => const AccountsPage(),
+      ),
+      GoRoute(
+        path: '/portfolio/assets/:id',
+        redirect: (context, state) =>
+            int.tryParse(state.pathParameters['id'] ?? '') == null
+            ? '/portfolio'
+            : null,
+        builder: (context, state) =>
+            AssetDetailPage(assetId: int.parse(state.pathParameters['id']!)),
       ),
       GoRoute(
         path: '/transfers',

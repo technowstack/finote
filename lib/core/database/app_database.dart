@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../../features/assets/domain/asset_transaction_action.dart';
+import '../../features/assets/domain/asset_type.dart';
 import '../../features/accounts/domain/account_type.dart';
 import '../../features/transactions/domain/transaction_source.dart';
 import '../../features/transactions/domain/transaction_type.dart';
@@ -11,6 +13,8 @@ import '../utils/uuid_generator.dart';
 import 'converters.dart';
 import 'tables/categories.dart';
 import 'tables/accounts.dart';
+import 'tables/asset_transactions.dart';
+import 'tables/assets.dart';
 import 'tables/settings.dart';
 import 'tables/transactions.dart';
 import 'tables/transfers.dart';
@@ -18,14 +22,22 @@ import 'tables/transfers.dart';
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [Accounts, Categories, Transactions, Transfers, Settings],
+  tables: [
+    Accounts,
+    Categories,
+    Transactions,
+    Transfers,
+    Settings,
+    Assets,
+    AssetTransactions,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor])
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -69,6 +81,11 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 8) {
         await _ensureAccountTransferIndexes();
+      }
+      if (from < 9) {
+        await migrator.createTable(assets);
+        await migrator.createTable(assetTransactions);
+        await _ensureAssetIndexes();
       }
     },
     onCreate: (migrator) async {
@@ -135,6 +152,25 @@ class AppDatabase extends _$AppDatabase {
       'CREATE INDEX IF NOT EXISTS transfers_date ON transfers (transfer_date)',
       'CREATE INDEX IF NOT EXISTS transfers_deleted_at '
           'ON transfers (deleted_at)',
+    ]) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _ensureAssetIndexes() async {
+    for (final statement in [
+      'CREATE INDEX IF NOT EXISTS assets_active ON assets (is_active)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS assets_type_normalized_symbol '
+          'ON assets (asset_type, normalized_symbol)',
+      'CREATE INDEX IF NOT EXISTS asset_transactions_asset_id '
+          'ON asset_transactions (asset_id)',
+      'CREATE INDEX IF NOT EXISTS asset_transactions_date '
+          'ON asset_transactions (transaction_date)',
+      'CREATE INDEX IF NOT EXISTS asset_transactions_deleted_at '
+          'ON asset_transactions (deleted_at)',
+      'CREATE UNIQUE INDEX IF NOT EXISTS '
+          'asset_transactions_source_transaction_id '
+          'ON asset_transactions (source_transaction_id)',
     ]) {
       await customStatement(statement);
     }

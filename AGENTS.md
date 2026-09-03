@@ -96,7 +96,7 @@ Before coding:
 
 # 4. Current Product Direction
 
-Finote is currently focused on becoming a mature, reliable, fast, offline-first personal finance app suitable for public release.
+Finote is currently extending its mature offline-first personal finance core with **Finote v1.3.0 — Assets / Investments**, while preserving financial correctness, data ownership, backward compatibility, and offline operation.
 
 Current priorities:
 
@@ -139,7 +139,7 @@ not a:
 Business Accounting System
 ERP
 Banking Application
-Investment Platform
+Broker / Trading Platform
 ```
 
 ---
@@ -1391,27 +1391,15 @@ Phase 5H  Closed Testing Preparation / RC Validation       COMPLETE LOCALLY
 Phase 5I  LOCAL PRODUCTION FINAL / PLAY STORE READY v1.0   COMPLETE
 ```
 
-The repository is now in **v1.0 maintenance/freeze mode** until the user explicitly starts a post-v1 phase.
+Post-v1 development is active by explicit user instruction. Finote v1.1.0 Accounts & Transfers and v1.2.0 Reports Visualization & Analytics are complete; the current approved track is Finote v1.3.0 Assets / Investments.
 
 ---
 
-# 56. v1.0 Maintenance / Feature Freeze
+# 56. Versioned Development / Scope Control
 
-Finote v1.0.0 is locally production-final. Default behavior for future tasks is **maintenance first**, not feature expansion.
+Finote v1.0.0 remains the local production-final baseline, but later version development may proceed only when explicitly requested. The currently approved feature track is **v1.3.0 Assets / Investments**.
 
-Do not implement unless explicitly requested:
-
-```text
-AI features
-Wallet / Accounts
-Budgeting
-Recurring Transactions
-Cloud Backup
-Cloud Sync
-Optional User Accounts
-Advanced Analytics
-Major Receipt Scanner Expansion
-```
+Do not implement outside the explicitly requested version/phase. AI, Cloud Sync, automated trading, realtime trading, and unrelated post-v1 features remain deferred unless separately requested.
 
 Current sequence:
 
@@ -1429,16 +1417,16 @@ Post-v1 Development Only When Explicitly Requested
 
 ---
 
-# 56A. Deferred v1.1.0 — Accounts & Transfers
+# 56A. Completed v1.1.0 — Accounts & Transfers
 
-Accounts/Wallet and account-to-account transfers are a planned **post-v1** feature under:
+Accounts/Wallet and account-to-account transfers are a completed **post-v1** feature under:
 
 ```text
 v1.1.0
 Phase 6A — Accounts & Transfers
 ```
 
-Planned sub-phases:
+Completed sub-phases:
 
 ```text
 6A.1 Account / Wallet Management
@@ -1453,7 +1441,7 @@ Planned sub-phases:
 6A.10 Testing & Polish
 ```
 
-While v1.0.0 remains in maintenance/freeze mode, do NOT automatically:
+Historical note: before Phase 6A was explicitly started, these changes were deferred. They are now implemented in v1.1.0. Do not recreate or duplicate them:
 
 - create an `accounts` table;
 - create a `transfers` table;
@@ -1463,11 +1451,11 @@ While v1.0.0 remains in maintenance/freeze mode, do NOT automatically:
 - change backup format solely for future accounts;
 - change exports solely for future accounts.
 
-These changes remain deliberately deferred until Phase 6A is explicitly requested. Completion of Phase 5I does not automatically authorize Phase 6A implementation.
+Phase 6A is complete. Existing Accounts & Transfers code is now baseline architecture and must be reused rather than reimplemented.
 
 ## 56A.1 Transfer Financial Semantics
 
-Future domain separation:
+Implemented domain separation:
 
 ```text
 Transactions
@@ -1493,9 +1481,9 @@ Total assets Rp10.000.000
 
 Reports must not increase expense or income because of the transfer.
 
-## 56A.2 Future Account Balance Rule
+## 56A.2 Current Account Balance Rule
 
-When implemented, account balance should be derived conceptually as:
+Account balance is derived conceptually as:
 
 ```text
 initial_balance
@@ -1507,9 +1495,9 @@ initial_balance
 
 Do not implement account balance as a manually mutated source-of-truth field that can drift when transactions/transfers are edited or deleted.
 
-## 56A.3 Future Migration Safety
+## 56A.3 Completed Migration Safety Baseline
 
-When Phase 6A begins, inspect the actual Drift schema and migration history first. Do not assume conceptual names match current code.
+The completed Phase 6A migration established the backward-compatible baseline below. Future migrations must inspect the actual Drift schema and migration history first and must not assume conceptual names match current code.
 
 Required backward-compatible strategy:
 
@@ -1535,7 +1523,7 @@ The migration must preserve existing financial data and supported upgrade paths.
 
 Legacy databases may have no account information.
 
-Future Phase 6A behavior:
+Current Phase 6A behavior:
 
 ```text
 Legacy transaction
@@ -1553,9 +1541,9 @@ Rules:
 - existing Finote data remains intact;
 - transfer records are not synthesized for historical legacy transactions.
 
-## 56A.5 Future Backup / Restore / Export Rules
+## 56A.5 Current Backup / Restore / Export Rules
 
-After Accounts & Transfers are actually implemented:
+Accounts & Transfers are implemented; therefore:
 
 - backup/restore must include accounts, transfers, transaction-account relations, and new schema metadata;
 - exports may include Account information;
@@ -1690,11 +1678,14 @@ Do not start the next phase automatically.
 Current product state:
 
 ```text
-Finote v1.0.0
-LOCAL PRODUCTION FINAL / PLAY STORE READY (local)
+Finote v1.2.0
+REPORTS VISUALIZATION & ANALYTICS COMPLETE
+
+Finote v1.3.0
+ASSETS / INVESTMENTS — PHASE 7A.1 PLANNING / AUDIT
 ```
 
-When the user asks to continue working on v1.0.0 without explicitly opening Phase 6A or another post-v1 feature phase, default to one of:
+For tasks explicitly scoped to the v1.0 maintenance baseline, default to one of:
 
 - `fix:` bug correction;
 - `perf:` measured performance/reliability correction;
@@ -1805,7 +1796,7 @@ Do not make Finote complicated simply because more features are technically poss
 
 ## Rule 10
 
-Future account-to-account transfers must never be classified as income or expense.
+Account-to-account transfers must never be classified as income or expense.
 
 ---
 
@@ -1813,9 +1804,9 @@ Future account-to-account transfers must never be classified as income or expens
 
 Current product state:
 
-> **Finote v1.0.0 is LOCAL PRODUCTION FINAL / PLAY STORE READY locally.**
+> **Finote v1.2.0 is the current completed feature baseline; Finote v1.3.0 Assets / Investments is the active explicitly approved development track.**
 
-The current goal is not to maximize feature count. The default goal now is to preserve v1.0.0 quality through real usage, regression fixes, and safe release maintenance.
+The current goal is to add Assets / Investments incrementally without weakening the existing finance core. Data integrity, deterministic calculations, offline usability, and backward compatibility remain more important than feature count.
 
 Current product focus:
 
@@ -1836,3 +1827,340 @@ Play Store Readiness
 ```
 
 AI, cloud, and advanced finance features come later only when there is validated demand.
+
+
+---
+
+# 65. Finote v1.3.0 — Assets / Investments Rules
+
+Finote v1.3.0 is an explicitly approved development track.
+
+Current active phase:
+
+```text
+Phase 7A.1 — Investment Architecture & Existing Code Audit
+```
+
+Do not automatically implement Phase 7A.2 or later phases until 7A.1 is reviewed/accepted.
+
+## 65.1 Investment Domain Separation
+
+Keep these concepts separate:
+
+```text
+Cashflow
+Investment Cashflow
+Asset Activity
+Current Holdings
+Current Portfolio Value
+Net Worth
+```
+
+Historical investment cashflow must never become the holdings source of truth.
+
+## 65.2 Existing Investment Cashflow
+
+Existing categories/transactions have already been normalized manually into:
+
+```text
+Pembelian Aset
+Penjualan Aset
+```
+
+Do not build a legacy category reconstruction/migration assistant.
+
+Use these records only for:
+
+```text
+Total Pembelian Aset
+Total Penjualan Aset
+Net Cash Invested
+```
+
+Never infer from Net Cash Invested:
+
+- current portfolio value;
+- holdings quantity;
+- cost basis;
+- historical P/L.
+
+## 65.3 Opening Portfolio Snapshot
+
+Existing users may not know historical lots/units/average buy. Do not force reconstruction.
+
+Use an Opening Portfolio Snapshot / Opening Asset Position that represents the holdings owned when the Assets feature begins.
+
+New users may start from zero or from an Opening Position.
+
+## 65.4 Holdings Formula
+
+Canonical concept:
+
+```text
+Current Holdings
+= Opening Position
++ Buy
+- Sell
++ Adjustment
+```
+
+Asset activities required for v1.3.0:
+
+```text
+openingPosition
+buy
+sell
+adjustment
+```
+
+Do not implement dividend/interest/staking/split unless explicitly requested later.
+
+## 65.5 Quantity Precision
+
+Money rules remain unchanged:
+
+```text
+IDR / financial amount = integer source of truth
+```
+
+Asset quantity may be fractional. Do not persist/calculate canonical quantity using binary `double` without an explicit deterministic precision design.
+
+Phase 7A.1 must inspect and recommend a safe strategy such as:
+
+- scaled integer;
+- decimal value object;
+- string-backed decimal;
+- another deterministic representation compatible with Drift.
+
+Do not choose scale/precision blindly.
+
+## 65.6 Cost Basis Unknown Is Valid State
+
+Existing opening holdings may have quantity but no known cost basis.
+
+```text
+quantity known
+cost basis unknown
+```
+
+Unknown must not be converted to zero.
+
+Historical P/L must remain unavailable until sufficient cost-basis data exists.
+
+## 65.7 Asset / Cashflow Link
+
+An asset activity may use nullable `source_transaction_id` (exact name follows actual schema) to reference one normal Finote cashflow transaction.
+
+Rules:
+
+- Buy may create/link one Expense / Pembelian Aset cashflow transaction.
+- Sell may create/link one Income / Penjualan Aset cashflow transaction.
+- Never create duplicate cashflow for one economic event.
+- Historical Pembelian/Penjualan records do not require automatic asset-activity backfill.
+- Adjustment changes holdings without automatically becoming Income/Expense.
+
+Operations that create both cashflow + asset activity should be atomic where practical.
+
+## 65.8 Asset Types and Pricing
+
+Initial asset types:
+
+```text
+stock
+crypto
+mutualFund
+gold
+other
+```
+
+Pricing modes:
+
+```text
+api
+manual
+```
+
+Do not expand into Bond/SBN/ETF/Property unless explicitly requested.
+
+## 65.9 Market API Boundary
+
+Flutter talks only to **Finote Market API**, not Yahoo/yfinance/CoinGecko/Binance directly.
+
+Preferred portfolio quote endpoint:
+
+```http
+POST /api/v1/market/quotes
+```
+
+Avoid one request per asset when batch quote is available.
+
+Flutter consumes normalized quote fields and must not depend on provider-specific response formats or symbols such as Yahoo `.JK` suffixes.
+
+## 65.10 Market API Privacy
+
+Market quote requests may send only minimal market identifiers such as:
+
+```text
+symbol
+asset type
+currency
+```
+
+Never send to Market API:
+
+- quantity owned;
+- account balances;
+- account names;
+- transaction history;
+- transaction notes;
+- portfolio value;
+- net worth.
+
+## 65.11 Offline-First Portfolio
+
+Required UX/data flow:
+
+```text
+Load assets + activities from Drift
+↓
+derive holdings locally
+↓
+load local last-known/manual prices
+↓
+render Portfolio immediately
+↓
+refresh batch market quotes asynchronously
+↓
+update UI and local last-known price
+```
+
+Network failure must not prevent viewing holdings or using Finote core finance.
+
+Market prices are auxiliary external data; holdings are local source records.
+
+## 65.12 No Realtime Trading Scope
+
+Do not add for v1.3.0:
+
+```text
+WebSocket
+per-second polling
+candlestick chart
+trading/order execution
+automated trading
+large historical price database
+server-side portfolio storage
+complex portfolio analytics
+AI investment advice
+```
+
+Finote remains a personal finance tracker with portfolio awareness, not a brokerage/trading terminal.
+
+## 65.13 Current Value and Net Worth
+
+Portfolio Value:
+
+```text
+SUM(current holding × current/manual/last-known price)
+```
+
+Net Worth:
+
+```text
+Cash / Wallet Assets
++ Current Portfolio Value
+```
+
+Do not include Net Cash Invested as an extra component of Net Worth.
+
+Market price movement must not modify Income/Expense.
+
+## 65.14 Backup / Restore
+
+Persistent v1.3 investment source records must be included in Backup/Restore:
+
+- assets;
+- opening-position activities;
+- buy/sell/adjustment activities;
+- manual pricing configuration;
+- any other persistent holdings source records.
+
+Last-known API quote cache is rebuildable and does not have to be backup-critical.
+
+Restore must work offline and preserve referential integrity.
+
+## 65.15 Migration and Legacy Safety
+
+Prefer additive Drift migrations.
+
+Before any schema work:
+
+- inspect actual schema version;
+- inspect migration history;
+- preserve v1.2 data;
+- test fresh install and v1.2 -> v1.3 upgrade;
+- do not modify/rewrite existing historical transactions unnecessarily;
+- do not auto-create holdings from legacy investment categories.
+
+Legacy source databases remain READ ONLY.
+
+## 65.16 Phase 7 Roadmap
+
+```text
+7A Asset Domain Foundation
+7A.1 Investment Architecture & Existing Code Audit
+7A.2 Asset Database Schema & Migration
+7A.3 Asset CRUD & Asset Types
+7A.4 Opening Portfolio Snapshot
+7A.5 Asset Activity / Buy-Sell-Adjustment
+7A.6 Holdings Calculation
+
+7B Market Data
+7B.1 Market API Client Foundation
+7B.2 Batch Quote Integration
+7B.3 Local Last-Known Price Cache
+7B.4 Manual Asset Pricing
+7B.5 Current Market Value
+
+7C Portfolio
+7C.1 Portfolio Screen Foundation
+7C.2 Stock Holdings UI
+7C.3 Crypto Holdings UI
+7C.4 Mutual Fund / Gold / Manual Assets
+7C.5 Portfolio Summary & Refresh UX
+
+7D Finance Integration
+7D.1 Historical Investment Cashflow
+7D.2 Net Worth Integration
+7D.3 Reports Integration
+7D.4 Dashboard Integration
+
+7E Reliability & Release
+7E.1 Backup / Restore Integration
+7E.2 Backward Compatibility & Migration Tests
+7E.3 Portfolio Performance & Offline Audit
+7E.4 UI/UX Polish
+7E.5 v1.3.0 Final Audit & Release Preparation
+```
+
+Implement only the explicitly requested sub-phase.
+
+## 65.17 Phase 7A.1 Gate
+
+7A.1 is **audit/planning only**.
+
+Before coding, inspect:
+
+1. Drift/SQLite schema and migration history;
+2. transaction model and transaction categories;
+3. Accounts & Transfers architecture;
+4. `Pembelian Aset` / `Penjualan Aset` existing implementation;
+5. Reports/Dashboard calculations;
+6. Backup/Restore format;
+7. Legacy Import;
+8. Riverpod providers;
+9. GoRouter/navigation;
+10. networking client conventions;
+11. Finote Market API integration contract.
+
+7A.1 must produce an implementation plan and identify blockers. Do not create asset tables, UI, or Market API integration until the user explicitly proceeds to 7A.2.

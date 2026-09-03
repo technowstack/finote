@@ -2809,6 +2809,1484 @@ class SettingsCompanion extends UpdateCompanion<SettingRecord> {
   }
 }
 
+class $AssetsTable extends Assets with TableInfo<$AssetsTable, AssetRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: generateUuid,
+  );
+  static const VerificationMeta _symbolMeta = const VerificationMeta('symbol');
+  @override
+  late final GeneratedColumn<String> symbol = GeneratedColumn<String>(
+    'symbol',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _normalizedSymbolMeta = const VerificationMeta(
+    'normalizedSymbol',
+  );
+  @override
+  late final GeneratedColumn<String> normalizedSymbol = GeneratedColumn<String>(
+    'normalized_symbol',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<AssetType, String> assetType =
+      GeneratedColumn<String>(
+        'asset_type',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL CHECK (asset_type IN (\'stock\', \'crypto\', \'mutualFund\', \'gold\', \'other\'))',
+      ).withConverter<AssetType>($AssetsTable.$converterassetType);
+  @override
+  late final GeneratedColumnWithTypeConverter<AssetPricingMode, String>
+  pricingMode = GeneratedColumn<String>(
+    'pricing_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints:
+        'NOT NULL CHECK (pricing_mode IN (\'api\', \'manual\'))',
+  ).withConverter<AssetPricingMode>($AssetsTable.$converterpricingMode);
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('IDR'),
+  );
+  static const VerificationMeta _unitLabelMeta = const VerificationMeta(
+    'unitLabel',
+  );
+  @override
+  late final GeneratedColumn<String> unitLabel = GeneratedColumn<String>(
+    'unit_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isActiveMeta = const VerificationMeta(
+    'isActive',
+  );
+  @override
+  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
+    'is_active',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_active" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    symbol,
+    normalizedSymbol,
+    name,
+    assetType,
+    pricingMode,
+    currency,
+    unitLabel,
+    isActive,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'assets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('symbol')) {
+      context.handle(
+        _symbolMeta,
+        symbol.isAcceptableOrUnknown(data['symbol']!, _symbolMeta),
+      );
+    }
+    if (data.containsKey('normalized_symbol')) {
+      context.handle(
+        _normalizedSymbolMeta,
+        normalizedSymbol.isAcceptableOrUnknown(
+          data['normalized_symbol']!,
+          _normalizedSymbolMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
+      );
+    }
+    if (data.containsKey('unit_label')) {
+      context.handle(
+        _unitLabelMeta,
+        unitLabel.isAcceptableOrUnknown(data['unit_label']!, _unitLabelMeta),
+      );
+    }
+    if (data.containsKey('is_active')) {
+      context.handle(
+        _isActiveMeta,
+        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AssetRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      symbol: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}symbol'],
+      ),
+      normalizedSymbol: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}normalized_symbol'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      assetType: $AssetsTable.$converterassetType.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}asset_type'],
+        )!,
+      ),
+      pricingMode: $AssetsTable.$converterpricingMode.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}pricing_mode'],
+        )!,
+      ),
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
+      unitLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_label'],
+      ),
+      isActive: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_active'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetsTable createAlias(String alias) {
+    return $AssetsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<AssetType, String> $converterassetType =
+      const AssetTypeConverter();
+  static TypeConverter<AssetPricingMode, String> $converterpricingMode =
+      const AssetPricingModeConverter();
+}
+
+class AssetRecord extends DataClass implements Insertable<AssetRecord> {
+  final int id;
+  final String uuid;
+  final String? symbol;
+  final String? normalizedSymbol;
+  final String name;
+  final AssetType assetType;
+  final AssetPricingMode pricingMode;
+  final String currency;
+  final String? unitLabel;
+  final bool isActive;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const AssetRecord({
+    required this.id,
+    required this.uuid,
+    this.symbol,
+    this.normalizedSymbol,
+    required this.name,
+    required this.assetType,
+    required this.pricingMode,
+    required this.currency,
+    this.unitLabel,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    if (!nullToAbsent || symbol != null) {
+      map['symbol'] = Variable<String>(symbol);
+    }
+    if (!nullToAbsent || normalizedSymbol != null) {
+      map['normalized_symbol'] = Variable<String>(normalizedSymbol);
+    }
+    map['name'] = Variable<String>(name);
+    {
+      map['asset_type'] = Variable<String>(
+        $AssetsTable.$converterassetType.toSql(assetType),
+      );
+    }
+    {
+      map['pricing_mode'] = Variable<String>(
+        $AssetsTable.$converterpricingMode.toSql(pricingMode),
+      );
+    }
+    map['currency'] = Variable<String>(currency);
+    if (!nullToAbsent || unitLabel != null) {
+      map['unit_label'] = Variable<String>(unitLabel);
+    }
+    map['is_active'] = Variable<bool>(isActive);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  AssetsCompanion toCompanion(bool nullToAbsent) {
+    return AssetsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      symbol: symbol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(symbol),
+      normalizedSymbol: normalizedSymbol == null && nullToAbsent
+          ? const Value.absent()
+          : Value(normalizedSymbol),
+      name: Value(name),
+      assetType: Value(assetType),
+      pricingMode: Value(pricingMode),
+      currency: Value(currency),
+      unitLabel: unitLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitLabel),
+      isActive: Value(isActive),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory AssetRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetRecord(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      symbol: serializer.fromJson<String?>(json['symbol']),
+      normalizedSymbol: serializer.fromJson<String?>(json['normalizedSymbol']),
+      name: serializer.fromJson<String>(json['name']),
+      assetType: serializer.fromJson<AssetType>(json['assetType']),
+      pricingMode: serializer.fromJson<AssetPricingMode>(json['pricingMode']),
+      currency: serializer.fromJson<String>(json['currency']),
+      unitLabel: serializer.fromJson<String?>(json['unitLabel']),
+      isActive: serializer.fromJson<bool>(json['isActive']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'symbol': serializer.toJson<String?>(symbol),
+      'normalizedSymbol': serializer.toJson<String?>(normalizedSymbol),
+      'name': serializer.toJson<String>(name),
+      'assetType': serializer.toJson<AssetType>(assetType),
+      'pricingMode': serializer.toJson<AssetPricingMode>(pricingMode),
+      'currency': serializer.toJson<String>(currency),
+      'unitLabel': serializer.toJson<String?>(unitLabel),
+      'isActive': serializer.toJson<bool>(isActive),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  AssetRecord copyWith({
+    int? id,
+    String? uuid,
+    Value<String?> symbol = const Value.absent(),
+    Value<String?> normalizedSymbol = const Value.absent(),
+    String? name,
+    AssetType? assetType,
+    AssetPricingMode? pricingMode,
+    String? currency,
+    Value<String?> unitLabel = const Value.absent(),
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => AssetRecord(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    symbol: symbol.present ? symbol.value : this.symbol,
+    normalizedSymbol: normalizedSymbol.present
+        ? normalizedSymbol.value
+        : this.normalizedSymbol,
+    name: name ?? this.name,
+    assetType: assetType ?? this.assetType,
+    pricingMode: pricingMode ?? this.pricingMode,
+    currency: currency ?? this.currency,
+    unitLabel: unitLabel.present ? unitLabel.value : this.unitLabel,
+    isActive: isActive ?? this.isActive,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  AssetRecord copyWithCompanion(AssetsCompanion data) {
+    return AssetRecord(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      symbol: data.symbol.present ? data.symbol.value : this.symbol,
+      normalizedSymbol: data.normalizedSymbol.present
+          ? data.normalizedSymbol.value
+          : this.normalizedSymbol,
+      name: data.name.present ? data.name.value : this.name,
+      assetType: data.assetType.present ? data.assetType.value : this.assetType,
+      pricingMode: data.pricingMode.present
+          ? data.pricingMode.value
+          : this.pricingMode,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      unitLabel: data.unitLabel.present ? data.unitLabel.value : this.unitLabel,
+      isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetRecord(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('symbol: $symbol, ')
+          ..write('normalizedSymbol: $normalizedSymbol, ')
+          ..write('name: $name, ')
+          ..write('assetType: $assetType, ')
+          ..write('pricingMode: $pricingMode, ')
+          ..write('currency: $currency, ')
+          ..write('unitLabel: $unitLabel, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uuid,
+    symbol,
+    normalizedSymbol,
+    name,
+    assetType,
+    pricingMode,
+    currency,
+    unitLabel,
+    isActive,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetRecord &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.symbol == this.symbol &&
+          other.normalizedSymbol == this.normalizedSymbol &&
+          other.name == this.name &&
+          other.assetType == this.assetType &&
+          other.pricingMode == this.pricingMode &&
+          other.currency == this.currency &&
+          other.unitLabel == this.unitLabel &&
+          other.isActive == this.isActive &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class AssetsCompanion extends UpdateCompanion<AssetRecord> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<String?> symbol;
+  final Value<String?> normalizedSymbol;
+  final Value<String> name;
+  final Value<AssetType> assetType;
+  final Value<AssetPricingMode> pricingMode;
+  final Value<String> currency;
+  final Value<String?> unitLabel;
+  final Value<bool> isActive;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  const AssetsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.normalizedSymbol = const Value.absent(),
+    this.name = const Value.absent(),
+    this.assetType = const Value.absent(),
+    this.pricingMode = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.unitLabel = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  AssetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.normalizedSymbol = const Value.absent(),
+    required String name,
+    required AssetType assetType,
+    required AssetPricingMode pricingMode,
+    this.currency = const Value.absent(),
+    this.unitLabel = const Value.absent(),
+    this.isActive = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  }) : name = Value(name),
+       assetType = Value(assetType),
+       pricingMode = Value(pricingMode);
+  static Insertable<AssetRecord> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<String>? symbol,
+    Expression<String>? normalizedSymbol,
+    Expression<String>? name,
+    Expression<String>? assetType,
+    Expression<String>? pricingMode,
+    Expression<String>? currency,
+    Expression<String>? unitLabel,
+    Expression<bool>? isActive,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (symbol != null) 'symbol': symbol,
+      if (normalizedSymbol != null) 'normalized_symbol': normalizedSymbol,
+      if (name != null) 'name': name,
+      if (assetType != null) 'asset_type': assetType,
+      if (pricingMode != null) 'pricing_mode': pricingMode,
+      if (currency != null) 'currency': currency,
+      if (unitLabel != null) 'unit_label': unitLabel,
+      if (isActive != null) 'is_active': isActive,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  AssetsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<String?>? symbol,
+    Value<String?>? normalizedSymbol,
+    Value<String>? name,
+    Value<AssetType>? assetType,
+    Value<AssetPricingMode>? pricingMode,
+    Value<String>? currency,
+    Value<String?>? unitLabel,
+    Value<bool>? isActive,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+  }) {
+    return AssetsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      symbol: symbol ?? this.symbol,
+      normalizedSymbol: normalizedSymbol ?? this.normalizedSymbol,
+      name: name ?? this.name,
+      assetType: assetType ?? this.assetType,
+      pricingMode: pricingMode ?? this.pricingMode,
+      currency: currency ?? this.currency,
+      unitLabel: unitLabel ?? this.unitLabel,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (symbol.present) {
+      map['symbol'] = Variable<String>(symbol.value);
+    }
+    if (normalizedSymbol.present) {
+      map['normalized_symbol'] = Variable<String>(normalizedSymbol.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (assetType.present) {
+      map['asset_type'] = Variable<String>(
+        $AssetsTable.$converterassetType.toSql(assetType.value),
+      );
+    }
+    if (pricingMode.present) {
+      map['pricing_mode'] = Variable<String>(
+        $AssetsTable.$converterpricingMode.toSql(pricingMode.value),
+      );
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (unitLabel.present) {
+      map['unit_label'] = Variable<String>(unitLabel.value);
+    }
+    if (isActive.present) {
+      map['is_active'] = Variable<bool>(isActive.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('symbol: $symbol, ')
+          ..write('normalizedSymbol: $normalizedSymbol, ')
+          ..write('name: $name, ')
+          ..write('assetType: $assetType, ')
+          ..write('pricingMode: $pricingMode, ')
+          ..write('currency: $currency, ')
+          ..write('unitLabel: $unitLabel, ')
+          ..write('isActive: $isActive, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetTransactionsTable extends AssetTransactions
+    with TableInfo<$AssetTransactionsTable, AssetTransactionRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+    clientDefault: generateUuid,
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<int> assetId = GeneratedColumn<int>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES assets (id) ON DELETE RESTRICT',
+    ),
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<AssetTransactionAction, String>
+  action =
+      GeneratedColumn<String>(
+        'action',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+        $customConstraints: 'NOT NULL CHECK ("action" IN (\'openingPosition\', \'buy\', \'sell\', \'adjustment\'))',
+      ).withConverter<AssetTransactionAction>(
+        $AssetTransactionsTable.$converteraction,
+      );
+  static const VerificationMeta _quantityScaledMeta = const VerificationMeta(
+    'quantityScaled',
+  );
+  @override
+  late final GeneratedColumn<int> quantityScaled = GeneratedColumn<int>(
+    'quantity_scaled',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL CHECK (quantity_scaled <> 0)',
+  );
+  static const VerificationMeta _priceAmountMeta = const VerificationMeta(
+    'priceAmount',
+  );
+  @override
+  late final GeneratedColumn<int> priceAmount = GeneratedColumn<int>(
+    'price_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _totalAmountMeta = const VerificationMeta(
+    'totalAmount',
+  );
+  @override
+  late final GeneratedColumn<int> totalAmount = GeneratedColumn<int>(
+    'total_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<DateTime, String>
+  transactionDate = GeneratedColumn<String>(
+    'transaction_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  ).withConverter<DateTime>($AssetTransactionsTable.$convertertransactionDate);
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sourceTransactionIdMeta =
+      const VerificationMeta('sourceTransactionId');
+  @override
+  late final GeneratedColumn<int> sourceTransactionId = GeneratedColumn<int>(
+    'source_transaction_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES transactions (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now().toUtc(),
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uuid,
+    assetId,
+    action,
+    quantityScaled,
+    priceAmount,
+    totalAmount,
+    transactionDate,
+    note,
+    sourceTransactionId,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_transactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetTransactionRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('quantity_scaled')) {
+      context.handle(
+        _quantityScaledMeta,
+        quantityScaled.isAcceptableOrUnknown(
+          data['quantity_scaled']!,
+          _quantityScaledMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_quantityScaledMeta);
+    }
+    if (data.containsKey('price_amount')) {
+      context.handle(
+        _priceAmountMeta,
+        priceAmount.isAcceptableOrUnknown(
+          data['price_amount']!,
+          _priceAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('total_amount')) {
+      context.handle(
+        _totalAmountMeta,
+        totalAmount.isAcceptableOrUnknown(
+          data['total_amount']!,
+          _totalAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('source_transaction_id')) {
+      context.handle(
+        _sourceTransactionIdMeta,
+        sourceTransactionId.isAcceptableOrUnknown(
+          data['source_transaction_id']!,
+          _sourceTransactionIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  AssetTransactionRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetTransactionRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      action: $AssetTransactionsTable.$converteraction.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.string,
+          data['${effectivePrefix}action'],
+        )!,
+      ),
+      quantityScaled: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}quantity_scaled'],
+      )!,
+      priceAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}price_amount'],
+      ),
+      totalAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}total_amount'],
+      ),
+      transactionDate: $AssetTransactionsTable.$convertertransactionDate
+          .fromSql(
+            attachedDatabase.typeMapping.read(
+              DriftSqlType.string,
+              data['${effectivePrefix}transaction_date'],
+            )!,
+          ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      sourceTransactionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_transaction_id'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $AssetTransactionsTable createAlias(String alias) {
+    return $AssetTransactionsTable(attachedDatabase, alias);
+  }
+
+  static TypeConverter<AssetTransactionAction, String> $converteraction =
+      const AssetTransactionActionConverter();
+  static TypeConverter<DateTime, String> $convertertransactionDate =
+      const DateOnlyConverter();
+}
+
+class AssetTransactionRecord extends DataClass
+    implements Insertable<AssetTransactionRecord> {
+  final int id;
+  final String uuid;
+  final int assetId;
+  final AssetTransactionAction action;
+  final int quantityScaled;
+  final int? priceAmount;
+  final int? totalAmount;
+  final DateTime transactionDate;
+  final String? note;
+  final int? sourceTransactionId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  const AssetTransactionRecord({
+    required this.id,
+    required this.uuid,
+    required this.assetId,
+    required this.action,
+    required this.quantityScaled,
+    this.priceAmount,
+    this.totalAmount,
+    required this.transactionDate,
+    this.note,
+    this.sourceTransactionId,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uuid'] = Variable<String>(uuid);
+    map['asset_id'] = Variable<int>(assetId);
+    {
+      map['action'] = Variable<String>(
+        $AssetTransactionsTable.$converteraction.toSql(action),
+      );
+    }
+    map['quantity_scaled'] = Variable<int>(quantityScaled);
+    if (!nullToAbsent || priceAmount != null) {
+      map['price_amount'] = Variable<int>(priceAmount);
+    }
+    if (!nullToAbsent || totalAmount != null) {
+      map['total_amount'] = Variable<int>(totalAmount);
+    }
+    {
+      map['transaction_date'] = Variable<String>(
+        $AssetTransactionsTable.$convertertransactionDate.toSql(
+          transactionDate,
+        ),
+      );
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    if (!nullToAbsent || sourceTransactionId != null) {
+      map['source_transaction_id'] = Variable<int>(sourceTransactionId);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    return map;
+  }
+
+  AssetTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return AssetTransactionsCompanion(
+      id: Value(id),
+      uuid: Value(uuid),
+      assetId: Value(assetId),
+      action: Value(action),
+      quantityScaled: Value(quantityScaled),
+      priceAmount: priceAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(priceAmount),
+      totalAmount: totalAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(totalAmount),
+      transactionDate: Value(transactionDate),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      sourceTransactionId: sourceTransactionId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sourceTransactionId),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory AssetTransactionRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetTransactionRecord(
+      id: serializer.fromJson<int>(json['id']),
+      uuid: serializer.fromJson<String>(json['uuid']),
+      assetId: serializer.fromJson<int>(json['assetId']),
+      action: serializer.fromJson<AssetTransactionAction>(json['action']),
+      quantityScaled: serializer.fromJson<int>(json['quantityScaled']),
+      priceAmount: serializer.fromJson<int?>(json['priceAmount']),
+      totalAmount: serializer.fromJson<int?>(json['totalAmount']),
+      transactionDate: serializer.fromJson<DateTime>(json['transactionDate']),
+      note: serializer.fromJson<String?>(json['note']),
+      sourceTransactionId: serializer.fromJson<int?>(
+        json['sourceTransactionId'],
+      ),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uuid': serializer.toJson<String>(uuid),
+      'assetId': serializer.toJson<int>(assetId),
+      'action': serializer.toJson<AssetTransactionAction>(action),
+      'quantityScaled': serializer.toJson<int>(quantityScaled),
+      'priceAmount': serializer.toJson<int?>(priceAmount),
+      'totalAmount': serializer.toJson<int?>(totalAmount),
+      'transactionDate': serializer.toJson<DateTime>(transactionDate),
+      'note': serializer.toJson<String?>(note),
+      'sourceTransactionId': serializer.toJson<int?>(sourceTransactionId),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+    };
+  }
+
+  AssetTransactionRecord copyWith({
+    int? id,
+    String? uuid,
+    int? assetId,
+    AssetTransactionAction? action,
+    int? quantityScaled,
+    Value<int?> priceAmount = const Value.absent(),
+    Value<int?> totalAmount = const Value.absent(),
+    DateTime? transactionDate,
+    Value<String?> note = const Value.absent(),
+    Value<int?> sourceTransactionId = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+  }) => AssetTransactionRecord(
+    id: id ?? this.id,
+    uuid: uuid ?? this.uuid,
+    assetId: assetId ?? this.assetId,
+    action: action ?? this.action,
+    quantityScaled: quantityScaled ?? this.quantityScaled,
+    priceAmount: priceAmount.present ? priceAmount.value : this.priceAmount,
+    totalAmount: totalAmount.present ? totalAmount.value : this.totalAmount,
+    transactionDate: transactionDate ?? this.transactionDate,
+    note: note.present ? note.value : this.note,
+    sourceTransactionId: sourceTransactionId.present
+        ? sourceTransactionId.value
+        : this.sourceTransactionId,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  AssetTransactionRecord copyWithCompanion(AssetTransactionsCompanion data) {
+    return AssetTransactionRecord(
+      id: data.id.present ? data.id.value : this.id,
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      action: data.action.present ? data.action.value : this.action,
+      quantityScaled: data.quantityScaled.present
+          ? data.quantityScaled.value
+          : this.quantityScaled,
+      priceAmount: data.priceAmount.present
+          ? data.priceAmount.value
+          : this.priceAmount,
+      totalAmount: data.totalAmount.present
+          ? data.totalAmount.value
+          : this.totalAmount,
+      transactionDate: data.transactionDate.present
+          ? data.transactionDate.value
+          : this.transactionDate,
+      note: data.note.present ? data.note.value : this.note,
+      sourceTransactionId: data.sourceTransactionId.present
+          ? data.sourceTransactionId.value
+          : this.sourceTransactionId,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetTransactionRecord(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('assetId: $assetId, ')
+          ..write('action: $action, ')
+          ..write('quantityScaled: $quantityScaled, ')
+          ..write('priceAmount: $priceAmount, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('transactionDate: $transactionDate, ')
+          ..write('note: $note, ')
+          ..write('sourceTransactionId: $sourceTransactionId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uuid,
+    assetId,
+    action,
+    quantityScaled,
+    priceAmount,
+    totalAmount,
+    transactionDate,
+    note,
+    sourceTransactionId,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetTransactionRecord &&
+          other.id == this.id &&
+          other.uuid == this.uuid &&
+          other.assetId == this.assetId &&
+          other.action == this.action &&
+          other.quantityScaled == this.quantityScaled &&
+          other.priceAmount == this.priceAmount &&
+          other.totalAmount == this.totalAmount &&
+          other.transactionDate == this.transactionDate &&
+          other.note == this.note &&
+          other.sourceTransactionId == this.sourceTransactionId &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class AssetTransactionsCompanion
+    extends UpdateCompanion<AssetTransactionRecord> {
+  final Value<int> id;
+  final Value<String> uuid;
+  final Value<int> assetId;
+  final Value<AssetTransactionAction> action;
+  final Value<int> quantityScaled;
+  final Value<int?> priceAmount;
+  final Value<int?> totalAmount;
+  final Value<DateTime> transactionDate;
+  final Value<String?> note;
+  final Value<int?> sourceTransactionId;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  const AssetTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.action = const Value.absent(),
+    this.quantityScaled = const Value.absent(),
+    this.priceAmount = const Value.absent(),
+    this.totalAmount = const Value.absent(),
+    this.transactionDate = const Value.absent(),
+    this.note = const Value.absent(),
+    this.sourceTransactionId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  });
+  AssetTransactionsCompanion.insert({
+    this.id = const Value.absent(),
+    this.uuid = const Value.absent(),
+    required int assetId,
+    required AssetTransactionAction action,
+    required int quantityScaled,
+    this.priceAmount = const Value.absent(),
+    this.totalAmount = const Value.absent(),
+    required DateTime transactionDate,
+    this.note = const Value.absent(),
+    this.sourceTransactionId = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+  }) : assetId = Value(assetId),
+       action = Value(action),
+       quantityScaled = Value(quantityScaled),
+       transactionDate = Value(transactionDate);
+  static Insertable<AssetTransactionRecord> custom({
+    Expression<int>? id,
+    Expression<String>? uuid,
+    Expression<int>? assetId,
+    Expression<String>? action,
+    Expression<int>? quantityScaled,
+    Expression<int>? priceAmount,
+    Expression<int>? totalAmount,
+    Expression<String>? transactionDate,
+    Expression<String>? note,
+    Expression<int>? sourceTransactionId,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uuid != null) 'uuid': uuid,
+      if (assetId != null) 'asset_id': assetId,
+      if (action != null) 'action': action,
+      if (quantityScaled != null) 'quantity_scaled': quantityScaled,
+      if (priceAmount != null) 'price_amount': priceAmount,
+      if (totalAmount != null) 'total_amount': totalAmount,
+      if (transactionDate != null) 'transaction_date': transactionDate,
+      if (note != null) 'note': note,
+      if (sourceTransactionId != null)
+        'source_transaction_id': sourceTransactionId,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+    });
+  }
+
+  AssetTransactionsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uuid,
+    Value<int>? assetId,
+    Value<AssetTransactionAction>? action,
+    Value<int>? quantityScaled,
+    Value<int?>? priceAmount,
+    Value<int?>? totalAmount,
+    Value<DateTime>? transactionDate,
+    Value<String?>? note,
+    Value<int?>? sourceTransactionId,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+  }) {
+    return AssetTransactionsCompanion(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      assetId: assetId ?? this.assetId,
+      action: action ?? this.action,
+      quantityScaled: quantityScaled ?? this.quantityScaled,
+      priceAmount: priceAmount ?? this.priceAmount,
+      totalAmount: totalAmount ?? this.totalAmount,
+      transactionDate: transactionDate ?? this.transactionDate,
+      note: note ?? this.note,
+      sourceTransactionId: sourceTransactionId ?? this.sourceTransactionId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<int>(assetId.value);
+    }
+    if (action.present) {
+      map['action'] = Variable<String>(
+        $AssetTransactionsTable.$converteraction.toSql(action.value),
+      );
+    }
+    if (quantityScaled.present) {
+      map['quantity_scaled'] = Variable<int>(quantityScaled.value);
+    }
+    if (priceAmount.present) {
+      map['price_amount'] = Variable<int>(priceAmount.value);
+    }
+    if (totalAmount.present) {
+      map['total_amount'] = Variable<int>(totalAmount.value);
+    }
+    if (transactionDate.present) {
+      map['transaction_date'] = Variable<String>(
+        $AssetTransactionsTable.$convertertransactionDate.toSql(
+          transactionDate.value,
+        ),
+      );
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (sourceTransactionId.present) {
+      map['source_transaction_id'] = Variable<int>(sourceTransactionId.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('uuid: $uuid, ')
+          ..write('assetId: $assetId, ')
+          ..write('action: $action, ')
+          ..write('quantityScaled: $quantityScaled, ')
+          ..write('priceAmount: $priceAmount, ')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('transactionDate: $transactionDate, ')
+          ..write('note: $note, ')
+          ..write('sourceTransactionId: $sourceTransactionId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   late final $AccountsTable accounts = $AccountsTable(this);
@@ -2816,6 +4294,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $TransfersTable transfers = $TransfersTable(this);
   late final $SettingsTable settings = $SettingsTable(this);
+  late final $AssetsTable assets = $AssetsTable(this);
+  late final $AssetTransactionsTable assetTransactions =
+      $AssetTransactionsTable(this);
   late final Index accountsActive = Index(
     'accounts_active',
     'CREATE INDEX accounts_active ON accounts (is_active)',
@@ -2872,6 +4353,30 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     'transfers_deleted_at',
     'CREATE INDEX transfers_deleted_at ON transfers (deleted_at)',
   );
+  late final Index assetsTypeNormalizedSymbol = Index(
+    'assets_type_normalized_symbol',
+    'CREATE UNIQUE INDEX assets_type_normalized_symbol ON assets (asset_type, normalized_symbol)',
+  );
+  late final Index assetsActive = Index(
+    'assets_active',
+    'CREATE INDEX assets_active ON assets (is_active)',
+  );
+  late final Index assetTransactionsAssetId = Index(
+    'asset_transactions_asset_id',
+    'CREATE INDEX asset_transactions_asset_id ON asset_transactions (asset_id)',
+  );
+  late final Index assetTransactionsDate = Index(
+    'asset_transactions_date',
+    'CREATE INDEX asset_transactions_date ON asset_transactions (transaction_date)',
+  );
+  late final Index assetTransactionsDeletedAt = Index(
+    'asset_transactions_deleted_at',
+    'CREATE INDEX asset_transactions_deleted_at ON asset_transactions (deleted_at)',
+  );
+  late final Index assetTransactionsSourceTransactionId = Index(
+    'asset_transactions_source_transaction_id',
+    'CREATE UNIQUE INDEX asset_transactions_source_transaction_id ON asset_transactions (source_transaction_id)',
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2882,6 +4387,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     transfers,
     settings,
+    assets,
+    assetTransactions,
     accountsActive,
     categoriesType,
     categoriesDeletedAt,
@@ -2896,5 +4403,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transfersToAccountId,
     transfersDate,
     transfersDeletedAt,
+    assetsTypeNormalizedSymbol,
+    assetsActive,
+    assetTransactionsAssetId,
+    assetTransactionsDate,
+    assetTransactionsDeletedAt,
+    assetTransactionsSourceTransactionId,
   ];
 }

@@ -322,6 +322,8 @@ class BackupService {
             'transactions',
             'transfers',
             'settings',
+            'assets',
+            'asset_transactions',
           }) ||
           !_hasColumns(db, 'categories', {
             'id',
@@ -375,9 +377,44 @@ class BackupService {
             'created_at',
             'updated_at',
           }) ||
+          !_hasColumns(db, 'assets', {
+            'id',
+            'uuid',
+            'symbol',
+            'normalized_symbol',
+            'name',
+            'asset_type',
+            'pricing_mode',
+            'currency',
+            'unit_label',
+            'is_active',
+            'created_at',
+            'updated_at',
+          }) ||
+          !_hasColumns(db, 'asset_transactions', {
+            'id',
+            'uuid',
+            'asset_id',
+            'action',
+            'quantity_scaled',
+            'price_amount',
+            'total_amount',
+            'transaction_date',
+            'note',
+            'source_transaction_id',
+            'created_at',
+            'updated_at',
+            'deleted_at',
+          }) ||
           !indexes.containsAll({
             'accounts_active',
             'transactions_account_id',
+            'assets_active',
+            'assets_type_normalized_symbol',
+            'asset_transactions_asset_id',
+            'asset_transactions_date',
+            'asset_transactions_deleted_at',
+            'asset_transactions_source_transaction_id',
             'transfers_from_account_id',
             'transfers_to_account_id',
             'transfers_date',

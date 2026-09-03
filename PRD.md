@@ -61,7 +61,9 @@ Receipt Scanner lokal yang sudah dikembangkan dapat dipertahankan selama stabil,
 
 Fokus Finote saat ini adalah:
 
-> **Membuat core personal finance app yang matang, stabil, cepat, nyaman digunakan secara manual, dan layak dirilis ke Play Store.**
+> **Mengembangkan Finote v1.3.0 dengan Assets / Investments yang tetap local-first, ringan, backward compatible, dan tidak mengubah Finote menjadi aplikasi trading.**
+
+Core personal finance v1.0-v1.2 tetap menjadi baseline stabil. Finote v1.3.0 menambahkan pemisahan antara cashflow, investment activity, current holdings, current portfolio value, dan net worth.
 
 Finote saat ini **tidak berfokus pada AI**.
 
@@ -184,8 +186,8 @@ Finote versi awal bukan:
 - aplikasi kasir;
 - aplikasi pembayaran;
 - aplikasi perbankan;
-- aplikasi investasi;
-- aplikasi cryptocurrency;
+- platform broker/trading investasi;
+- aplikasi trading cryptocurrency;
 - sistem pembukuan double-entry;
 - AI financial assistant;
 - AI expense advisor;
@@ -228,6 +230,7 @@ Bottom navigation:
 ```text
 Home
 Transactions
+Portfolio
 Reports
 Settings
 ```
@@ -1764,7 +1767,7 @@ Phase 6A dianggap lengkap setelah regression coverage mencakup:
 - existing Finote data preservation.
 
 
-## 47.10 Planned v1.2.0 — Phase 6B Reports Visualization & Analytics
+## 47.10 Completed v1.2.0 — Phase 6B Reports Visualization & Analytics
 
 Setelah Accounts & Transfers selesai pada v1.1.0, pengembangan laporan berikutnya berfokus pada **visualisasi data keuangan dan analisis grafik** agar user tidak hanya membaca angka, tetapi juga dapat memahami tren, perbandingan, komposisi pengeluaran, dan posisi aset secara cepat.
 
@@ -1880,8 +1883,8 @@ Visualisasi pengeluaran per kategori harus menggunakan transaction expense saja 
 
 Preferred:
 
-- donut/pie composition visualization with a numeric breakdown list;
-- Top 5 categories plus `Lainnya` when many categories make slices difficult to read.
+- horizontal bar chart jika kategori cukup banyak;
+- pie/donut hanya jika jumlah kategori sedikit dan part-to-whole masih mudah dibaca.
 
 Transfer tidak memiliki kategori dan tidak boleh dibuat menjadi kategori palsu.
 
@@ -2182,7 +2185,7 @@ Do not automatically add new product features during this period.
 
 External Play Store activities such as final signing, Play Console configuration, store assets, Data Safety submission, AAB upload, external closed testing, and production rollout are **not prerequisites for local production-final status**.
 
-Phase 6A is complete for Finote v1.1.0. Phase 6B Reports Visualization & Analytics is the next explicitly approved development track.
+Phase 6A is complete for Finote v1.1.0 and Phase 6B Reports Visualization & Analytics is complete for Finote v1.2.0. Phase 7 Assets / Investments is the next explicitly approved development track.
 
 ---
 
@@ -2190,7 +2193,7 @@ Phase 6A is complete for Finote v1.1.0. Phase 6B Reports Visualization & Analyti
 
 Current product state:
 
-> **Finote v1.1.0 — ACCOUNTS & TRANSFERS COMPLETE / STABILIZATION-READY.**
+> **Finote v1.2.0 — REPORTS VISUALIZATION & ANALYTICS COMPLETE. Finote v1.3.0 — ASSETS / INVESTMENTS IN PLANNING.**
 
 Target produk tetap:
 
@@ -2212,6 +2215,603 @@ Export Excel / Text / PDF
 Backup data dengan aman
 ```
 
-Finote v1.1.0 telah memperluas core finance dengan Accounts & Transfers tanpa mengubah prinsip offline-first dan deterministic financial calculations. Pengembangan berikutnya berfokus pada Reports Visualization & Analytics (Phase 6B).
+Finote v1.1.0 telah memperluas core finance dengan Accounts & Transfers dan Finote v1.2.0 menambahkan Reports Visualization & Analytics. Pengembangan aktif berikutnya adalah **Finote v1.3.0 — Assets / Investments (Phase 7)**.
 
 AI dan cloud sync tetap deferred sampai kebutuhan nyata pengguna membuktikannya.
+
+
+---
+
+# 53. Finote v1.3.0 — Assets / Investments
+
+Finote v1.3.0 menambahkan kemampuan **Assets / Investments / Portfolio** tanpa mengubah Finote menjadi aplikasi broker atau trading. Fitur ini harus tetap mengikuti prinsip **local-first, offline-friendly, lightweight, backward compatible, deterministic, dan data-ownership first**.
+
+## 53.1 Domain Separation
+
+Finote v1.3.0 wajib membedakan secara eksplisit:
+
+```text
+Cashflow
+Investment Activity
+Current Holdings
+Current Portfolio Value
+Net Worth
+```
+
+Historical investment cashflow dan portfolio holdings adalah dua konsep berbeda dan tidak boleh dicampur menjadi satu source of truth.
+
+## 53.2 Historical Investment Cashflow
+
+Data investasi lama sudah dirapikan manual menjadi:
+
+```text
+Expense  -> Pembelian Aset
+Income   -> Penjualan Aset
+```
+
+Tidak perlu membuat migration assistant untuk merekonstruksi kategori investasi lama.
+
+Historical cashflow hanya digunakan untuk menghitung:
+
+```text
+Total Pembelian Aset
+Total Penjualan Aset
+Net Cash Invested
+```
+
+Formula:
+
+```text
+Net Cash Invested
+= Total Pembelian Aset - Total Penjualan Aset
+```
+
+`Net Cash Invested` **bukan**:
+
+- current portfolio value;
+- historical profit/loss;
+- current holdings;
+- cost basis aset yang masih dimiliki.
+
+Existing transaction records tetap dipertahankan sebagai historical cashflow.
+
+## 53.3 Opening Portfolio Snapshot
+
+Existing user tidak wajib merekonstruksi seluruh histori pembelian lama.
+
+Gunakan konsep:
+
+```text
+Opening Portfolio Snapshot
+atau
+Opening Asset Position
+```
+
+User memasukkan kondisi aset yang benar-benar dimiliki saat fitur Asset mulai digunakan, misalnya:
+
+```text
+BBCA 12 lot
+BTC 0.015 BTC
+Emas 5 gram
+Reksadana ABC sejumlah unit yang masih dimiliki
+```
+
+User baru dapat memulai dari `Opening Position = 0` atau memasukkan existing holdings melalui Opening Position.
+
+## 53.4 Supported Asset Types v1.3.0
+
+Prioritas awal:
+
+```text
+stock
+crypto
+mutualFund
+gold
+other
+```
+
+Future asset types seperti Bond/SBN, Deposit, ETF, Property, dan jenis investasi lain tidak termasuk scope wajib v1.3.0.
+
+## 53.5 Asset Activities
+
+Minimal action:
+
+```text
+openingPosition
+buy
+sell
+adjustment
+```
+
+Future, bukan scope wajib v1.3.0:
+
+```text
+dividend
+interest
+stakingReward
+split
+```
+
+Current Holdings:
+
+```text
+Current Holdings
+= Opening Position
++ Buy
+- Sell
++ Adjustment
+```
+
+Short selling tidak didukung. Normal sell tidak boleh membuat holding menjadi negatif.
+
+## 53.6 Conceptual Asset Model
+
+Exact field/table names wajib mengikuti codebase aktual setelah audit Phase 7A.1.
+
+Konsep awal:
+
+```text
+assets
+- id / uuid
+- symbol
+- name
+- asset_type
+- pricing_mode
+- currency
+- unit metadata
+- is_active
+- created_at
+- updated_at
+- deleted_at
+```
+
+Pricing mode:
+
+```text
+api
+manual
+```
+
+Contoh:
+
+```text
+Stock       -> api
+Crypto      -> api
+Mutual Fund -> manual initially
+Gold        -> manual initially
+Other       -> manual
+```
+
+## 53.7 Conceptual Asset Transaction Model
+
+```text
+asset_transactions
+- id / uuid
+- asset_id
+- action
+- quantity
+- price nullable
+- total_amount nullable
+- transaction_date
+- note
+- source_transaction_id nullable
+- created_at
+- updated_at
+- deleted_at
+```
+
+Opening Position sebaiknya dievaluasi sebagai `asset_transactions.action = openingPosition` agar dapat diaudit dan dihitung melalui satu holdings formula.
+
+## 53.8 Quantity Precision
+
+Aturan uang Finote tetap:
+
+```text
+Money / IDR = integer source of truth
+```
+
+Quantity aset dapat berupa pecahan, misalnya:
+
+```text
+BTC 0.015
+Gold 5.25 gram
+Mutual Fund 123.4567 unit
+```
+
+Jangan menggunakan binary floating-point `double` sebagai persisted/canonical source of truth untuk quantity atau monetary value. Phase 7A.1 wajib menentukan strategi deterministic seperti scaled integer, decimal value object, atau string-backed decimal sesuai codebase aktual.
+
+Untuk saham Indonesia, UI dapat menggunakan lot, dengan `1 lot = 100 shares`. Canonical storage lot vs shares harus diputuskan setelah audit, bukan diasumsikan dari PRD.
+
+## 53.9 Cost Basis and Profit/Loss
+
+Existing holdings dapat memiliki:
+
+```text
+quantity known
+cost basis unknown
+```
+
+Unknown cost basis tidak boleh direpresentasikan sebagai `0`.
+
+Jika cost basis historical tidak tersedia:
+
+```text
+Current Value            -> available
+Historical Cost Basis    -> Unknown
+Historical P/L           -> Unavailable
+```
+
+Jangan menghitung historical P/L dari `Net Cash Invested`.
+
+Untuk Buy baru setelah v1.3.0 aktif, simpan data yang cukup untuk memungkinkan cost-basis calculation yang benar di masa depan.
+
+## 53.10 Cashflow Link
+
+Asset activity dapat memiliki relation nullable:
+
+```text
+source_transaction_id nullable
+```
+
+Tujuannya menghubungkan activity dengan cashflow tanpa membuat duplicate cashflow.
+
+Contoh Buy baru:
+
+```text
+Asset Activity BUY
++
+1 linked Expense transaction / Pembelian Aset
+```
+
+Contoh Sell baru:
+
+```text
+Asset Activity SELL
++
+1 linked Income transaction / Penjualan Aset
+```
+
+Historical `Pembelian Aset` / `Penjualan Aset` tidak wajib dibackfill menjadi asset activities.
+
+## 53.11 Market Data Architecture
+
+Finote menggunakan backend terpisah:
+
+```text
+Finote Flutter
+      ↓
+Finote Market API
+      ↓
+MarketService
+      ├── Stock Provider -> Yahoo / yfinance
+      └── Crypto Provider -> CoinGecko -> Binance fallback
+```
+
+Flutter tidak boleh berkomunikasi langsung dengan provider market-data dan tidak perlu mengetahui suffix/provider-specific identifiers seperti `.JK`.
+
+Single quote:
+
+```http
+GET /api/v1/assets/{symbol}?type=stock|crypto&currency=IDR
+```
+
+Portfolio wajib memprioritaskan batch quote:
+
+```http
+POST /api/v1/market/quotes
+```
+
+Hindari satu network request per asset jika batch endpoint dapat digunakan.
+
+Normalized quote minimal:
+
+```text
+symbol
+name
+asset_type
+price
+currency
+change
+change_percent
+market_status
+is_stale
+updated_at
+```
+
+## 53.12 Market API Privacy Rule
+
+Market API hanya boleh menerima data minimum yang diperlukan seperti:
+
+```text
+symbol
+asset type
+currency
+```
+
+Jangan kirim ke Market API:
+
+- quantity holdings;
+- account balance;
+- transaction history;
+- account name;
+- transaction note;
+- portfolio value;
+- net worth.
+
+## 53.13 Offline-First Portfolio Flow
+
+Required flow:
+
+```text
+Open Portfolio
+↓
+Load assets + holdings from Drift
+↓
+Load local last-known price
+↓
+Render immediately
+↓
+Refresh prices via batch Market API asynchronously
+↓
+Update UI
+↓
+Persist last-known price locally
+```
+
+Jika Market API tidak tersedia:
+
+- Portfolio tetap dapat dibuka;
+- holdings tetap tersedia;
+- asset activities tetap berfungsi;
+- Reports tetap berfungsi;
+- last-known price tetap dapat ditampilkan jika tersedia;
+- hanya fresh market-price refresh yang gagal.
+
+Finote bukan trading app. Tidak diperlukan WebSocket atau refresh per detik. Refresh cukup saat membuka Portfolio, pull-to-refresh/tombol Refresh, dan cache interval yang wajar (sekitar 15–30 menit atau sesuai implementasi aktual).
+
+## 53.14 Local Last-Known Price
+
+Finote boleh menyimpan local last-known price / price cache agar Portfolio tetap berguna secara offline.
+
+Price cache bukan portfolio source of truth dan tidak wajib dibackup karena dapat di-refresh kembali. Persistent holdings dan manual asset configuration wajib dibackup.
+
+## 53.15 Current Value
+
+Stock:
+
+```text
+shares × current market price = current value
+```
+
+Jika UI menggunakan lot:
+
+```text
+lot × 100 × current market price = current value
+```
+
+Crypto/manual unit asset:
+
+```text
+quantity × current unit price = current value
+```
+
+Monetary result harus dihitung secara deterministic tanpa menjadikan floating-point sebagai financial source of truth.
+
+## 53.16 Manual Pricing
+
+Asset harus mendukung:
+
+```text
+pricingMode = api
+pricingMode = manual
+```
+
+Manual pricing digunakan untuk asset yang belum memiliki provider market data, termasuk mutual fund, gold, atau custom/manual asset sesuai kebutuhan.
+
+## 53.17 Portfolio Summary
+
+Target Portfolio:
+
+```text
+PORTFOLIO
+
+Current Portfolio Value
+RpXX.XXX.XXX
+
+Saham
+Crypto
+Reksadana
+Emas
+Other
+
+Last Updated
+[Refresh]
+```
+
+Portfolio tidak boleh menunggu API sebelum menampilkan data lokal.
+
+## 53.18 Net Worth
+
+Mulai v1.3.0, terminology finansial harus membedakan:
+
+```text
+Cash / Wallet Assets
+Current Portfolio Value
+Net Worth
+```
+
+Formula:
+
+```text
+Net Worth
+= Cash / Wallet Assets
++ Current Portfolio Value
+```
+
+`Net Cash Invested` tidak boleh digunakan dalam formula Net Worth.
+
+## 53.19 Reports Separation
+
+Laporan harus memisahkan:
+
+```text
+Cashflow Report
+Investment Cashflow
+Portfolio
+Net Worth
+```
+
+Historical investment cashflow menampilkan minimal:
+
+```text
+Total Pembelian Aset
+Total Penjualan Aset
+Net Cash Invested
+```
+
+Portfolio menampilkan current portfolio value. Jangan membuat historical P/L jika cost basis tidak lengkap.
+
+## 53.20 Database Migration Strategy
+
+Prefer additive migration.
+
+Existing transaction/account/transfer tables tidak boleh dirombak jika tidak diperlukan.
+
+Expected new domain tables secara konseptual:
+
+```text
+assets
+asset_transactions
+asset_prices / last_known_prices
+```
+
+Historical `transactions` tidak diwajibkan memiliki asset relation. `source_transaction_id` pada asset activity bersifat nullable.
+
+Setiap schema change harus:
+
+- increment schema version;
+- memiliki explicit migration;
+- preserve existing user data;
+- diuji fresh install dan upgrade dari v1.2.x;
+- tidak merekonstruksi portfolio dari historical investment cashflow.
+
+## 53.21 Backup / Restore v1.3.0
+
+Backup wajib mencakup persistent investment data:
+
+- assets;
+- opening positions;
+- asset transactions;
+- manual pricing configuration;
+- holdings-related persistent state yang benar-benar menjadi source records.
+
+Local last-known market price cache tidak wajib dibackup.
+
+Restore harus menjaga FK/order/migration safety dan dapat memulihkan portfolio tanpa membutuhkan Market API.
+
+## 53.22 Legacy Compatibility
+
+Legacy Import tidak boleh otomatis membuat:
+
+```text
+assets
+holdings
+asset_transactions
+```
+
+berdasarkan kategori investasi lama.
+
+Historical transaction tetap historical cashflow. Existing user menggunakan Opening Portfolio Snapshot untuk memulai holdings.
+
+## 53.23 Asset Lifecycle Safety
+
+Asset yang tidak memiliki activity/history dapat dipertimbangkan untuk hard delete.
+
+Asset yang memiliki activity/history sebaiknya archive/deactivate daripada cascade delete. Jangan menghapus historical asset activities secara cascade.
+
+Exact lifecycle policy ditetapkan setelah audit schema dan UX.
+
+## 53.24 v1.3.0 Scope Exclusions
+
+Jangan implementasikan dalam v1.3.0:
+
+```text
+Real-time trading
+WebSocket
+Candlestick chart
+Large historical price database
+Automated trading
+Server-side portfolio database
+Complex portfolio analytics
+AI investment advice
+Redis solely for Flutter portfolio needs
+Background high-frequency polling
+```
+
+Finote Market API boleh mempertahankan arsitektur backend ringan yang sudah ada tanpa memaksa Redis/database/queue infrastructure.
+
+## 53.25 Phase 7 Roadmap
+
+```text
+Phase 7 — Assets / Investments
+
+7A — Asset Domain Foundation
+7A.1 Investment Architecture & Existing Code Audit
+7A.2 Asset Database Schema & Migration
+7A.3 Asset CRUD & Asset Types
+7A.4 Opening Portfolio Snapshot
+7A.5 Asset Activity / Buy-Sell-Adjustment
+7A.6 Holdings Calculation
+
+7B — Market Data
+7B.1 Market API Client Foundation
+7B.2 Batch Quote Integration
+7B.3 Local Last-Known Price Cache
+7B.4 Manual Asset Pricing
+7B.5 Current Market Value
+
+7C — Portfolio
+7C.1 Portfolio Screen Foundation
+7C.2 Stock Holdings UI
+7C.3 Crypto Holdings UI
+7C.4 Mutual Fund / Gold / Manual Assets
+7C.5 Portfolio Summary & Refresh UX
+
+7D — Finance Integration
+7D.1 Historical Investment Cashflow
+7D.2 Net Worth Integration
+7D.3 Reports Integration
+7D.4 Dashboard Integration
+
+7E — Reliability & Release
+7E.1 Backup / Restore Integration
+7E.2 Backward Compatibility & Migration Tests
+7E.3 Portfolio Performance & Offline Audit
+7E.4 UI/UX Polish
+7E.5 v1.3.0 Final Audit & Release Preparation
+```
+
+Setiap phase harus dikerjakan incremental. Jangan memulai sub-phase berikutnya otomatis.
+
+## 53.26 Current Implementation Gate
+
+Sebelum coding Phase 7:
+
+1. inspect Drift/SQLite schema existing;
+2. inspect transaction model;
+3. inspect existing `Pembelian Aset` dan `Penjualan Aset`;
+4. inspect Reports calculations;
+5. inspect Backup/Restore;
+6. inspect Legacy Import;
+7. inspect Riverpod providers;
+8. inspect GoRouter/navigation;
+9. inspect networking infrastructure;
+10. inspect requirements/integration contract Finote Market API;
+11. produce implementation plan;
+12. only then continue to schema implementation.
+
+Current active phase:
+
+> **Phase 7A.1 — Investment Architecture & Existing Code Audit**
+
+Phase 7A.1 is audit/planning only and must not create schema/UI/API integration changes yet.

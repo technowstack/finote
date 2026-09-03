@@ -25,7 +25,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('fresh database creates version 8 tables and indexes', () async {
+  test('fresh database creates version 9 tables and indexes', () async {
     final schema = await database
         .customSelect(
           "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -33,14 +33,21 @@ void main() {
         .get();
     final names = schema.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 8);
+    expect(database.schemaVersion, 9);
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
         .getSingle();
     expect(foreignKeys.read<int>('foreign_keys'), 1);
     expect(
       names,
-      containsAll(['accounts', 'categories', 'transactions', 'settings']),
+      containsAll([
+        'accounts',
+        'categories',
+        'transactions',
+        'settings',
+        'assets',
+        'asset_transactions',
+      ]),
     );
     expect(
       names,
@@ -57,6 +64,12 @@ void main() {
         'transactions_receipt_fingerprint',
         'transactions_legacy_source_id',
         'accounts_active',
+        'assets_active',
+        'assets_type_normalized_symbol',
+        'asset_transactions_asset_id',
+        'asset_transactions_date',
+        'asset_transactions_deleted_at',
+        'asset_transactions_source_transaction_id',
       ]),
     );
     final defaultAccount = await database.select(database.accounts).getSingle();
@@ -202,7 +215,7 @@ void main() {
     await expectLater(insert(), throwsA(isA<Exception>()));
   });
 
-  test('version 1 database migrates to version 8 without recreation', () async {
+  test('version 1 database migrates to version 9 without recreation', () async {
     await database.close();
     database = AppDatabase(
       NativeDatabase.memory(
@@ -226,11 +239,18 @@ void main() {
         .customSelect('SELECT value FROM phase_zero_marker')
         .getSingle();
 
-    expect(version.read<int>('user_version'), 8);
+    expect(version.read<int>('user_version'), 9);
     expect(marker.read<String>('value'), 'preserved');
     expect(
       tables.map((row) => row.read<String>('name')),
-      containsAll(['accounts', 'categories', 'transactions', 'settings']),
+      containsAll([
+        'accounts',
+        'categories',
+        'transactions',
+        'settings',
+        'assets',
+        'asset_transactions',
+      ]),
     );
   });
 
@@ -294,7 +314,7 @@ void main() {
         .customSelect('PRAGMA table_info(transactions)')
         .get();
 
-    expect(database.schemaVersion, 8);
+    expect(database.schemaVersion, 9);
     expect(transaction.uuid, 'transaction-v2');
     expect(transaction.amount, 25000);
     expect(transaction.transactionDate, DateTime(2026, 8, 29));

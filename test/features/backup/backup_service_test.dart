@@ -766,7 +766,7 @@ void main() {
       final version = await live
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(version.read<int>('user_version'), 8);
+      expect(version.read<int>('user_version'), 9);
       final restoredAccounts = await live.select(live.accounts).get();
       expect(restoredAccounts, hasLength(1));
       expect(restoredAccounts.single.name, 'Tunai');

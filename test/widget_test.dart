@@ -89,6 +89,52 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     },
   );
+
+  testWidgets('five bottom tabs map to the intended root screens', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(database),
+          pinStoreProvider.overrideWithValue(_EmptyPinStore()),
+        ],
+        child: const FinoteApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Beranda'), findsOneWidget);
+    await tester.tap(find.text('Transaksi'));
+    await tester.pumpAndSettle();
+    expect(find.text('Transaksi'), findsAtLeastNWidgets(1));
+    expect(find.byTooltip('Tambah transaksi'), findsOneWidget);
+
+    await tester.tap(find.text('Portofolio'));
+    await tester.pumpAndSettle();
+    expect(find.text('Portofolio'), findsAtLeastNWidgets(1));
+    expect(find.byTooltip('Tambah transaksi'), findsNothing);
+    expect(find.text('Belum ada aset investasi'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Tambah Aset'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tambah aset'), findsOneWidget);
+    await tester.tap(find.text('Batal'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Laporan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Laporan'), findsAtLeastNWidgets(1));
+    await tester.tap(find.text('Pengaturan'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pengaturan'), findsAtLeastNWidgets(1));
+    expect(find.text('Kelola Aset'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }
 
 class _EmptyPinStore implements PinStore {
