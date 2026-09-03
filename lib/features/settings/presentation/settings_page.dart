@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_mode_provider.dart';
@@ -71,7 +72,18 @@ class SettingsPage extends ConsumerWidget {
                 icon: Icons.info_outline,
                 title: 'Finote',
                 subtitle: 'Versi 1.2.0',
-                onTap: () {},
+                onTap: () async {
+                  final Uri url = Uri.parse(
+                    'https://github.com/technowstack/finote/releases',
+                  );
+
+                  if (!await launchUrl(
+                    url,
+                    mode: LaunchMode.externalApplication,
+                  )) {
+                    throw Exception('Tidak dapat membuka $url');
+                  }
+                },
               ),
             ],
           ),
