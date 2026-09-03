@@ -141,6 +141,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
   @override
   Widget build(BuildContext context) {
     final assets = ref.watch(assetHoldingsProvider);
+    final allAssets = ref.watch(allAssetHoldingsProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('Portofolio')),
       body: assets.when(
@@ -149,14 +150,12 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
           message: 'Aset belum dapat dimuat.',
           onRetry: () => ref.invalidate(allAssetsProvider),
         ),
-        data: (items) {
-          final active = items
-              .where((holding) => holding.asset.isActive)
-              .toList();
-          final archived = items
+        data: (active) {
+          final all = allAssets.valueOrNull ?? active;
+          final archived = all
               .where((holding) => !holding.asset.isActive)
               .toList();
-          if (items.isEmpty) {
+          if (active.isEmpty && archived.isEmpty) {
             return _EmptyAssets(onAdd: _openForm);
           }
           return ListView(
@@ -169,7 +168,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
             children: [
               Text('Aset Saya', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.sm),
-              ..._groupedAssets(active),
+              if (active.isNotEmpty) ..._groupedAssets(active),
               if (archived.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.lg),
                 Text(
@@ -181,6 +180,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
                   _AssetCard(
                     asset: holding.asset,
                     quantity: holding.quantity,
+                    hasActivity: holding.hasActivity,
                     onTap: () => context.push(
                       '${widget.routePrefix}/${holding.asset.id}',
                     ),
@@ -223,6 +223,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
             child: _AssetCard(
               asset: holding.asset,
               quantity: holding.quantity,
+              hasActivity: holding.hasActivity,
               onTap: () =>
                   context.push('${widget.routePrefix}/${holding.asset.id}'),
               onEdit: () => _openForm(holding.asset),
@@ -275,11 +276,7 @@ class _AssetDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final activities = ref.watch(assetActivitiesProvider(asset.id));
-    final holding = ref
-        .watch(assetHoldingsProvider)
-        .valueOrNull
-        ?.where((item) => item.asset.id == asset.id)
-        .firstOrNull;
+    final holding = ref.watch(holdingProvider(asset.id)).valueOrNull;
     final opening = activities.valueOrNull
         ?.where(
           (activity) =>
@@ -307,6 +304,7 @@ class _AssetDetail extends ConsumerWidget {
                   value: _formatAssetQuantity(
                     asset,
                     holding?.quantity ?? AssetQuantity.fromScaled(0),
+                    hasActivity: holding?.hasActivity ?? false,
                   ),
                 ),
                 _DetailRow(
@@ -326,7 +324,7 @@ class _AssetDetail extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        if (opening == null && (holding?.quantity.isZero ?? true)) ...[
+        if (!(holding?.hasActivity ?? false)) ...[
           const Text('Belum ada posisi'),
           const SizedBox(height: AppSpacing.sm),
           FilledButton.icon(
@@ -335,7 +333,7 @@ class _AssetDetail extends ConsumerWidget {
             icon: const Icon(Icons.add),
             label: const Text('Tambah Posisi Awal'),
           ),
-        ] else
+        ] else if (opening != null)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -347,7 +345,7 @@ class _AssetDetail extends ConsumerWidget {
                   Text(
                     _formatAssetQuantity(
                       asset,
-                      AssetQuantity.fromScaled(opening!.quantityScaled),
+                      AssetQuantity.fromScaled(opening.quantityScaled),
                     ),
                   ),
                   _DetailRow(
@@ -396,6 +394,20 @@ class _AssetDetail extends ConsumerWidget {
                     ],
                   ),
                 ],
+              ),
+            ),
+          )
+        else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: _DetailRow(
+                label: 'Posisi saat ini',
+                value: _formatAssetQuantity(
+                  asset,
+                  holding!.quantity,
+                  hasActivity: true,
+                ),
               ),
             ),
           ),
@@ -529,8 +541,12 @@ Future<void> _removeOpeningPosition(
   }
 }
 
-String _formatAssetQuantity(AssetRecord asset, AssetQuantity quantity) {
-  if (quantity.isZero) return 'Belum ada posisi';
+String _formatAssetQuantity(
+  AssetRecord asset,
+  AssetQuantity quantity, {
+  bool hasActivity = true,
+}) {
+  if (quantity.isZero && !hasActivity) return 'Belum ada posisi';
   if (asset.assetType == AssetType.stock) {
     final shares = quantity.scaled ~/ AssetQuantity.scale;
     if (shares % 100 == 0) return '${shares ~/ 100} lot';
@@ -1234,6 +1250,7 @@ class _AssetCard extends StatelessWidget {
   const _AssetCard({
     required this.asset,
     required this.quantity,
+    required this.hasActivity,
     required this.onTap,
     required this.onEdit,
     required this.onArchive,
@@ -1242,6 +1259,7 @@ class _AssetCard extends StatelessWidget {
 
   final AssetRecord asset;
   final AssetQuantity quantity;
+  final bool hasActivity;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
@@ -1261,7 +1279,7 @@ class _AssetCard extends StatelessWidget {
         ),
         title: Text(asset.symbol ?? asset.name),
         subtitle: Text(
-          '${asset.name} • ${_formatAssetQuantity(asset, quantity)} • '
+          '${asset.name} • ${_formatAssetQuantity(asset, quantity, hasActivity: hasActivity)} • '
           '${asset.pricingMode == AssetPricingMode.api ? 'Otomatis' : 'Manual'}',
         ),
         trailing: PopupMenuButton<_AssetAction>(

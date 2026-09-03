@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import 'asset_transaction_repository.dart';
 import '../domain/asset_quantity.dart';
 import '../domain/asset_transaction_action.dart';
 import '../domain/asset_type.dart';
@@ -12,6 +13,9 @@ class AssetActivityService {
   AssetActivityService(this._database);
 
   final AppDatabase _database;
+
+  AssetTransactionRepository get _holdings =>
+      AssetTransactionRepository(_database);
 
   Future<AssetTransactionRecord> createBuy({
     required int assetId,
@@ -63,7 +67,7 @@ class AssetActivityService {
   }) async {
     if (quantity.isZero) throw ArgumentError('Adjustment cannot be zero');
     return _database.transaction(() async {
-      final current = await _currentHolding(assetId);
+      final current = await _holdings.currentHolding(assetId);
       if ((current + quantity).scaled < 0) {
         throw StateError('Adjustment would make holdings negative');
       }
@@ -130,7 +134,10 @@ class AssetActivityService {
           current.action != AssetTransactionAction.adjustment) {
         throw StateError('Adjustment not found');
       }
-      final base = await _currentHoldingExcluding(current.assetId, activityId);
+      final base = await _holdings.currentHoldingExcluding(
+        current.assetId,
+        activityId,
+      );
       if ((base + quantity).scaled < 0) {
         throw StateError('Adjustment would make holdings negative');
       }
@@ -241,7 +248,10 @@ class AssetActivityService {
       if (activity == null || activity.action != action) {
         throw StateError('Asset activity not found');
       }
-      final base = await _currentHoldingExcluding(activity.assetId, activityId);
+      final base = await _holdings.currentHoldingExcluding(
+        activity.assetId,
+        activityId,
+      );
       if (action == AssetTransactionAction.sell &&
           base.scaled < quantity.scaled) {
         throw StateError('Sell quantity exceeds holdings');
@@ -371,37 +381,9 @@ class AssetActivityService {
     return category.id;
   }
 
-  Future<AssetQuantity> _currentHolding(int assetId) async {
-    return _currentHoldingExcluding(assetId, null);
-  }
-
-  Future<AssetQuantity> _currentHoldingExcluding(
-    int assetId,
-    int? excludedId,
-  ) async {
-    final row = await _database
-        .customSelect(
-          '''
-SELECT COALESCE(SUM(CASE
-  WHEN action IN ('openingPosition', 'buy') THEN quantity_scaled
-  WHEN action = 'sell' THEN -quantity_scaled
-  ELSE quantity_scaled END), 0) AS quantity_scaled
-FROM asset_transactions
-WHERE asset_id = ? AND deleted_at IS NULL ${excludedId == null ? '' : 'AND id <> ?'}
-''',
-          variables: [
-            Variable.withInt(assetId),
-            if (excludedId != null) Variable.withInt(excludedId),
-          ],
-          readsFrom: {_database.assetTransactions},
-        )
-        .getSingle();
-    return AssetQuantity.fromScaled(row.read<int>('quantity_scaled'));
-  }
-
   Future<void> _requireSellable(int assetId, AssetQuantity quantity) async {
     _validatePositive(quantity);
-    if ((await _currentHolding(assetId)).scaled < quantity.scaled) {
+    if ((await _holdings.currentHolding(assetId)).scaled < quantity.scaled) {
       throw StateError('Sell quantity exceeds holdings');
     }
   }

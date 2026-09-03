@@ -151,6 +151,13 @@ class AssetTransactionRepository {
   }
 
   Future<AssetQuantity> currentHolding(int assetId) async {
+    return currentHoldingExcluding(assetId);
+  }
+
+  Future<AssetQuantity> currentHoldingExcluding(
+    int assetId, [
+    int? excludedId,
+  ]) async {
     final row = await _database
         .customSelect(
           '''
@@ -162,9 +169,12 @@ SELECT COALESCE(SUM(
   END
 ), 0) AS quantity_scaled
 FROM asset_transactions
-WHERE asset_id = ? AND deleted_at IS NULL
+WHERE asset_id = ? AND deleted_at IS NULL ${excludedId == null ? '' : 'AND id <> ?'}
 ''',
-          variables: [Variable.withInt(assetId)],
+          variables: [
+            Variable.withInt(assetId),
+            if (excludedId != null) Variable.withInt(excludedId),
+          ],
           readsFrom: {_database.assetTransactions},
         )
         .getSingle();
@@ -187,7 +197,13 @@ WHERE asset_id = ? AND deleted_at IS NULL
     return count == 1;
   }
 
-  Stream<List<AssetHolding>> watchHoldings() {
+  Stream<List<AssetHolding>> watchHoldings() =>
+      _watchHoldings(activeOnly: true);
+
+  Stream<List<AssetHolding>> watchAllHoldings() =>
+      _watchHoldings(activeOnly: false);
+
+  Stream<List<AssetHolding>> _watchHoldings({required bool activeOnly}) {
     return _database
         .customSelect(
           '''
@@ -197,12 +213,14 @@ SELECT a.*, COALESCE(SUM(
     WHEN at.action = 'sell' THEN -at.quantity_scaled
     ELSE at.quantity_scaled
   END
-), 0) AS holding_quantity_scaled
+ ), 0) AS holding_quantity_scaled,
+ COUNT(at.id) > 0 AS has_activity
 FROM assets a
 LEFT JOIN asset_transactions at
   ON at.asset_id = a.id AND at.deleted_at IS NULL
+${activeOnly ? 'WHERE a.is_active = 1' : ''}
 GROUP BY a.id
-ORDER BY a.is_active DESC, a.name ASC
+ORDER BY a.name ASC
 ''',
           readsFrom: {_database.assets, _database.assetTransactions},
         )
@@ -234,9 +252,15 @@ ORDER BY a.is_active DESC, a.name ASC
                 quantity: AssetQuantity.fromScaled(
                   row.read<int>('holding_quantity_scaled'),
                 ),
+                hasActivity: row.read<bool>('has_activity'),
               ),
           ],
         );
+  }
+
+  Future<List<AssetHolding>> findNegativeHoldings() async {
+    final rows = await _watchHoldings(activeOnly: false).first;
+    return rows.where((holding) => holding.quantity.isNegative).toList();
   }
 
   void _validate(
@@ -277,10 +301,17 @@ ORDER BY a.is_active DESC, a.name ASC
 }
 
 class AssetHolding {
-  const AssetHolding({required this.asset, required this.quantity});
+  const AssetHolding({
+    required this.asset,
+    required this.quantity,
+    required this.hasActivity,
+  });
 
   final AssetRecord asset;
   final AssetQuantity quantity;
+  final bool hasActivity;
+
+  bool get isConsistent => !quantity.isNegative;
 }
 
 final assetTransactionRepositoryProvider = Provider<AssetTransactionRepository>(
@@ -296,4 +327,18 @@ final assetActivitiesProvider =
 
 final assetHoldingsProvider = StreamProvider<List<AssetHolding>>(
   (ref) => ref.watch(assetTransactionRepositoryProvider).watchHoldings(),
+);
+
+final allAssetHoldingsProvider = StreamProvider<List<AssetHolding>>(
+  (ref) => ref.watch(assetTransactionRepositoryProvider).watchAllHoldings(),
+);
+
+final holdingProvider = Provider.family<AsyncValue<AssetHolding?>, int>(
+  (ref, assetId) => ref
+      .watch(allAssetHoldingsProvider)
+      .whenData(
+        (holdings) => holdings
+            .where((holding) => holding.asset.id == assetId)
+            .firstOrNull,
+      ),
 );

@@ -31,10 +31,11 @@
 - [x] v1.3 Portfolio primary navigation and asset UI cleanup
 - [x] v1.3 Opening Portfolio Snapshot / Opening Position
 - [x] v1.3 Asset Activity / Buy-Sell-Adjustment
+- [x] v1.3 Holdings Calculation
 
 ## Current
 
-Finote v1.2.0 has completed **Phase 6B — Reports Visualization & Analytics**. Development has now moved to **Finote v1.3.0 — Assets / Investments**.
+Finote v1.3.0 Phase 7A Asset Domain Foundation is complete through holdings calculation. Market Data remains unimplemented.
 
 Current focus:
 
@@ -54,7 +55,7 @@ Current focus:
 ```text
 Finote v1.2.0
 REPORTS VISUALIZATION & ANALYTICS COMPLETE
-FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A.5 COMPLETE
+FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7A COMPLETE
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -88,7 +89,7 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 7A.3 Asset CRUD & Asset Types
 - [x] 7A.4 Opening Portfolio Snapshot
 - [x] 7A.5 Asset Activity / Buy-Sell-Adjustment
-- [ ] 7A.6 Holdings Calculation
+- [x] 7A.6 Holdings Calculation
 
 ### Phase 7B — Market Data
 
@@ -441,13 +442,13 @@ AI:
 
 ## Immediate Action
 
-Finote v1.2.0 has completed **Reports Visualization & Analytics** and the
-Finote v1.3.0 Phase 7A.1 Assets / Investments audit is complete.
+Finote v1.3.0 Phase 7A Asset Domain Foundation is complete through holdings
+calculation. Market Data remains unimplemented.
 
 Current rules:
 
 1. Keep Phase 7A.1 audit decisions authoritative for the next implementation.
-2. Do not create Portfolio UI or Market API integration during Phase 7A.2.
+2. Keep holdings derived from active asset activities; do not add mutable totals.
 3. Keep historical `Pembelian Aset` / `Penjualan Aset` as investment cashflow only.
 4. Do not reconstruct holdings, cost basis, or historical P/L from old cashflow.
 5. Use Opening Portfolio Snapshot / Opening Asset Position for existing holdings.
@@ -459,7 +460,7 @@ Current rules:
 
 Next active implementation:
 
-> **Phase 7A.2 — Asset Database Schema & Migration**
+> **Phase 7B.1 — Market API Client Foundation**
 
 
 ---
@@ -486,8 +487,6 @@ Next active implementation:
 
 ### Current active task
 
-> **7A.3 — Asset CRUD & Asset Types**
+> **7B.1 — Market API Client Foundation** (not started)
 
-7A.1 audit is complete in `docs/assets_phase_7a1_architecture_audit.md` and
-7A.2 schema/migration is complete in
-`docs/assets_phase_7a2_schema_migration.md`. Do not start 7A.3 automatically.
+7A.1 through 7A.6 are complete. Do not start 7B.1 automatically.
