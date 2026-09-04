@@ -1884,6 +1884,12 @@ Never infer from Net Cash Invested:
 - cost basis;
 - historical P/L.
 
+Historical investment cashflow has one source of truth: active Transactions.
+Aggregate only correctly typed `Pembelian Aset` expense and `Penjualan Aset`
+income rows. Do not sum `AssetTransaction.totalAmount`; linked Buy/Sell already
+have one corresponding cashflow transaction. Opening Position and Adjustment
+must not create or contribute investment cashflow.
+
 ## 65.3 Opening Portfolio Snapshot
 
 Existing users may not know historical lots/units/average buy. Do not force reconstruction.
@@ -2077,7 +2083,17 @@ Cash / Wallet Assets
 
 Do not include Net Cash Invested as an extra component of Net Worth.
 
+Net Worth must consume the existing derived account summaries and local
+PortfolioSnapshot. Never recalculate either component in the Net Worth UI or
+trigger a Market API request from a Net Worth provider. Missing Portfolio prices
+make Net Worth partial, not zero-valued or complete.
+
 Market price movement must not modify Income/Expense.
+
+Reports must never period-filter Current Portfolio Value or Current Net Worth,
+and must never trigger Market API requests. Reports cashflow must aggregate
+linked Buy/Sell through Transactions only; never double-count
+AssetTransaction.totalAmount.
 
 ## 65.14 Backup / Restore
 

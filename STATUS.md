@@ -68,7 +68,7 @@ Current focus:
 ```text
 Finote v1.2.0
 REPORTS VISUALIZATION & ANALYTICS COMPLETE
- FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7C.6 IN PROGRESS
+ FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7D.5B BLOCKED
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -123,10 +123,13 @@ These external tasks do not reopen the v1.0 feature scope.
 
 ### Phase 7D — Finance Integration
 
-- [ ] 7D.1 Historical Investment Cashflow
-- [ ] 7D.2 Net Worth Integration
-- [ ] 7D.3 Reports Integration
-- [ ] 7D.4 Dashboard Integration
+- [x] 7D.1 Historical Investment Cashflow
+- [x] 7D.2 Net Worth Integration
+- [x] 7D.3 Reports Integration
+- [x] 7D.4 Dashboard Integration
+- [ ] 7D.5 Transaction Edit Hang Audit & Stabilization (blocked: runtime reproduction unavailable)
+- [ ] 7D.5A Core Transaction Save Hang Fix (blocked: runtime CRUD matrix unavailable)
+- [ ] 7D.5B Reactive Transaction State & Main-Isolate Hang Fix (automated correction complete; blocked: Android runtime stack and CRUD matrix unavailable)
 
 ### Phase 7E — Reliability & Release
 
@@ -474,7 +477,7 @@ Current rules:
 
 Next active implementation:
 
-> **Phase 7C.6 — Manual Market Refresh & Resilient Pricing**
+> **Phase 7D.5B — Reactive Transaction State & Main-Isolate Hang Fix**
 
 
 ---
@@ -501,7 +504,7 @@ Next active implementation:
 
 ### Current active task
 
-> **Phase 7C.6 — Manual Market Refresh & Resilient Pricing**
+> **Phase 7D.5B — Reactive Transaction State & Main-Isolate Hang Fix**
 
 7A.1 through 7A.6, 7B.1 through 7B.5, and 7C.1 are complete. Phase 7C.2
 implementation is locally complete but blocked pending real BBCA verification.
@@ -511,3 +514,28 @@ Phase 7C.5 implementation and automated validation are complete but blocked
 pending required mixed-Portfolio verification on Android.
 Phase 7C.6 implementation and automated validation are complete. Android
 runtime verification remains blocked because no emulator/device is connected.
+Phase 7D.1 implementation and automated validation are complete. Historical
+investment cashflow is derived from active Transactions only; no schema
+migration was required. Category identity remains name plus transaction type
+because the current category schema has no semantic key.
+Phase 7D.2 implementation and automated validation are complete. Net Worth is
+derived from existing account summaries plus PortfolioSnapshot; no schema
+migration or market request was added.
+Phase 7D.3 implementation and automated validation are complete. Reports now
+separates period cashflow and investment cashflow from global point-in-time
+Cash, Portfolio, and Net Worth summaries.
+Phase 7D.4 implementation and automated validation are complete. Home now uses the shared Net Worth
+snapshot as its primary current-position summary, removes the duplicate
+account-only headline, and provides Portfolio navigation from the breakdown.
+Phase 7D.5 is blocked pending runtime reproduction of the reported transaction
+edit hang. Submit double-tap protection and loading-state exception cleanup are
+implemented; Phase 7E.1 remains not started.
+Phase 7D.5A is blocked pending runtime reproduction of the reported core save
+hang on the existing user database. Layered Drift, repository, and UI tests
+pass; Phase 7E.1 remains not started.
+Phase 7D.5B automated correction is complete. Build-time form validation and
+post-navigation loading mutation were removed, Dashboard and account summaries
+now use direct Drift-watched query emissions, and active-stream CRUD regression
+tests pass. The phase remains blocked pending the Android CRUD/refresh matrix
+and a frozen main-isolate stack if the hang persists; Phase 7E.1 remains not
+started.

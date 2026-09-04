@@ -20,7 +20,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Total aset'), findsOneWidget);
+    expect(find.text('Kekayaan Bersih'), findsOneWidget);
+    expect(find.text('Kas & Dompet'), findsAtLeastNWidgets(1));
     expect(find.text('Pemasukan bulan ini'), findsOneWidget);
     expect(find.text('Pengeluaran bulan ini'), findsOneWidget);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);

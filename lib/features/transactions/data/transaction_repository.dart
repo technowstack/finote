@@ -104,7 +104,7 @@ class TransactionRepository {
       () => _database.transaction(() async {
         await _requireMatchingCategory(categoryId, type);
         final resolvedAccountId = await _resolveAccountId(accountId);
-        return _database
+        final result = await _database
             .into(_database.transactions)
             .insertReturning(
               TransactionsCompanion.insert(
@@ -121,8 +121,11 @@ class TransactionRepository {
                 receiptFingerprint: Value(receiptFingerprint),
               ),
             );
+        return result;
       }),
-    );
+    ).then((result) {
+      return result;
+    });
   }
 
   Future<List<TransactionRecord>> createMany({

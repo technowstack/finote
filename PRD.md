@@ -2275,6 +2275,11 @@ Net Cash Invested
 
 Existing transaction records tetap dipertahankan sebagai historical cashflow.
 
+Historical investment cashflow is derived from active Transactions using the
+semantic category/type pairs above. Legacy rows remain cashflow only and are
+never automatically converted into Assets or AssetTransactions. Opening
+Position and Adjustment have zero investment cashflow effect.
+
 ## 53.3 Opening Portfolio Snapshot
 
 Existing user tidak wajib merekonstruksi seluruh histori pembelian lama.
@@ -2649,6 +2654,12 @@ Net Worth
 
 `Net Cash Invested` tidak boleh digunakan dalam formula Net Worth.
 
+Current Net Worth is derived from the existing active account-balance
+aggregation plus the existing current Portfolio value. It is not persisted,
+does not trigger Market API requests, and remains explicitly partial when
+Portfolio holdings lack valid prices. Historical investment cashflow is never
+added separately.
+
 ## 53.19 Reports Separation
 
 Laporan harus memisahkan:
@@ -2669,6 +2680,10 @@ Net Cash Invested
 ```
 
 Portfolio menampilkan current portfolio value. Jangan membuat historical P/L jika cost basis tidak lengkap.
+
+Reports must keep period-based Income, Expense, Net Flow, and Investment
+Cashflow separate from point-in-time Cash, Current Portfolio Value, and Net
+Worth. Changing a report period must not filter Portfolio or Net Worth.
 
 ## 53.20 Database Migration Strategy
 

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/finance/net_worth.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../accounts/domain/account_summary.dart';
@@ -51,6 +52,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
     final range = resolveReportRange(_period, customRange: _customRange);
     final filter = ReportFilter(range: range);
     final report = ref.watch(reportProvider(filter));
+    final investmentCashflow = ref.watch(investmentCashflowProvider(filter));
+    final netWorth = ref.watch(netWorthProvider);
     final trend = ref.watch(financialTrendProvider(filter));
     final accounts = ref.watch(accountSummariesProvider);
 
@@ -127,6 +130,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
                 children: [
                   _SummaryTab(
                     data: data,
+                    investmentCashflow: investmentCashflow,
+                    netWorth: netWorth,
                     accounts: accounts,
                     trend: trend,
                     range: range,
@@ -349,6 +354,8 @@ String _periodLabel(ExportDocument document) {
 class _SummaryTab extends StatelessWidget {
   const _SummaryTab({
     required this.data,
+    required this.investmentCashflow,
+    required this.netWorth,
     required this.accounts,
     required this.trend,
     required this.range,
@@ -356,6 +363,8 @@ class _SummaryTab extends StatelessWidget {
   });
 
   final ReportData data;
+  final AsyncValue<InvestmentCashflowSummary> investmentCashflow;
+  final AsyncValue<NetWorthSnapshot> netWorth;
   final AsyncValue<List<AccountSummary>> accounts;
   final AsyncValue<List<FinancialTrendPoint>> trend;
   final ReportRange range;
@@ -380,6 +389,8 @@ class _SummaryTab extends StatelessWidget {
           )
         else
           _CompactSummary(data: data),
+        _InvestmentCashflowSection(summary: investmentCashflow),
+        _CurrentPositionSection(netWorth: netWorth),
         const SizedBox(height: AppSpacing.xl),
         ReportChartSection<List<FinancialTrendPoint>>(
           title: 'Pemasukan vs Pengeluaran',
@@ -429,6 +440,187 @@ class _SummaryTab extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         _TransferSummarySection(summary: data.transferSummary),
       ],
+    );
+  }
+}
+
+class _InvestmentCashflowSection extends StatelessWidget {
+  const _InvestmentCashflowSection({required this.summary});
+
+  final AsyncValue<InvestmentCashflowSummary> summary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Arus Kas Investasi',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Card(
+            child: summary.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: LinearProgressIndicator(),
+              ),
+              error: (_, _) => const ListTile(
+                title: Text('Riwayat arus kas investasi belum dapat dimuat.'),
+              ),
+              data: (data) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Column(
+                  children: [
+                    _InvestmentAmount(
+                      label: 'Total Pembelian Aset',
+                      amount: data.totalPurchases,
+                    ),
+                    _InvestmentAmount(
+                      label: 'Total Penjualan Aset',
+                      amount: data.totalSales,
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    _InvestmentAmount(
+                      label: 'Dana Bersih Diinvestasikan',
+                      amount: data.netCashInvested,
+                      emphasized: true,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      child: Text(
+                        'Berdasarkan riwayat transaksi, bukan nilai portofolio atau keuntungan investasi.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrentPositionSection extends StatelessWidget {
+  const _CurrentPositionSection({required this.netWorth});
+
+  final AsyncValue<NetWorthSnapshot> netWorth;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Posisi Keuangan Saat Ini',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text('Nilai saat ini', style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: AppSpacing.sm),
+          Card(
+            child: netWorth.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: LinearProgressIndicator(),
+              ),
+              error: (_, _) => const ListTile(
+                title: Text('Posisi keuangan belum dapat dimuat.'),
+              ),
+              data: (snapshot) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+                child: Column(
+                  children: [
+                    _PositionAmount(
+                      label: 'Kas & Dompet',
+                      amount: snapshot.cashValue,
+                    ),
+                    _PositionAmount(
+                      label: 'Portofolio',
+                      amount: snapshot.portfolioKnownValue,
+                    ),
+                    const Divider(indent: 16, endIndent: 16),
+                    _PositionAmount(
+                      label: 'Kekayaan Bersih',
+                      amount: snapshot.totalKnownValue,
+                      emphasized: true,
+                    ),
+                    if (snapshot.isPartial)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                        child: Text(
+                          snapshot.unvaluedAssetCount > 0
+                              ? 'Nilai sementara • ${snapshot.unvaluedAssetCount} aset belum memiliki harga'
+                              : 'Nilai sementara • terdapat posisi aset yang tidak valid',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PositionAmount extends StatelessWidget {
+  const _PositionAmount({
+    required this.label,
+    required this.amount,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final int? amount;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleMedium;
+    return ListTile(
+      title: Text(label),
+      trailing: Text(
+        amount == null ? 'Belum tersedia' : formatIdr(amount!),
+        style: emphasized
+            ? style?.copyWith(fontWeight: FontWeight.w700)
+            : style,
+      ),
+    );
+  }
+}
+
+class _InvestmentAmount extends StatelessWidget {
+  const _InvestmentAmount({
+    required this.label,
+    required this.amount,
+    this.emphasized = false,
+  });
+
+  final String label;
+  final int amount;
+  final bool emphasized;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.titleMedium;
+    return ListTile(
+      title: Text(label),
+      trailing: Text(
+        formatIdr(amount),
+        style: emphasized
+            ? style?.copyWith(fontWeight: FontWeight.w700)
+            : style,
+      ),
     );
   }
 }

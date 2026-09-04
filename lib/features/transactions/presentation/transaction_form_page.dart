@@ -85,6 +85,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   int? _accountId;
   CategorySuggestion? _categorySuggestion;
   bool _categoryManuallySelected = false;
+  bool _showCategoryError = false;
   bool _saving = false;
   late final List<_DraftReceiptItem> _receiptItems;
   ReceiptSaveMode _saveMode = ReceiptSaveMode.single;
@@ -194,6 +195,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                   setState(() {
                     _type = type;
                     _categoryId = null;
+                    _showCategoryError = false;
                   });
                 },
               ),
@@ -285,6 +287,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 onSelected: (id) => setState(() {
                   _categoryId = id;
                   _categoryManuallySelected = true;
+                  _showCategoryError = false;
                 }),
               ),
             ),
@@ -301,8 +304,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                   style: textTheme.bodySmall?.copyWith(color: colors.error),
                 ),
               ),
-            if (_formKey.currentState?.validate() == false &&
-                _categoryId == null)
+            if (_showCategoryError && _categoryId == null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(
@@ -430,6 +432,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   }
 
   Future<void> _save() async {
+    if (_saving) return;
+    var leftForm = false;
     final router = GoRouter.of(context);
     final isItemized =
         widget.draft?.receiptReview != null &&
@@ -463,8 +467,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
         (!isItemized &&
             (_categoryId == null ||
                 availableCategoryIds?.contains(_categoryId) != true))) {
-      // Force rebuild to show category error
-      setState(() {});
+      setState(() => _showCategoryError = _categoryId == null);
       return;
     }
     final categoryId = _categoryId;
@@ -472,51 +475,52 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
       ref.read(accountsProvider).valueOrNull ?? const [],
     );
     if (accountId == null) {
-      setState(() {});
+      setState(() => _showCategoryError = _categoryId == null);
       return;
     }
 
     setState(() => _saving = true);
-    final review = widget.draft?.receiptReview;
-    final identity = review == null
-        ? null
-        : ReceiptIdentity(
-            merchant: review.merchant ?? _titleController.text,
-            date: _date,
-            total: isItemized
-                ? review.total ?? 0
-                : _parseAmount(_amountController.text),
-            receiptNumber: review.receiptNumber,
-            items: [
-              for (final item in _receiptItems)
-                ReceiptItem(name: item.name, lineTotal: item.amount),
-            ],
-          );
-    final fingerprint = identity == null ? null : await identity.fingerprint();
-    if (identity != null && fingerprint != null && identity.total > 0) {
-      final duplicate = await ref
-          .read(receiptDuplicateDetectorProvider)
-          .findDuplicate(identity);
-      if (!mounted) return;
-      if (duplicate != null) {
-        final action = await _confirmDuplicate(duplicate, identity);
+    try {
+      final review = widget.draft?.receiptReview;
+      final identity = review == null
+          ? null
+          : ReceiptIdentity(
+              merchant: review.merchant ?? _titleController.text,
+              date: _date,
+              total: isItemized
+                  ? review.total ?? 0
+                  : _parseAmount(_amountController.text),
+              receiptNumber: review.receiptNumber,
+              items: [
+                for (final item in _receiptItems)
+                  ReceiptItem(name: item.name, lineTotal: item.amount),
+              ],
+            );
+      final fingerprint = identity == null
+          ? null
+          : await identity.fingerprint();
+      if (identity != null && fingerprint != null && identity.total > 0) {
+        final duplicate = await ref
+            .read(receiptDuplicateDetectorProvider)
+            .findDuplicate(identity);
         if (!mounted) return;
-        if (action == _DuplicateAction.view) {
-          setState(() => _saving = false);
-          router.go('/transactions');
-          return;
-        }
-        if (action != _DuplicateAction.save) {
-          setState(() => _saving = false);
-          return;
+        if (duplicate != null) {
+          final action = await _confirmDuplicate(duplicate, identity);
+          if (!mounted) return;
+          if (action == _DuplicateAction.view) {
+            leftForm = true;
+            router.go('/transactions');
+            return;
+          }
+          if (action != _DuplicateAction.save) {
+            return;
+          }
         }
       }
-    }
 
-    final repository = ref.read(transactionRepositoryProvider);
-    final note = _noteController.text.trim();
+      final repository = ref.read(transactionRepositoryProvider);
+      final note = _noteController.text.trim();
 
-    try {
       final existing = widget.transaction;
       if (existing == null) {
         if (isItemized) {
@@ -574,19 +578,24 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
           );
         }
       }
+      leftForm = true;
       router.canPop() ? router.pop() : router.go('/transactions');
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final message =
+            error is StateError &&
+                error.message ==
+                    'Edit linked investment transaction from asset activity'
+            ? 'Transaksi pembelian/penjualan aset harus diubah dari detail aset.'
+            : widget.transaction == null
+            ? 'Gagal menyimpan transaksi. Silakan coba lagi.'
+            : 'Gagal memperbarui transaksi. Silakan coba lagi.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted && !leftForm) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.transaction == null
-                  ? 'Gagal menyimpan transaksi. Silakan coba lagi.'
-                  : 'Gagal memperbarui transaksi. Silakan coba lagi.',
-            ),
-          ),
-        );
       }
     }
   }

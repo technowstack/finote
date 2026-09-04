@@ -37,8 +37,39 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Finote'), findsOneWidget);
-    expect(find.text('Total aset'), findsOneWidget);
+    expect(find.text('Kekayaan Bersih'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Belum ada transaksi.'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('dashboard portfolio summary opens the portfolio tab', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseProvider.overrideWithValue(database),
+          pinStoreProvider.overrideWithValue(_EmptyPinStore()),
+        ],
+        child: const FinoteApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('dashboard-portfolio-summary')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Belum ada aset investasi'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

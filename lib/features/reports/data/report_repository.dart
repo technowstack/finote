@@ -112,6 +112,50 @@ ORDER BY
         .map(_mapRows);
   }
 
+  Stream<InvestmentCashflowSummary> watchInvestmentCashflow(
+    ReportRange range, {
+    int? accountId,
+  }) {
+    const converter = DateOnlyConverter();
+    final conditions = [
+      't.deleted_at IS NULL',
+      'c.deleted_at IS NULL',
+      't.transaction_date BETWEEN ? AND ?',
+      if (accountId != null) 't.account_id = ?',
+      "((t.type = 'expense' AND c.name = 'Pembelian Aset') OR "
+          "(t.type = 'income' AND c.name = 'Penjualan Aset'))",
+    ];
+    return _database
+        .customSelect(
+          '''
+SELECT
+  COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0)
+    AS total_purchases,
+  COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0)
+    AS total_sales,
+  COUNT(*) AS transaction_count
+FROM transactions t
+JOIN categories c ON c.id = t.category_id
+WHERE ${conditions.join(' AND ')}
+''',
+          variables: [
+            Variable.withString(converter.toSql(range.start)),
+            Variable.withString(converter.toSql(range.end)),
+            if (accountId != null) Variable.withInt(accountId),
+          ],
+          readsFrom: {_database.transactions, _database.categories},
+        )
+        .watchSingle()
+        .map(
+          (row) => InvestmentCashflowSummary(
+            totalPurchases: row.read<int>('total_purchases'),
+            totalSales: row.read<int>('total_sales'),
+            transactionCount: row.read<int>('transaction_count'),
+            period: range,
+          ),
+        );
+  }
+
   Stream<List<FinancialTrendPoint>> watchFinancialTrend(
     ReportRange range, {
     int? accountId,
@@ -334,6 +378,22 @@ class ReportData extends FinancialSummary {
   bool get isEmpty => transactionCount == 0;
 }
 
+class InvestmentCashflowSummary {
+  const InvestmentCashflowSummary({
+    required this.totalPurchases,
+    required this.totalSales,
+    required this.transactionCount,
+    required this.period,
+  });
+
+  final int totalPurchases;
+  final int totalSales;
+  final int transactionCount;
+  final ReportRange period;
+
+  int get netCashInvested => totalPurchases - totalSales;
+}
+
 class TransferReportSummary {
   const TransferReportSummary({required this.count, required this.volume});
 
@@ -446,4 +506,11 @@ final reportProvider = StreamProvider.autoDispose
             accountId: filter.accountId,
             categoryId: filter.categoryId,
           ),
+    );
+
+final investmentCashflowProvider = StreamProvider.autoDispose
+    .family<InvestmentCashflowSummary, ReportFilter>(
+      (ref, filter) => ref
+          .watch(reportRepositoryProvider)
+          .watchInvestmentCashflow(filter.range, accountId: filter.accountId),
     );

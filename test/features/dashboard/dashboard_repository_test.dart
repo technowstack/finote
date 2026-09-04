@@ -62,6 +62,28 @@ void main() {
     expect(summaries.current.monthlyIncome, 1200000);
   });
 
+  test('active summary subscription emits after account changes', () async {
+    final summaries = StreamIterator(
+      dashboard.watchSummary(DateTime(2026, 8, 29)),
+    );
+    addTearDown(summaries.cancel);
+
+    expect(await summaries.moveNext(), isTrue);
+    final account = await AccountRepository(database)
+        .create(name: 'Tunai', type: AccountType.cash, initialBalance: 500000);
+    expect(await summaries.moveNext(), isTrue);
+    expect(summaries.current.totalAssets, 500000);
+
+    await AccountRepository(database).update(
+      id: account.id,
+      name: account.name,
+      type: account.type,
+      initialBalance: 750000,
+    );
+    expect(await summaries.moveNext(), isTrue);
+    expect(summaries.current.totalAssets, 750000);
+  });
+
   test(
     'summary calculates balance, current month totals, and today count',
     () async {

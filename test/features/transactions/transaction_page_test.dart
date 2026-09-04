@@ -43,6 +43,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Masukkan nominal yang valid.'), findsNothing);
+    expect(find.text('Pilih kategori transaksi.'), findsNothing);
+
     // Type toggle should show both options
     expect(find.text('Pengeluaran'), findsOneWidget);
     expect(find.text('Pemasukan'), findsOneWidget);
@@ -79,6 +82,7 @@ void main() {
     expect(find.text(formatDate(DateTime.now())), findsOneWidget);
     expect(find.text('Semua'), findsOneWidget);
     expect(find.text('Bulan ini'), findsNothing);
+    expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
@@ -127,6 +131,7 @@ void main() {
     expect(find.text('Simpan perubahan'), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField).first, '1250000');
+    await tester.tap(find.text('Simpan perubahan'));
     await tester.tap(find.text('Simpan perubahan'));
     await tester.pumpAndSettle();
 

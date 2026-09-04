@@ -91,6 +91,13 @@ void main() {
       300,
       scrollable: find.byType(Scrollable).last,
     );
+    await tester.scrollUntilVisible(
+      find.text('Posisi Keuangan Saat Ini'),
+      300,
+      scrollable: find.byType(Scrollable).last,
+    );
+    expect(find.text('Posisi Keuangan Saat Ini'), findsOneWidget);
+    expect(find.text('Kekayaan Bersih'), findsOneWidget);
     expect(find.byType(BarChart), findsOneWidget);
     var chart = tester.widget<BarChart>(find.byType(BarChart));
     expect(

@@ -175,4 +175,35 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('direct transaction edit rejects linked buy cashflow', () async {
+    final buy = await service.createBuy(
+      assetId: asset.id,
+      quantity: shares(2),
+      priceAmount: 10000,
+      accountId: account.id,
+      date: DateTime(2026, 9, 3),
+    );
+    final transactionId = buy.sourceTransactionId!;
+    final transaction = await TransactionRepository(database)
+        .findActiveById(transactionId);
+
+    await expectLater(
+      TransactionRepository(database).update(transaction!),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('asset activity'),
+        ),
+      ),
+    );
+    expect(await database.select(database.transactions).get(), hasLength(1));
+    expect(
+      (await database.select(database.assetTransactions).get())
+          .single
+          .deletedAt,
+      isNull,
+    );
+  });
 }

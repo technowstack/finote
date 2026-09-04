@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../../core/finance/net_worth.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../transactions/data/transaction_repository.dart';
 import '../../transactions/domain/transaction_type.dart';
@@ -58,6 +59,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
   @override
   Widget build(BuildContext context) {
     final summary = ref.watch(dashboardSummaryProvider);
+    final netWorth = ref.watch(netWorthProvider);
     final recentTransactions = ref.watch(dashboardRecentTransactionsProvider);
 
     return Scaffold(
@@ -85,7 +87,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 message: 'Ringkasan belum dapat dimuat.',
                 onRetry: () => ref.invalidate(dashboardSummaryProvider),
               ),
-              data: (data) => _Summary(summary: data),
+              data: (data) => _Summary(
+                summary: data,
+                netWorth: netWorth,
+                onOpenPortfolio: () => context.go('/portfolio'),
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
@@ -133,54 +139,25 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
 // ---------------------------------------------------------------------------
 
 class _Summary extends StatelessWidget {
-  const _Summary({required this.summary});
+  const _Summary({
+    required this.summary,
+    required this.netWorth,
+    required this.onOpenPortfolio,
+  });
 
   final DashboardSummary summary;
+  final AsyncValue<NetWorthSnapshot> netWorth;
+  final VoidCallback onOpenPortfolio;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Balance
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xl,
-            vertical: AppSpacing.lg,
-          ),
-          decoration: BoxDecoration(
-            color: colors.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Total aset',
-                style: textTheme.labelLarge?.copyWith(
-                  color: colors.onPrimaryContainer.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  formatIdr(summary.totalAssets),
-                  style: textTheme.displayMedium?.copyWith(
-                    color: colors.onPrimaryContainer,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        _NetWorthCard(netWorth: netWorth, onOpenPortfolio: onOpenPortfolio),
         const SizedBox(height: AppSpacing.md),
-
-        // Monthly income & expense — single compact row
         Row(
           children: [
             Expanded(
@@ -203,6 +180,88 @@ class _Summary extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _NetWorthCard extends StatelessWidget {
+  const _NetWorthCard({required this.netWorth, required this.onOpenPortfolio});
+
+  final AsyncValue<NetWorthSnapshot> netWorth;
+  final VoidCallback onOpenPortfolio;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: netWorth.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (_, _) => const Text('Kekayaan bersih belum dapat dimuat.'),
+          data: (snapshot) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Kekayaan Bersih',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  formatIdr(snapshot.totalKnownValue),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _NetWorthLine(label: 'Kas & Dompet', value: snapshot.cashValue),
+              _NetWorthLine(
+                label: 'Portofolio',
+                value: snapshot.portfolioKnownValue,
+                key: const Key('dashboard-portfolio-summary'),
+                onTap: onOpenPortfolio,
+              ),
+              if (snapshot.isPartial)
+                Text(
+                  snapshot.unvaluedAssetCount > 0
+                      ? 'Nilai sementara • ${snapshot.unvaluedAssetCount} aset belum memiliki harga'
+                      : 'Nilai sementara • terdapat posisi aset yang tidak valid',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NetWorthLine extends StatelessWidget {
+  const _NetWorthLine({
+    super.key,
+    required this.label,
+    required this.value,
+    this.onTap,
+  });
+
+  final String label;
+  final int? value;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      onTap: onTap,
+      title: Text(label),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value == null ? 'Belum tersedia' : formatIdr(value!)),
+          if (onTap != null) const Icon(Icons.chevron_right),
+        ],
+      ),
     );
   }
 }

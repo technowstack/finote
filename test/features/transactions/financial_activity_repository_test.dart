@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:finote/core/database/app_database.dart';
@@ -228,5 +230,34 @@ void main() {
         .watch(const FinancialActivityQuery())
         .first;
     expect(remaining.map((item) => item.entityId), [income.id]);
+  });
+
+  test('active history subscription emits after transaction CRUD', () async {
+    final stream = StreamIterator(
+      activities.watch(const FinancialActivityQuery()),
+    );
+    addTearDown(stream.cancel);
+
+    expect(await stream.moveNext(), isTrue);
+    expect(stream.current, hasLength(3));
+
+    final created = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: expense.categoryId,
+      accountId: source.id,
+      amount: 100000,
+      title: 'Baru',
+      transactionDate: DateTime(2026, 9, 2),
+    );
+    expect(await stream.moveNext(), isTrue);
+    expect(stream.current.first.entityId, created.id);
+
+    await transactions.update(created.copyWith(title: 'Diubah'));
+    expect(await stream.moveNext(), isTrue);
+    expect(stream.current.first.title, 'Diubah');
+
+    await transactions.softDelete(created.id);
+    expect(await stream.moveNext(), isTrue);
+    expect(stream.current, hasLength(3));
   });
 }

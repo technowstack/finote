@@ -267,7 +267,7 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Text(
-                  'Aset',
+                  'Akun & Saldo',
                   style: Theme.of(context).textTheme.labelLarge
                       ?.copyWith(color: Theme.of(context).colorScheme.primary),
                 ),

@@ -31,7 +31,15 @@ class AccountRepository {
     final aggregate = _database
         .customSelect(
           '''
-      SELECT a.id AS account_id,
+      SELECT a.id,
+             a.uuid,
+             a.name,
+             a.type,
+             a.initial_balance,
+             a.is_active,
+             a.is_default,
+             a.created_at,
+             a.updated_at,
              COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0)
                AS total_income,
              COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0)
@@ -64,26 +72,18 @@ class AccountRepository {
         )
         .watch();
 
-    return aggregate.asyncMap((rows) async {
-      final accounts =
-          await (_database.select(_database.accounts)..orderBy([
-                (account) => OrderingTerm.desc(account.isActive),
-                (account) => OrderingTerm.asc(account.name),
-              ]))
-              .get();
-      final byId = {for (final account in accounts) account.id: account};
-      return [
+    return aggregate.map(
+      (rows) => [
         for (final row in rows)
-          if (byId[row.read<int>('account_id')] case final account?)
-            AccountSummary(
-              account: account,
-              totalIncome: row.read<int>('total_income'),
-              totalExpense: row.read<int>('total_expense'),
-              totalIncomingTransfer: row.read<int>('total_incoming_transfer'),
-              totalOutgoingTransfer: row.read<int>('total_outgoing_transfer'),
-            ),
-      ];
-    });
+          AccountSummary(
+            account: _database.accounts.map(row.data),
+            totalIncome: row.read<int>('total_income'),
+            totalExpense: row.read<int>('total_expense'),
+            totalIncomingTransfer: row.read<int>('total_incoming_transfer'),
+            totalOutgoingTransfer: row.read<int>('total_outgoing_transfer'),
+          ),
+      ],
+    );
   }
 
   Future<AccountRecord?> findById(int id) {
