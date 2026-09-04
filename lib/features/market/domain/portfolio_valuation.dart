@@ -45,6 +45,7 @@ class PortfolioSnapshot {
   const PortfolioSnapshot({
     required this.valuations,
     required this.groups,
+    required this.holdingAssetCount,
     required this.valuedAssetCount,
     required this.unvaluedAssetCount,
     required this.integrityIssueCount,
@@ -52,6 +53,7 @@ class PortfolioSnapshot {
 
   final List<AssetValuation> valuations;
   final Map<AssetType, PortfolioGroupSummary> groups;
+  final int holdingAssetCount;
   final int valuedAssetCount;
   final int unvaluedAssetCount;
   final int integrityIssueCount;
@@ -63,7 +65,7 @@ class PortfolioSnapshot {
           (total, item) => total + (item.currentValue ?? 0),
         );
 
-  bool get isEmpty => valuations.isEmpty;
+  bool get isEmpty => holdingAssetCount == 0;
   bool get isComplete => !isEmpty && unvaluedAssetCount == 0;
   bool get isPartial => valuedAssetCount > 0 && unvaluedAssetCount > 0;
   bool get isUnavailable => !isEmpty && valuedAssetCount == 0;

@@ -56,7 +56,11 @@ Current focus:
 - [x] Phase 7B.3 — Local Last-Known Price Cache
 - [x] Phase 7B.4 — Manual Asset Pricing
 - [x] Phase 7B.5 — Current Market Value
-- [ ] Market API end-to-end integration audit and runtime stabilization
+- [x] Market API end-to-end integration audit and runtime stabilization
+- [x] Phase 7C.1 — Portfolio Screen Foundation
+- [ ] Phase 7C.2 — Stock Holdings UI (blocked: real BBCA quote provider rate-limited)
+- [ ] Phase 7C.4 — Mutual Fund / Gold / Manual Assets UI (blocked: no Android emulator/device for required manual verification)
+- [ ] Phase 7C.5 — Portfolio Summary & Refresh UX (blocked: no Android emulator/device for required mixed-Portfolio verification)
 
 ## Current Product State
 
@@ -109,11 +113,11 @@ These external tasks do not reopen the v1.0 feature scope.
 
 ### Phase 7C — Portfolio
 
-- [ ] 7C.1 Portfolio Screen Foundation
-- [ ] 7C.2 Stock Holdings UI
+- [x] 7C.1 Portfolio Screen Foundation
+- [ ] 7C.2 Stock Holdings UI (blocked: real BBCA quote provider rate-limited)
 - [ ] 7C.3 Crypto Holdings UI
-- [ ] 7C.4 Mutual Fund / Gold / Manual Assets
-- [ ] 7C.5 Portfolio Summary & Refresh UX
+- [ ] 7C.4 Mutual Fund / Gold / Manual Assets (blocked: no Android emulator/device for required manual verification)
+- [ ] 7C.5 Portfolio Summary & Refresh UX (blocked: no Android emulator/device for required mixed-Portfolio verification)
 
 ### Phase 7D — Finance Integration
 
@@ -468,7 +472,7 @@ Current rules:
 
 Next active implementation:
 
-> **Market API end-to-end integration audit and runtime stabilization**
+> **Phase 7C.5 — Portfolio Summary & Refresh UX**
 
 
 ---
@@ -495,7 +499,11 @@ Next active implementation:
 
 ### Current active task
 
-> **Market API end-to-end integration audit and runtime stabilization**
+> **Phase 7C.5 — Portfolio Summary & Refresh UX**
 
-7A.1 through 7A.6 and 7B.1 through 7B.5 are complete. The next approved
-phase is 7C.1 Portfolio Screen Foundation, treated as a UI audit/polish phase.
+7A.1 through 7A.6, 7B.1 through 7B.5, and 7C.1 are complete. Phase 7C.2
+implementation is locally complete but blocked pending real BBCA verification.
+Phase 7C.4 implementation and automated validation are complete but blocked
+pending required manual Gold and Mutual Fund verification on Android.
+Phase 7C.5 implementation and automated validation are complete but blocked
+pending required mixed-Portfolio verification on Android.

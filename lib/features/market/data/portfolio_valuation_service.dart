@@ -13,11 +13,18 @@ class PortfolioValuationService {
     final valuations = <AssetValuation>[];
     final groups = <AssetType, _GroupAccumulator>{};
     var integrityIssueCount = 0;
+    var holdingAssetCount = 0;
 
     for (final holding in holdings) {
       if (!holding.hasActivity) continue;
       final valuation = valueFor(holding, prices[holding.asset.id]);
       valuations.add(valuation);
+      if (holding.quantity.isNegative) {
+        integrityIssueCount++;
+        continue;
+      }
+      if (holding.quantity.isZero) continue;
+      holdingAssetCount++;
       final group = groups.putIfAbsent(
         holding.asset.assetType,
         () => _GroupAccumulator(),
@@ -28,7 +35,6 @@ class PortfolioValuationService {
       } else {
         group.unvaluedAssetCount++;
       }
-      if (!holding.isConsistent) integrityIssueCount++;
     }
 
     return PortfolioSnapshot(
@@ -41,8 +47,15 @@ class PortfolioValuationService {
             unvaluedAssetCount: entry.value.unvaluedAssetCount,
           ),
       },
-      valuedAssetCount: valuations.where((item) => item.isValued).length,
-      unvaluedAssetCount: valuations.where((item) => !item.isValued).length,
+      holdingAssetCount: holdingAssetCount,
+      valuedAssetCount: groups.values.fold<int>(
+        0,
+        (total, group) => total + group.valuedAssetCount,
+      ),
+      unvaluedAssetCount: groups.values.fold<int>(
+        0,
+        (total, group) => total + group.unvaluedAssetCount,
+      ),
       integrityIssueCount: integrityIssueCount,
     );
   }

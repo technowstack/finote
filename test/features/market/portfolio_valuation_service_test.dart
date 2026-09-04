@@ -141,12 +141,37 @@ void main() {
 
       expect(snapshot.totalKnownValue, 7500000);
       expect(snapshot.isPartial, isTrue);
-      expect(snapshot.valuedAssetCount, 2);
-      expect(snapshot.unvaluedAssetCount, 2);
+      expect(snapshot.holdingAssetCount, 2);
+      expect(snapshot.valuedAssetCount, 1);
+      expect(snapshot.unvaluedAssetCount, 1);
       expect(snapshot.integrityIssueCount, 1);
       expect(snapshot.groups[AssetType.stock]?.knownValue, 7500000);
-      expect(snapshot.groups[AssetType.other]?.knownValue, 0);
+      expect(snapshot.groups[AssetType.other], isNull);
       expect(snapshot.byAssetId[priced.id]?.isBackendStale, isTrue);
+
+      final missingOnly = service.buildSnapshot([
+        AssetHolding(
+          asset: missing,
+          quantity: AssetQuantity.parse('1'),
+          hasActivity: true,
+        ),
+      ], const {});
+      expect(missingOnly.isUnavailable, isTrue);
+      expect(missingOnly.totalKnownValue, isNull);
+      expect(missingOnly.holdingAssetCount, 1);
+
+      final zeroOnly = service.buildSnapshot(
+        [
+          AssetHolding(
+            asset: zero,
+            quantity: AssetQuantity.fromScaled(0),
+            hasActivity: true,
+          ),
+        ],
+        {zero.id: makePrice(zero.id, 500000)},
+      );
+      expect(zeroOnly.isEmpty, isTrue);
+      expect(zeroOnly.holdingAssetCount, 0);
     },
   );
 }

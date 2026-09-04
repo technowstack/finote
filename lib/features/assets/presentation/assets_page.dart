@@ -30,27 +30,26 @@ class AssetsPage extends ConsumerStatefulWidget {
 }
 
 class _AssetsPageState extends ConsumerState<AssetsPage> {
-  String? _lastQuoteRefreshKey;
-
   void _requestQuoteRefresh(List<AssetHolding> holdings) {
-    final refreshKey = holdings
-        .where(
-          (holding) =>
-              holding.hasActivity &&
-              !holding.quantity.isNegative &&
-              !holding.quantity.isZero &&
-              holding.asset.pricingMode == AssetPricingMode.api &&
-              (holding.asset.assetType == AssetType.stock ||
-                  holding.asset.assetType == AssetType.crypto) &&
-              holding.asset.symbol?.trim().isNotEmpty == true,
-        )
-        .map(
-          (holding) =>
-              '${holding.asset.id}:${holding.asset.assetType.databaseValue}:${holding.asset.symbol!.trim().toUpperCase()}',
-        )
-        .join('|');
-    if (_lastQuoteRefreshKey == refreshKey) return;
-    _lastQuoteRefreshKey = refreshKey;
+    final candidates =
+        holdings
+            .where(
+              (holding) =>
+                  holding.hasActivity &&
+                  !holding.quantity.isNegative &&
+                  !holding.quantity.isZero &&
+                  holding.asset.pricingMode == AssetPricingMode.api &&
+                  (holding.asset.assetType == AssetType.stock ||
+                      holding.asset.assetType == AssetType.crypto) &&
+                  holding.asset.symbol?.trim().isNotEmpty == true,
+            )
+            .map(
+              (holding) =>
+                  '${holding.asset.id}:${holding.asset.assetType.databaseValue}:${holding.asset.symbol!.trim().toUpperCase()}',
+            )
+            .toList()
+          ..sort();
+    if (candidates.isEmpty) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) ref.read(portfolioMarketQuotesProvider.notifier).refresh();
     });
@@ -221,20 +220,9 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
               96,
             ),
             children: [
-              Text('Aset Saya', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.sm),
-              if (portfolio != null) _PortfolioSummary(snapshot: portfolio),
+              if (portfolio != null)
+                _PortfolioSummary(snapshot: portfolio, market: market),
               if (portfolio != null) const SizedBox(height: AppSpacing.md),
-              if (market.isRefreshing)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text('Memperbarui harga...'),
-                ),
-              if (market.failure != null || market.result.failures.isNotEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text('Harga terbaru belum dapat diperbarui.'),
-                ),
               if (active.isNotEmpty)
                 ..._groupedAssets(active, market, prices, portfolio),
               if (archived.isNotEmpty) ...[
@@ -281,9 +269,13 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
   ) {
     final widgets = <Widget>[];
     for (final type in AssetType.values) {
-      final group = holdings
-          .where((holding) => holding.asset.assetType == type)
-          .toList();
+      final group =
+          holdings.where((holding) => holding.asset.assetType == type).toList()
+            ..sort((a, b) {
+              final aKey = (a.asset.symbol ?? a.asset.name).toUpperCase();
+              final bKey = (b.asset.symbol ?? b.asset.name).toUpperCase();
+              return aKey.compareTo(bKey);
+            });
       if (group.isEmpty) continue;
       widgets.add(
         Text(type.label, style: Theme.of(context).textTheme.titleMedium),
@@ -407,18 +399,24 @@ class _AssetDetail extends ConsumerWidget {
                     hasActivity: holding?.hasActivity ?? false,
                   ),
                 ),
-                _DetailRow(
-                  label: 'Harga',
-                  value: asset.pricingMode == AssetPricingMode.api
-                      ? 'Otomatis'
-                      : 'Manual',
-                ),
+                if (asset.assetType == AssetType.stock &&
+                    holding?.hasActivity == true)
+                  _DetailRow(
+                    label: 'Jumlah Lembar',
+                    value: _formatStockShares(holding!.quantity),
+                  ),
+                if (asset.pricingMode == AssetPricingMode.api)
+                  const _DetailRow(label: 'Harga', value: 'Otomatis'),
                 if (holding?.hasActivity == true) ...[
                   _DetailRow(
-                    label: 'Harga Saat Ini',
+                    label: asset.pricingMode == AssetPricingMode.manual
+                        ? _manualPriceLabel(asset)
+                        : 'Harga Saat Ini',
                     value: currentValuation.valueOrNull?.unitPrice == null
-                        ? 'Belum tersedia'
-                        : '${formatIdr(currentValuation.valueOrNull!.unitPrice!)} / ${_priceUnit(asset)}',
+                        ? asset.pricingMode == AssetPricingMode.manual
+                              ? 'Harga belum diatur'
+                              : 'Belum tersedia'
+                        : '${currentValuation.valueOrNull!.isBackendStale ? 'Harga terakhir ' : ''}${formatIdr(currentValuation.valueOrNull!.unitPrice!)} / ${_priceUnit(asset)}',
                   ),
                   _DetailRow(
                     label: 'Nilai Saat Ini',
@@ -592,7 +590,14 @@ class _DetailRow extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: Text(label)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
       ],
     ),
   );
@@ -621,7 +626,7 @@ class _ManualPriceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Harga saat ini',
+              _manualPriceLabel(asset),
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -670,11 +675,22 @@ String _priceUnit(AssetRecord asset) => switch (asset.assetType) {
   AssetType.crypto => 'coin/token',
 };
 
+String _assetTitle(AssetRecord asset) => switch (asset.assetType) {
+  AssetType.stock || AssetType.crypto => asset.symbol ?? asset.name,
+  _ => asset.name,
+};
+
 String _manualPriceLabel(AssetRecord asset) => switch (asset.assetType) {
   AssetType.gold => 'Harga per Gram',
   AssetType.mutualFund => 'Nilai per Unit',
   AssetType.other => 'Harga per ${_priceUnit(asset)}',
   _ => 'Harga per Unit',
+};
+
+String _activityPriceLabel(AssetRecord asset) => switch (asset.assetType) {
+  AssetType.gold => 'Harga per Gram (IDR)',
+  AssetType.stock => 'Harga per Saham (IDR)',
+  _ => 'Harga per Unit (IDR)',
 };
 
 Future<void> _showManualPriceForm(
@@ -714,7 +730,7 @@ Future<void> _clearManualPrice(
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Hapus harga manual?'),
+      title: const Text('Hapus harga saat ini?'),
       content: const Text(
         'Jumlah aset tetap tersimpan. Hanya harga saat ini yang akan dihapus.',
       ),
@@ -907,9 +923,7 @@ String _formatAssetQuantity(
 }) {
   if (quantity.isZero && !hasActivity) return 'Belum ada posisi';
   if (asset.assetType == AssetType.stock) {
-    final shares = quantity.scaled ~/ AssetQuantity.scale;
-    if (shares % 100 == 0) return '${shares ~/ 100} lot';
-    return '$quantity saham';
+    return _formatStockQuantity(quantity);
   }
   final unit = switch (asset.assetType) {
     AssetType.crypto => 'coin/token',
@@ -919,6 +933,27 @@ String _formatAssetQuantity(
     AssetType.stock => 'saham',
   };
   return '$quantity $unit';
+}
+
+String _formatStockQuantity(AssetQuantity quantity) {
+  if (quantity.scaled % AssetQuantity.scale != 0) {
+    return '$quantity lembar';
+  }
+  final shares = quantity.scaled ~/ AssetQuantity.scale;
+  final sign = shares < 0 ? '-' : '';
+  final absoluteShares = shares.abs();
+  final lots = absoluteShares ~/ 100;
+  final remainder = absoluteShares % 100;
+  if (remainder == 0) return '$sign$lots lot';
+  if (lots == 0) return '$sign$remainder lembar';
+  return '$sign$lots lot + $remainder lembar';
+}
+
+String _formatStockShares(AssetQuantity quantity) {
+  if (quantity.scaled % AssetQuantity.scale != 0) {
+    return '$quantity lembar';
+  }
+  return '${formatIdr(quantity.scaled ~/ AssetQuantity.scale).replaceFirst('Rp', '')} lembar';
 }
 
 class _OpeningPositionData {
@@ -1012,6 +1047,7 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
                       ? 'Jumlah Lot'
                       : 'Jumlah ${_unitLabel(widget.asset)}',
                 ),
+                onChanged: (_) => setState(() {}),
                 validator: (value) {
                   try {
                     final quantity = _parseOpeningQuantity(
@@ -1028,6 +1064,12 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
                   }
                 },
               ),
+              if (isStock)
+                if (_stockSharesPreview(_quantity.text) case final shares?)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Jumlah Lembar: ${_formatInteger(shares)}'),
+                  ),
               const SizedBox(height: AppSpacing.sm),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -1139,6 +1181,51 @@ AssetQuantity _parseOpeningQuantity(AssetRecord asset, String value) {
 
 int _parseMoney(String value) =>
     int.tryParse(value.replaceAll(RegExp(r'\D'), '')) ?? 0;
+
+int? _stockSharesPreview(String value) {
+  final input = value.trim();
+  if (!RegExp(r'^\d+$').hasMatch(input)) return null;
+  final shares = BigInt.parse(input) * BigInt.from(100);
+  if (shares > BigInt.from(9223372036854775807 ~/ AssetQuantity.scale)) {
+    return null;
+  }
+  return shares.toInt();
+}
+
+int? _stockTotalPreview(String quantity, String price) {
+  final shares = _stockSharesPreview(quantity);
+  final amount = _parseMoney(price);
+  if (shares == null || amount <= 0) return null;
+  final total = BigInt.from(shares) * BigInt.from(amount);
+  if (total > BigInt.from(9223372036854775807)) return null;
+  return total.toInt();
+}
+
+int? _activityTotalPreview(AssetRecord asset, String quantity, String price) {
+  if (asset.assetType == AssetType.stock) {
+    return _stockTotalPreview(quantity, price);
+  }
+  final parsedQuantity = _parseDecimalQuantityPreview(quantity);
+  final parsedPrice = _parseMoney(price);
+  if (parsedQuantity == null || parsedPrice <= 0) return null;
+  final total =
+      BigInt.from(parsedQuantity) *
+      BigInt.from(parsedPrice) ~/
+      BigInt.from(AssetQuantity.scale);
+  if (total > BigInt.from(9223372036854775807)) return null;
+  return total.toInt();
+}
+
+int? _parseDecimalQuantityPreview(String value) {
+  try {
+    final quantity = AssetQuantity.parse(value.trim().replaceAll(',', '.'));
+    return quantity.isNegative || quantity.isZero ? null : quantity.scaled;
+  } catch (_) {
+    return null;
+  }
+}
+
+String _formatInteger(int value) => formatIdr(value).replaceFirst('Rp', '');
 
 String _formatPositionDate(BuildContext context, DateTime date) =>
     MaterialLocalizations.of(context).formatMediumDate(date);
@@ -1336,12 +1423,16 @@ class _ActivityTile extends StatelessWidget {
               quantity.isNegative
         ? ''
         : '+';
+    final historicalPrice = activity.priceAmount == null
+        ? null
+        : '${formatIdr(activity.priceAmount!)} / ${_priceUnit(asset)}';
     return Card(
       child: ListTile(
         title: Text(label),
         subtitle: Text(
           '${_formatPositionDate(context, activity.transactionDate)}\n'
-          '$prefix${_formatAssetQuantity(asset, quantity)}',
+          '$prefix${_formatAssetQuantity(asset, quantity)}'
+          '${historicalPrice == null ? '' : ' @ $historicalPrice'}',
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1401,6 +1492,7 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
   late final TextEditingController _note;
   late DateTime _date;
   late bool _increase;
+  late bool _exactStockShares;
   int? _accountId;
   final _formKey = GlobalKey<FormState>();
 
@@ -1411,12 +1503,19 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
   void initState() {
     super.initState();
     final activity = widget.activity;
+    final activityQuantity = activity == null
+        ? null
+        : AssetQuantity.fromScaled(activity.quantityScaled);
+    _exactStockShares =
+        isStock &&
+        widget.action == AssetTransactionAction.adjustment &&
+        activityQuantity != null &&
+        activityQuantity.scaled % (AssetQuantity.scale * 100) != 0;
     final quantity = activity == null
         ? ''
-        : _inputActivityQuantity(
-            widget.asset,
-            AssetQuantity.fromScaled(activity.quantityScaled),
-          );
+        : _exactStockShares
+        ? _formatStockSharesInput(activityQuantity!)
+        : _inputActivityQuantity(widget.asset, activityQuantity!);
     _quantity = TextEditingController(text: quantity);
     _price = TextEditingController(
       text: activity?.priceAmount?.toString() ?? '',
@@ -1437,6 +1536,10 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountsProvider);
+    final holding = ref.watch(holdingProvider(widget.asset.id)).valueOrNull;
+    final previewShares = _exactStockShares
+        ? int.tryParse(_quantity.text.trim())
+        : _stockSharesPreview(_quantity.text);
     final title = switch (widget.action) {
       AssetTransactionAction.buy =>
         'Beli ${widget.asset.symbol ?? widget.asset.name}',
@@ -1460,23 +1563,48 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
                   decimal: !isStock,
                 ),
                 decoration: InputDecoration(
-                  labelText: 'Jumlah ${_unitLabel(widget.asset)}',
+                  labelText: _exactStockShares
+                      ? 'Jumlah Lembar'
+                      : isStock
+                      ? 'Jumlah Lot'
+                      : 'Jumlah ${_unitLabel(widget.asset)}',
                 ),
+                onChanged: (_) => setState(() {}),
                 validator: (value) {
                   try {
                     final quantity = _parseActivityQuantity(
                       widget.asset,
                       value ?? '',
                       _increase,
+                      exactStockShares: _exactStockShares,
                     );
                     return quantity.isZero ? 'Jumlah harus lebih dari 0' : null;
                   } catch (_) {
-                    return isStock
+                    return _exactStockShares
+                        ? 'Masukkan jumlah lembar bulat yang valid'
+                        : isStock
                         ? 'Masukkan jumlah lot bulat yang valid'
                         : 'Jumlah maksimal 8 angka desimal';
                   }
                 },
               ),
+              if (isStock) ...[
+                if (widget.action == AssetTransactionAction.sell &&
+                    holding?.hasActivity == true)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Tersedia ${_formatStockQuantity(holding!.quantity)}',
+                    ),
+                  ),
+                if (previewShares != null)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Jumlah Lembar: ${_formatInteger(previewShares)}',
+                    ),
+                  ),
+              ],
               const SizedBox(height: AppSpacing.md),
               if (isAdjustment)
                 SwitchListTile(
@@ -1489,13 +1617,24 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
                 TextFormField(
                   controller: _price,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Harga per unit (IDR)',
+                  decoration: InputDecoration(
+                    labelText: _activityPriceLabel(widget.asset),
                   ),
+                  onChanged: (_) => setState(() {}),
                   validator: (value) => _parseMoney(value ?? '') <= 0
                       ? 'Harga harus lebih dari 0'
                       : null,
                 ),
+                if (_activityTotalPreview(
+                      widget.asset,
+                      _quantity.text,
+                      _price.text,
+                    )
+                    case final total?)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Total: ${formatIdr(total)}'),
+                  ),
                 const SizedBox(height: AppSpacing.md),
                 accounts.when(
                   loading: () => const Padding(
@@ -1580,6 +1719,7 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
           widget.asset,
           _quantity.text,
           _increase,
+          exactStockShares: _exactStockShares,
         ),
         priceAmount: isAdjustment ? null : _parseMoney(_price.text),
         accountId: isAdjustment ? null : _accountId,
@@ -1600,17 +1740,32 @@ String _inputActivityQuantity(AssetRecord asset, AssetQuantity quantity) {
 AssetQuantity _parseActivityQuantity(
   AssetRecord asset,
   String value,
-  bool increase,
-) {
-  final parsed = _parseOpeningQuantity(asset, value);
+  bool increase, {
+  bool exactStockShares = false,
+}) {
+  final parsed = exactStockShares
+      ? _parseExactStockShares(value)
+      : _parseOpeningQuantity(asset, value);
   if (parsed.isZero) return parsed;
   return increase ? parsed : AssetQuantity.fromScaled(-parsed.scaled);
 }
 
+AssetQuantity _parseExactStockShares(String value) {
+  final input = value.trim();
+  if (!RegExp(r'^\d+$').hasMatch(input)) {
+    throw const FormatException('Stock shares must be a whole number');
+  }
+  return AssetQuantity.fromScaled(int.parse(input) * AssetQuantity.scale);
+}
+
+String _formatStockSharesInput(AssetQuantity quantity) =>
+    (quantity.scaled.abs() ~/ AssetQuantity.scale).toString();
+
 class _PortfolioSummary extends StatelessWidget {
-  const _PortfolioSummary({required this.snapshot});
+  const _PortfolioSummary({required this.snapshot, required this.market});
 
   final PortfolioSnapshot snapshot;
+  final PortfolioMarketQuoteState market;
 
   @override
   Widget build(BuildContext context) {
@@ -1622,7 +1777,9 @@ class _PortfolioSummary extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Total Portofolio',
+              snapshot.isPartial || snapshot.isUnavailable
+                  ? 'Nilai Portofolio'
+                  : 'Total Portofolio',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -1634,10 +1791,25 @@ class _PortfolioSummary extends StatelessWidget {
                   : formatIdr(value!),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            if (!snapshot.isEmpty) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text('${snapshot.holdingAssetCount} aset aktif'),
+            ],
             if (snapshot.isPartial)
               Text(
                 'Nilai sementara • ${snapshot.unvaluedAssetCount} aset belum memiliki harga',
               ),
+            if (snapshot.isUnavailable)
+              const Text('Belum ada harga untuk aset yang dimiliki.'),
+            if (_latestApiPriceUpdate(snapshot) case final updatedAt?)
+              Text(
+                'Harga pasar terakhir diperbarui ${_formatPositionDate(context, updatedAt)}',
+              ),
+            if (market.isRefreshing)
+              const Text('Memperbarui harga saham dan crypto...'),
+            if (!market.isRefreshing &&
+                (market.failure != null || market.result.failures.isNotEmpty))
+              const Text('Harga terbaru belum dapat diperbarui.'),
             if (snapshot.integrityIssueCount > 0)
               const Text('Ada posisi aset yang tidak valid.'),
             if (snapshot.groups.isNotEmpty) ...[
@@ -1648,7 +1820,7 @@ class _PortfolioSummary extends StatelessWidget {
                     label: '${type.label} total',
                     value: group.isComplete
                         ? formatIdr(group.knownValue)
-                        : '${formatIdr(group.knownValue)} • sebagian',
+                        : '${formatIdr(group.knownValue)} • ${group.unvaluedAssetCount} harga belum tersedia',
                   ),
             ],
           ],
@@ -1656,6 +1828,20 @@ class _PortfolioSummary extends StatelessWidget {
       ),
     );
   }
+}
+
+DateTime? _latestApiPriceUpdate(PortfolioSnapshot snapshot) {
+  DateTime? latest;
+  for (final valuation in snapshot.valuations) {
+    if (valuation.pricingSource != ValuationPriceSource.api ||
+        valuation.priceUpdatedAt == null) {
+      continue;
+    }
+    if (latest == null || valuation.priceUpdatedAt!.isAfter(latest)) {
+      latest = valuation.priceUpdatedAt;
+    }
+  }
+  return latest;
 }
 
 class _AssetCard extends StatelessWidget {
@@ -1695,13 +1881,17 @@ class _AssetCard extends StatelessWidget {
               : colors.surfaceContainerHighest,
           child: Icon(_assetIcon(asset.assetType)),
         ),
-        title: Text(asset.symbol ?? asset.name),
+        title: Text(_assetTitle(asset)),
         subtitle: Text(
           [
             asset.name,
             _formatAssetQuantity(asset, quantity, hasActivity: hasActivity),
             if (price != null)
-              'Harga ${formatIdr(price!.price)} / ${_priceUnit(asset)}',
+              '${price!.isBackendStale
+                  ? 'Harga terakhir'
+                  : asset.pricingMode == AssetPricingMode.manual
+                  ? _manualPriceLabel(asset)
+                  : 'Harga'} ${formatIdr(price!.price)} / ${_priceUnit(asset)}',
             if (price == null && asset.pricingMode == AssetPricingMode.manual)
               'Harga belum diatur',
             if (valuation?.currentValue != null)
@@ -1709,7 +1899,7 @@ class _AssetCard extends StatelessWidget {
             if (valuation != null && !valuation!.isValued)
               'Nilai belum tersedia',
             if (price == null && quoteUnavailable) 'Harga belum tersedia',
-            asset.pricingMode == AssetPricingMode.api ? 'Otomatis' : 'Manual',
+            if (asset.pricingMode == AssetPricingMode.api) 'Otomatis',
           ].join(' • '),
         ),
         trailing: PopupMenuButton<_AssetAction>(
@@ -1888,8 +2078,8 @@ class _AssetFormDialogState extends State<_AssetFormDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   _type.defaultPricingMode == AssetPricingMode.api
-                      ? 'Harga otomatis. Pembaruan harga tersedia pada fase berikutnya.'
-                      : 'Harga manual. Pengisian harga tersedia pada fase berikutnya.',
+                      ? 'Harga otomatis dari sumber market.'
+                      : 'Harga dapat diatur dari detail aset.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
