@@ -197,8 +197,6 @@ void main() {
       );
       shouldFail = true;
       await controller.refresh();
-      expect(calls, 1);
-      await controller.refresh(force: true);
       expect(calls, 2);
       expect(
         container.read(portfolioMarketQuotesProvider).result.quotes,

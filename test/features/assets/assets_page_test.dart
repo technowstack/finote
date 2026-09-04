@@ -23,10 +23,13 @@ void main() {
     addTearDown(database.close);
     await database.ensureDefaultAccount();
     await CategoryRepository(database).initializeDefaults();
+    var marketCalls = 0;
     final marketRepository = MarketRepository(
       MarketApiClient(
         baseUrl: 'https://market.example/',
-        post: (_, _) async => const MarketHttpResponse(200, '''{
+        post: (_, _) async {
+          marketCalls++;
+          return const MarketHttpResponse(200, '''{
           "data": [{
             "symbol": "BBCA",
             "type": "stock",
@@ -38,7 +41,8 @@ void main() {
             },
             "error": null
           }]
-        }'''),
+        }''');
+        },
       ),
     );
     final router = GoRouter(
@@ -64,6 +68,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Belum ada aset investasi'), findsOneWidget);
+    expect(marketCalls, 0);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Tambah Aset'));
     await tester.pumpAndSettle();
@@ -117,6 +122,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
+    expect(marketCalls, 0);
+    await tester.tap(find.byTooltip('Refresh Harga'));
+    await tester.pumpAndSettle();
+    expect(marketCalls, 1);
     expect(find.textContaining('Harga Rp9.200'), findsOneWidget);
     expect(find.textContaining('Nilai Rp11.040.000'), findsOneWidget);
 
@@ -219,6 +228,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('BTC'), findsOneWidget);
+    expect(find.textContaining('Harga belum tersedia'), findsOneWidget);
+    await tester.tap(find.byTooltip('Refresh Harga'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('Harga Rp1.000.000'), findsOneWidget);
     expect(find.textContaining('Nilai Rp15.000'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());

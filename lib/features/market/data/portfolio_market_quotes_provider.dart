@@ -44,9 +44,7 @@ class PortfolioMarketQuotesController
 
   final Ref _ref;
   bool _inFlight = false;
-  static const _cacheTtl = Duration(minutes: 15);
-
-  Future<void> refresh({bool force = false}) async {
+  Future<void> refresh({bool force = true}) async {
     if (_inFlight) return;
     final holdings = _ref.read(assetHoldingsProvider).valueOrNull;
     if (holdings == null) return;
@@ -94,19 +92,6 @@ class PortfolioMarketQuotesController
         assetIdsByKey[key] = asset.id;
       }
     }
-    final cached = await _ref
-        .read(assetPriceRepositoryProvider)
-        .getForAssets(assetIdsByKey.values);
-    final now = DateTime.now().toUtc();
-    if (!force &&
-        assetIdsByKey.values.every((id) {
-          final price = cached[id];
-          return price != null && now.difference(price.fetchedAt) < _cacheTtl;
-        })) {
-      _inFlight = false;
-      return;
-    }
-
     state = state.copyWith(isRefreshing: true, clearFailure: true);
     try {
       final result = await _ref

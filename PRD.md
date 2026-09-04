@@ -2551,11 +2551,7 @@ Load local last-known price
 ↓
 Render immediately
 ↓
-Refresh prices via batch Market API asynchronously
-↓
-Update UI
-↓
-Persist last-known price locally
+Stop; network refresh only follows an explicit user action
 ```
 
 Jika Market API tidak tersedia:
@@ -2567,7 +2563,10 @@ Jika Market API tidak tersedia:
 - last-known price tetap dapat ditampilkan jika tersedia;
 - hanya fresh market-price refresh yang gagal.
 
-Finote bukan trading app. Tidak diperlukan WebSocket atau refresh per detik. Refresh cukup saat membuka Portfolio, pull-to-refresh/tombol Refresh, dan cache interval yang wajar (sekitar 15–30 menit atau sesuai implementasi aktual).
+Finote bukan trading app. Tidak diperlukan WebSocket atau refresh per detik.
+Market-data refresh hanya boleh dilakukan setelah pengguna menekan tombol
+Refresh Harga. Cache interval backend boleh mengurangi request provider, tetapi
+TTL tidak boleh memicu network request otomatis saat Portfolio dibuka.
 
 ## 53.14 Local Last-Known Price
 

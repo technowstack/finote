@@ -61,13 +61,14 @@ Current focus:
 - [ ] Phase 7C.2 — Stock Holdings UI (blocked: real BBCA quote provider rate-limited)
 - [ ] Phase 7C.4 — Mutual Fund / Gold / Manual Assets UI (blocked: no Android emulator/device for required manual verification)
 - [ ] Phase 7C.5 — Portfolio Summary & Refresh UX (blocked: no Android emulator/device for required mixed-Portfolio verification)
+- [ ] Phase 7C.6 — Manual Market Refresh & Resilient Pricing (automated validation complete; blocked: no Android emulator/device)
 
 ## Current Product State
 
 ```text
 Finote v1.2.0
 REPORTS VISUALIZATION & ANALYTICS COMPLETE
-FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7B COMPLETE
+ FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7C.6 IN PROGRESS
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -118,6 +119,7 @@ These external tasks do not reopen the v1.0 feature scope.
 - [ ] 7C.3 Crypto Holdings UI
 - [ ] 7C.4 Mutual Fund / Gold / Manual Assets (blocked: no Android emulator/device for required manual verification)
 - [ ] 7C.5 Portfolio Summary & Refresh UX (blocked: no Android emulator/device for required mixed-Portfolio verification)
+- [ ] 7C.6 Manual Market Refresh & Resilient Pricing (automated validation complete; blocked: no Android emulator/device)
 
 ### Phase 7D — Finance Integration
 
@@ -472,7 +474,7 @@ Current rules:
 
 Next active implementation:
 
-> **Phase 7C.5 — Portfolio Summary & Refresh UX**
+> **Phase 7C.6 — Manual Market Refresh & Resilient Pricing**
 
 
 ---
@@ -499,7 +501,7 @@ Next active implementation:
 
 ### Current active task
 
-> **Phase 7C.5 — Portfolio Summary & Refresh UX**
+> **Phase 7C.6 — Manual Market Refresh & Resilient Pricing**
 
 7A.1 through 7A.6, 7B.1 through 7B.5, and 7C.1 are complete. Phase 7C.2
 implementation is locally complete but blocked pending real BBCA verification.
@@ -507,3 +509,5 @@ Phase 7C.4 implementation and automated validation are complete but blocked
 pending required manual Gold and Mutual Fund verification on Android.
 Phase 7C.5 implementation and automated validation are complete but blocked
 pending required mixed-Portfolio verification on Android.
+Phase 7C.6 implementation and automated validation are complete. Android
+runtime verification remains blocked because no emulator/device is connected.

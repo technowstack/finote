@@ -2029,12 +2029,16 @@ load local last-known/manual prices
 ↓
 render Portfolio immediately
 ↓
-refresh batch market quotes asynchronously
+wait for explicit user Refresh Harga action
+↓
+refresh batch market quotes
 ↓
 update UI and local last-known price
 ```
 
 Network failure must not prevent viewing holdings or using Finote core finance.
+Opening Portfolio, rebuilding the widget, switching tabs, and expired local
+price age must never trigger a Market API request automatically.
 
 Market prices are auxiliary external data; holdings are local source records.
 

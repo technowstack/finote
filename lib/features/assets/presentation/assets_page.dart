@@ -30,31 +30,6 @@ class AssetsPage extends ConsumerStatefulWidget {
 }
 
 class _AssetsPageState extends ConsumerState<AssetsPage> {
-  void _requestQuoteRefresh(List<AssetHolding> holdings) {
-    final candidates =
-        holdings
-            .where(
-              (holding) =>
-                  holding.hasActivity &&
-                  !holding.quantity.isNegative &&
-                  !holding.quantity.isZero &&
-                  holding.asset.pricingMode == AssetPricingMode.api &&
-                  (holding.asset.assetType == AssetType.stock ||
-                      holding.asset.assetType == AssetType.crypto) &&
-                  holding.asset.symbol?.trim().isNotEmpty == true,
-            )
-            .map(
-              (holding) =>
-                  '${holding.asset.id}:${holding.asset.assetType.databaseValue}:${holding.asset.symbol!.trim().toUpperCase()}',
-            )
-            .toList()
-          ..sort();
-    if (candidates.isEmpty) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(portfolioMarketQuotesProvider.notifier).refresh();
-    });
-  }
-
   Future<void> _openForm([AssetRecord? asset]) async {
     final data = await showDialog<_AssetFormData>(
       context: context,
@@ -181,12 +156,25 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
         title: const Text('Portofolio'),
         actions: [
           IconButton(
-            tooltip: 'Perbarui harga',
+            tooltip: 'Refresh Harga',
             onPressed: market.isRefreshing
                 ? null
-                : () => ref
-                      .read(portfolioMarketQuotesProvider.notifier)
-                      .refresh(force: true),
+                : () async {
+                    await ref
+                        .read(portfolioMarketQuotesProvider.notifier)
+                        .refresh(force: true);
+                    if (!context.mounted) return;
+                    final state = ref.read(portfolioMarketQuotesProvider);
+                    final message = state.failure != null
+                        ? 'Harga terbaru belum dapat diperbarui. Harga terakhir tetap digunakan.'
+                        : state.result.failures.isNotEmpty
+                        ? 'Sebagian harga tidak dapat diperbarui. Harga terakhir tetap digunakan.'
+                        : state.result.quotes.isEmpty
+                        ? 'Tidak ada harga pasar yang perlu diperbarui.'
+                        : 'Harga berhasil diperbarui.';
+                    ScaffoldMessenger.of(context)
+                        .showSnackBar(SnackBar(content: Text(message)));
+                  },
             icon: market.isRefreshing
                 ? const SizedBox(
                     width: 20,
@@ -204,7 +192,6 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
           onRetry: () => ref.invalidate(allAssetsProvider),
         ),
         data: (active) {
-          _requestQuoteRefresh(active);
           final all = allAssets.valueOrNull ?? active;
           final archived = all
               .where((holding) => !holding.asset.isActive)
@@ -223,6 +210,18 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
               if (portfolio != null)
                 _PortfolioSummary(snapshot: portfolio, market: market),
               if (portfolio != null) const SizedBox(height: AppSpacing.md),
+              if (market.isRefreshing)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text('Memperbarui harga...'),
+                ),
+              if (market.failure != null || market.result.failures.isNotEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Text(
+                    'Harga terbaru belum dapat diperbarui. Harga terakhir tetap digunakan.',
+                  ),
+                ),
               if (active.isNotEmpty)
                 ..._groupedAssets(active, market, prices, portfolio),
               if (archived.isNotEmpty) ...[
@@ -459,6 +458,15 @@ class _AssetDetail extends ConsumerWidget {
             onClearPrice: currentPrice.valueOrNull == null
                 ? null
                 : () => _clearManualPrice(context, ref, asset),
+            onUseAutomatic: _isMarketAsset(asset)
+                ? () => _useAutomaticPrice(context, ref, asset)
+                : null,
+          ),
+        if (asset.pricingMode == AssetPricingMode.api)
+          _ApiPriceFallbackCard(
+            asset: asset,
+            price: currentPrice.valueOrNull,
+            onSetManual: () => _showManualFallbackForm(context, ref, asset),
           ),
         if (asset.pricingMode == AssetPricingMode.manual)
           const SizedBox(height: AppSpacing.md),
@@ -609,12 +617,14 @@ class _ManualPriceCard extends StatelessWidget {
     required this.price,
     required this.onSetPrice,
     required this.onClearPrice,
+    this.onUseAutomatic,
   });
 
   final AssetRecord asset;
   final LocalAssetPrice? price;
   final VoidCallback onSetPrice;
   final VoidCallback? onClearPrice;
+  final VoidCallback? onUseAutomatic;
 
   @override
   Widget build(BuildContext context) {
@@ -660,11 +670,87 @@ class _ManualPriceCard extends StatelessWidget {
                 ],
               ],
             ),
+            if (onUseAutomatic != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: onUseAutomatic,
+                  child: const Text('Gunakan Harga Otomatis'),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+bool _isMarketAsset(AssetRecord asset) =>
+    asset.assetType == AssetType.stock || asset.assetType == AssetType.crypto;
+
+Future<void> _useAutomaticPrice(
+  BuildContext context,
+  WidgetRef ref,
+  AssetRecord asset,
+) async {
+  try {
+    final updated = await ref
+        .read(assetRepositoryProvider)
+        .update(
+          id: asset.id,
+          symbol: asset.symbol,
+          name: asset.name,
+          assetType: asset.assetType,
+          pricingMode: AssetPricingMode.api,
+          currency: asset.currency,
+          unitLabel: asset.unitLabel,
+        );
+    if (!updated) throw StateError('Asset is no longer available');
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harga otomatis gagal diaktifkan. Coba lagi.'),
+        ),
+      );
+    }
+  }
+}
+
+class _ApiPriceFallbackCard extends StatelessWidget {
+  const _ApiPriceFallbackCard({
+    required this.asset,
+    required this.price,
+    required this.onSetManual,
+  });
+
+  final AssetRecord asset;
+  final LocalAssetPrice? price;
+  final VoidCallback onSetManual;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Harga pasar', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            price == null
+                ? 'Harga belum tersedia'
+                : '${price!.isBackendStale ? 'Harga terakhir ' : ''}${formatIdr(price!.price)} / ${_priceUnit(asset)}',
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton(
+            onPressed: onSetManual,
+            child: const Text('Atur Harga Manual'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 String _priceUnit(AssetRecord asset) => switch (asset.assetType) {
@@ -717,6 +803,47 @@ Future<void> _showManualPriceForm(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Harga gagal disimpan. Coba lagi.')),
+      );
+    }
+  }
+}
+
+Future<void> _showManualFallbackForm(
+  BuildContext context,
+  WidgetRef ref,
+  AssetRecord asset,
+) async {
+  final price = await showDialog<int>(
+    context: context,
+    builder: (_) => _ManualPriceDialog(asset: asset, currentPrice: null),
+  );
+  if (price == null || !context.mounted) return;
+  try {
+    final updated = await ref
+        .read(assetRepositoryProvider)
+        .update(
+          id: asset.id,
+          symbol: asset.symbol,
+          name: asset.name,
+          assetType: asset.assetType,
+          pricingMode: AssetPricingMode.manual,
+          currency: asset.currency,
+          unitLabel: asset.unitLabel,
+        );
+    if (!updated) throw StateError('Asset is no longer available');
+    await ref
+        .read(assetPriceRepositoryProvider)
+        .setManualPrice(
+          assetId: asset.id,
+          price: price,
+          currency: asset.currency,
+        );
+  } catch (_) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harga manual gagal disimpan. Coba lagi.'),
+        ),
       );
     }
   }
@@ -1894,6 +2021,8 @@ class _AssetCard extends StatelessWidget {
                   : 'Harga'} ${formatIdr(price!.price)} / ${_priceUnit(asset)}',
             if (price == null && asset.pricingMode == AssetPricingMode.manual)
               'Harga belum diatur',
+            if (price == null && asset.pricingMode == AssetPricingMode.api)
+              'Harga belum tersedia',
             if (valuation?.currentValue != null)
               'Nilai ${formatIdr(valuation!.currentValue!)}',
             if (valuation != null && !valuation!.isValued)

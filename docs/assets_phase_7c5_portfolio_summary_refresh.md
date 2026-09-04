@@ -30,16 +30,15 @@ prices. Empty groups are not rendered in the summary.
 
 ## Refresh
 
-The existing app-bar `Perbarui harga` action remains the single Portfolio
-refresh control. It refreshes only positive API-priced Stock and Crypto
-holdings, in one batch. Manual Reksadana, Emas, and Lainnya prices are never
-sent to the Market API or changed by refresh.
+The existing app-bar `Perbarui harga` action is the single Portfolio refresh
+control. It refreshes only positive API-priced Stock and Crypto holdings, in
+one batch. Manual Reksadana, Emas, and Lainnya prices are never sent to the
+Market API or changed by refresh.
 
-Automatic refresh is requested when eligible holdings appear, while the
-existing 15-minute local freshness policy skips fresh cached prices. In-flight
-requests are deduplicated by the controller. Removing the widget-level key
-allows a later Portfolio rebuild to re-check the TTL without creating repeated
-network requests.
+Portfolio opening, tab switching, widget rebuilds, app startup, and local price
+age never trigger a Market API request. In-flight requests are deduplicated by
+the controller. A refresh is performed only after the user taps the explicit
+control.
 
 While refreshing, holdings and current values remain visible. A failed or
 partially failed request preserves successful and previously cached values and
