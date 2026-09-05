@@ -67,7 +67,7 @@ Current focus:
 
 ```text
 Finote v1.3.0
-ASSETS / INVESTMENTS - PHASE 7E.7 APP LOCK / BIOMETRIC AUTHENTICATION
+ASSETS / INVESTMENTS - PHASE 7E.8 FINAL AUDIT BLOCKED
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -137,9 +137,9 @@ These external tasks do not reopen the v1.0 feature scope.
 - [ ] 7E.3 Portfolio Performance & Offline Audit (blocked: no Android device/AVD for required runtime/profile matrix)
 - [ ] 7E.4 UI/UX Polish (blocked: connected Pixel 6a remained behind secure keyguard for required visual matrix)
 - [~] 7E.5 v1.3.0 Final Audit & Release Preparation (superseded by new pre-release hardening scope)
-- [ ] 7E.6 Reset Data — implementation/validation evidence must remain truthful
-- [ ] 7E.7 App Lock / Biometric Authentication — CURRENT
-- [ ] 7E.8 v1.3.0 Final Audit & Release Preparation
+- [ ] 7E.6 Reset Data — implementation exists; integrated/runtime validation pending
+- [ ] 7E.7 App Lock / Biometric Authentication — automated pass; Android validation blocked
+- [ ] 7E.8 v1.3.0 Final Audit & Release Preparation — BLOCKED
 
 ---
 
@@ -591,7 +591,7 @@ Before tagging Finote v1.3.0, the release scope has been explicitly extended wit
 
 ### Phase 7E.6 — Reset Data
 
-Status: **IN PROGRESS / DOCUMENTED, IMPLEMENTATION NOT YET STARTED**
+Status: **IMPLEMENTED / AUTOMATED VALIDATION PASSED, INTEGRATED RUNTIME VALIDATION PENDING**
 
 Required outcome:
 
@@ -640,7 +640,26 @@ Implementation evidence:
 
 Important: Phase 7E.6 must not be marked PASS retroactively without its actual validation evidence. If its implementation/report has not yet been recorded, keep that status explicit while working on 7E.7.
 
-### Next after 7E.7
+### Phase 7E.8 — Final Regression & v1.3.0 Release Audit
+
+Status: **BLOCKED**
+
+Audit evidence:
+
+- `dart format .` completed without changes;
+- `flutter analyze` passed;
+- full `flutter test` passed with 317 tests;
+- targeted release-domain tests passed with 185 tests;
+- `flutter build appbundle --release` passed and generated `build/app/outputs/bundle/release/app-release.aab`;
+- database schema version is 11 and migration tests cover v1.0/v1.1/v1.2 compatibility scenarios;
+- the working tree is clean and no tracked signing secrets were found;
+- Reset Data has automated service coverage, but the required backup -> reset -> restart -> restore integration flow and runtime confirmation are not recorded;
+- App Lock has controller/widget coverage, but Android biometric, lifecycle, picker, and enrollment-change validation could not be executed because the connected Pixel 6a was asleep/behind secure keyguard;
+- existing 7C/7E runtime validation blockers remain recorded and prevent a full release-ready claim.
+
+Release decision: **BLOCKED** until the required Android runtime matrix and Reset Data integration evidence are completed.
+
+### Next after 7E.8
 
 > **Phase 7E.8 — v1.3.0 Final Audit & Release Preparation**
 
