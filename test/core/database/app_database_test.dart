@@ -5,7 +5,9 @@ import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
+import 'package:finote/features/assets/domain/asset_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/settings/data/reset_data_service.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
@@ -100,6 +102,52 @@ void main() {
     expect(category.uuid, matches(_uuidPattern));
     expect(category.type, TransactionType.expense);
     expect(category.deletedAt, isNull);
+  });
+
+  test('reset removes user data and reseeds defaults idempotently', () async {
+    await categories.initializeDefaults();
+    final customCategory = await categories.create(
+      name: 'Kategori Sementara',
+      type: TransactionType.expense,
+    );
+    await transactions.create(
+      type: TransactionType.expense,
+      categoryId: customCategory.id,
+      amount: 25000,
+      transactionDate: DateTime(2026, 8, 29),
+    );
+    await database
+        .into(database.assets)
+        .insert(
+          AssetsCompanion.insert(
+            name: 'Bitcoin',
+            assetType: AssetType.crypto,
+            pricingMode: AssetPricingMode.manual,
+            currency: const Value('IDR'),
+          ),
+        );
+
+    final reset = ResetDataService(database, categories);
+    await reset.reset();
+
+    expect(await database.select(database.transactions).get(), isEmpty);
+    expect(await database.select(database.assets).get(), isEmpty);
+    expect(
+      (await database.select(database.accounts).get()).where(
+        (account) => account.isDefault,
+      ),
+      hasLength(1),
+    );
+    expect(await database.select(database.categories).get(), isNotEmpty);
+
+    await reset.reset();
+    expect(await database.select(database.transactions).get(), isEmpty);
+    expect(
+      (await database.select(database.accounts).get()).where(
+        (account) => account.isDefault,
+      ),
+      hasLength(1),
+    );
   });
 
   test(

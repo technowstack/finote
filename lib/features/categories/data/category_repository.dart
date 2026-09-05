@@ -30,39 +30,42 @@ class CategoryRepository {
   }
 
   Future<void> initializeDefaults() {
-    return _database.transaction(() async {
-      final initialized =
-          await (_database.select(_database.settings)
-                ..where((setting) => setting.key.equals(_defaultsSettingKey)))
-              .getSingleOrNull();
-      for (final category in _defaultCategories) {
-        final existing =
-            await (_database.select(_database.categories)..where(
-                  (row) =>
-                      row.name.equals(category.name) &
-                      row.type.equals(category.type.name),
-                ))
-                .getSingleOrNull();
-        if (existing == null) {
-          await _database
-              .into(_database.categories)
-              .insert(
-                CategoriesCompanion.insert(
-                  name: category.name,
-                  type: category.type,
-                ),
-              );
-        }
-      }
+    return _database.transaction(seedDefaults);
+  }
 
-      if (initialized == null) {
+  /// Seeds defaults while an outer database transaction is already active.
+  Future<void> seedDefaults() async {
+    final initialized =
+        await (_database.select(_database.settings)
+              ..where((setting) => setting.key.equals(_defaultsSettingKey)))
+            .getSingleOrNull();
+    for (final category in _defaultCategories) {
+      final existing =
+          await (_database.select(_database.categories)..where(
+                (row) =>
+                    row.name.equals(category.name) &
+                    row.type.equals(category.type.name),
+              ))
+              .getSingleOrNull();
+      if (existing == null) {
         await _database
-            .into(_database.settings)
+            .into(_database.categories)
             .insert(
-              SettingsCompanion.insert(key: _defaultsSettingKey, value: '1'),
+              CategoriesCompanion.insert(
+                name: category.name,
+                type: category.type,
+              ),
             );
       }
-    });
+    }
+
+    if (initialized == null) {
+      await _database
+          .into(_database.settings)
+          .insert(
+            SettingsCompanion.insert(key: _defaultsSettingKey, value: '1'),
+          );
+    }
   }
 
   Future<CategoryRecord> create({

@@ -67,7 +67,7 @@ Current focus:
 
 ```text
 Finote v1.3.0
-ASSETS / INVESTMENTS - PHASE 7E.5 FINAL RELEASE AUDIT BLOCKED
+ASSETS / INVESTMENTS - PHASE 7E.6 RESET DATA IN PROGRESS
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -136,7 +136,10 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 7E.2 Backward Compatibility & Migration Tests
 - [ ] 7E.3 Portfolio Performance & Offline Audit (blocked: no Android device/AVD for required runtime/profile matrix)
 - [ ] 7E.4 UI/UX Polish (blocked: connected Pixel 6a remained behind secure keyguard for required visual matrix)
-- [ ] 7E.5 v1.3.0 Final Audit & Release Preparation
+- [~] 7E.5 v1.3.0 Final Audit & Release Preparation (superseded by new pre-release hardening scope)
+- [ ] 7E.6 Reset Data — implementation complete; Android manual validation pending
+- [ ] 7E.7 App Lock / Biometric Authentication
+- [ ] 7E.8 v1.3.0 Final Audit & Release Preparation
 
 ---
 
@@ -476,7 +479,7 @@ Current rules:
 
 Next active task:
 
-> **Phase 7E.5 - Final Release Audit / Runtime Validation**
+> **Phase 7E.6 — Reset Data**
 
 
 ---
@@ -503,7 +506,7 @@ Next active task:
 
 ### Current active task
 
-> **Phase 7E.5 - Final Release Audit / Runtime Validation**
+> **Phase 7E.6 — Reset Data**
 
 7A.1 through 7A.6, 7B.1 through 7B.5, and 7C.1 are complete. Phase 7C.2
 implementation is locally complete but blocked pending real BBCA verification.
@@ -572,3 +575,45 @@ unlocked Android visual/offline matrix could not be completed, and the crypto
 holdings UI remains unchecked as a separately audited phase. See
 `docs/assets_phase_7e5_final_release_audit.md` for the evidence and release
 decision.
+
+
+---
+
+## Pre-Release Scope Update — Reset Data & App Lock
+
+Before tagging Finote v1.3.0, the release scope has been explicitly extended with two fundamental local safety features.
+
+```text
+7E.6 Reset Data — CURRENT
+7E.7 App Lock / Biometric Authentication — NEXT
+7E.8 Final v1.3.0 Audit / Release Preparation — AFTER 7E.6 + 7E.7
+```
+
+### Phase 7E.6 — Reset Data
+
+Status: **IMPLEMENTED / AUTOMATED VALIDATION PASSED, ANDROID MANUAL VALIDATION PENDING**
+
+Required outcome:
+
+- Settings exposes a clearly destructive Reset Data action;
+- user receives strong explicit confirmation before deletion;
+- Finote-owned personal financial data is removed using the audited current schema;
+- required default/seed records are recreated exactly once;
+- normal non-financial UI preferences are preserved unless the implementation audit proves otherwise;
+- App Lock/biometric state is not implemented as part of this phase;
+- one shared `AppDatabase` lifecycle is preserved;
+- reset is atomic where dependent writes/deletes must succeed together;
+- Drift/Riverpod views react without manual refresh;
+- reset is idempotent;
+- app restart does not resurrect deleted data;
+- pre-reset Backup can still be restored correctly;
+- offline behavior remains valid;
+- automated tests, analyzer, and Android manual regression must pass before completion.
+
+The existing Phase 7E.5 audit is retained as historical evidence, but it is no longer the final release decision because v1.3.0 scope changed before release. Final release validation moves to Phase 7E.8.
+
+### Next after 7E.6
+
+> **Phase 7E.7 — App Lock / Biometric Authentication**
+
+Do not start Phase 7E.7 automatically.

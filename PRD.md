@@ -2835,7 +2835,10 @@ Phase 7 — Assets / Investments
 7E.2 Backward Compatibility & Migration Tests
 7E.3 Portfolio Performance & Offline Audit
 7E.4 UI/UX Polish
-7E.5 v1.3.0 Final Audit & Release Preparation
+7E.5 v1.3.0 Final Audit & Release Preparation — superseded by pre-release hardening
+7E.6 Reset Data
+7E.7 App Lock / Biometric Authentication
+7E.8 v1.3.0 Final Audit & Release Preparation
 ```
 
 Setiap phase harus dikerjakan incremental. Jangan memulai sub-phase berikutnya otomatis.
@@ -2859,6 +2862,96 @@ Sebelum coding Phase 7:
 
 Current active phase:
 
-> **Phase 7A.1 — Investment Architecture & Existing Code Audit**
+> **Phase 7E.6 — Reset Data**
 
-Phase 7A.1 is audit/planning only and must not create schema/UI/API integration changes yet.
+Phase 7E.6 is a pre-release data-safety hardening task. Implement it incrementally and do not start Phase 7E.7 automatically. Phase 7E.8 becomes the final v1.3.0 release audit after Reset Data and App Lock / Biometric Authentication are completed and validated.
+
+
+---
+
+# 54. v1.3.0 Pre-Release Hardening
+
+Before Finote v1.3.0 is tagged/released, two fundamental local safety features are added to the release scope:
+
+```text
+7E.6 Reset Data
+7E.7 App Lock / Biometric Authentication
+7E.8 v1.3.0 Final Audit & Release Preparation
+```
+
+The previous 7E.5 audit evidence remains useful, but it is no longer the final release gate because the release scope has explicitly changed.
+
+## 54.1 Phase 7E.6 — Reset Data
+
+Goal:
+
+> Allow the user to intentionally remove all Finote-owned personal financial data from the device and return the app to a valid fresh-data state without reinstalling Finote.
+
+Product requirements:
+
+- entry point is under `Settings` in the existing Data/Storage area where appropriate;
+- the action must be clearly destructive and must never be triggered accidentally;
+- show clear Bahasa Indonesia confirmation explaining that financial data will be permanently removed;
+- use a strong confirmation flow; two explicit confirmation steps are preferred unless the current Settings UX already provides an equally safe pattern;
+- remind the user that Backup can be created first when appropriate, but never create or restore a backup implicitly;
+- reset must work fully offline;
+- reset must not require reinstalling or restarting the application unless the current architecture proves a restart unavoidable;
+- after success, Home, Transactions, Accounts, Reports, Portfolio, Net Worth, and other derived views must immediately represent the fresh state without manual refresh;
+- show user-friendly success/failure feedback and never expose raw SQLite/Drift exceptions.
+
+Data semantics:
+
+- inspect the current Drift schema and persistent stores before implementation; do not guess table names or ownership;
+- remove Finote-owned user financial records, including current Accounts/Transactions/Transfers and Portfolio source records that belong to the user;
+- include user-owned asset activities, opening positions, manual prices, and other persistent Portfolio source data discovered in the current schema;
+- remove stale/rebuildable local financial caches when necessary so deleted values cannot reappear;
+- required default/seed records must be recreated exactly once through the canonical existing initializer;
+- ordinary UI preferences such as Theme should remain preserved unless a concrete correctness reason requires otherwise;
+- App Lock / biometric state is outside Phase 7E.6 and belongs to Phase 7E.7;
+- legacy source database files selected/imported by the user remain external/read-only and must never be modified by Reset Data.
+
+Database and architecture rules:
+
+- prefer controlled deletion/reset through the existing shared `AppDatabase`; do not delete/recreate the SQLite file as a shortcut;
+- use an atomic Drift/SQLite transaction for dependent destructive changes where practical;
+- respect foreign-key ordering/cascades based on the actual schema;
+- normal transaction soft-delete rules do not prevent a deliberate full reset from physically removing Finote-owned user data when that is the verified correct reset semantic;
+- do not create a second `AppDatabase`; preserve the single shared database lifecycle;
+- do not introduce broad Riverpod invalidation loops or manual-refresh architecture; Drift streams remain the preferred reactive source;
+- reset must be idempotent: running Reset Data again on a fresh state must remain safe and must not duplicate seed/default records.
+
+Backup/Restore compatibility:
+
+```text
+Create data
+→ Backup
+→ Reset Data
+→ verify fresh state
+→ Restore backup
+→ verify original data and derived totals return correctly
+```
+
+A successful Reset Data must not damage backup/restore compatibility, migrations, deterministic quantities, account relations, Portfolio holdings, or report calculations.
+
+Acceptance criteria:
+
+- all intended user financial data is removed;
+- required defaults exist exactly once;
+- preserved non-financial preferences remain intact according to the audited reset contract;
+- no orphan rows or foreign-key failures remain;
+- Home/Transactions/Accounts/Reports/Portfolio/Net Worth react to the reset without manual refresh;
+- close/reopen does not resurrect deleted data;
+- a second reset is safe;
+- backup created before reset can still be restored successfully;
+- reset works offline;
+- `flutter analyze` passes;
+- relevant automated tests pass;
+- Android manual validation passes before Phase 7E.6 is marked complete.
+
+## 54.2 Phase 7E.7 — App Lock / Biometric Authentication
+
+This phase is explicitly planned after Reset Data but is not part of the current implementation task. It will provide local app locking using supported device authentication/biometrics without introducing a Finote cloud account or login dependency. Detailed implementation requirements must be audited before coding Phase 7E.7.
+
+## 54.3 Phase 7E.8 — Final v1.3.0 Release Gate
+
+Do not tag/release v1.3.0 until Phase 7E.6 and Phase 7E.7 are completed and the final regression/release audit is rerun. Existing 7E.5 evidence may be reused only where still valid after these changes.

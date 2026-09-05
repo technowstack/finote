@@ -96,7 +96,7 @@ Before coding:
 
 # 4. Current Product Direction
 
-Finote is currently extending its mature offline-first personal finance core with **Finote v1.3.0 — Assets / Investments**, while preserving financial correctness, data ownership, backward compatibility, and offline operation.
+Finote is currently hardening **Finote v1.3.0 — Assets / Investments** before release. Portfolio work remains part of v1.3.0, and the explicit current task is **Phase 7E.6 — Reset Data**, followed by **7E.7 App Lock / Biometric Authentication** and a rerun of the final release audit in **7E.8**.
 
 Current priorities:
 
@@ -2184,10 +2184,13 @@ Legacy source databases remain READ ONLY.
 7E.2 Backward Compatibility & Migration Tests
 7E.3 Portfolio Performance & Offline Audit
 7E.4 UI/UX Polish
-7E.5 v1.3.0 Final Audit & Release Preparation
+7E.5 v1.3.0 Final Audit & Release Preparation (historical audit; superseded as final gate)
+7E.6 Reset Data
+7E.7 App Lock / Biometric Authentication
+7E.8 v1.3.0 Final Audit & Release Preparation
 ```
 
-Implement only the explicitly requested sub-phase.
+Current task: **7E.6 Reset Data**. Implement only the explicitly requested sub-phase. Do not start 7E.7 automatically.
 
 ## 65.17 Phase 7A.1 Gate
 
@@ -2242,3 +2245,62 @@ Before coding, inspect:
   remain separate point-in-time concepts.
 - Portfolio copy and controls must remain usable on narrow screens and enlarged
   text without moving financial values into constrained trailing layouts.
+
+
+---
+
+# 66. Phase 7E.6 — Reset Data Engineering Rules
+
+The current explicit implementation phase is **7E.6 Reset Data**. Treat this as destructive data-safety work, not a Settings-only UI task.
+
+Before coding:
+
+1. read `PRD.md`, `STATUS.md`, and this `AGENTS.md`;
+2. inspect the actual Drift schema, migrations, DAOs/repositories, seed/default initialization, Settings persistence, Backup/Restore, Portfolio persistence, Riverpod providers, and navigation;
+3. inventory all Finote-owned user data and distinguish it from required defaults, rebuildable cache, non-financial preferences, and external legacy source files;
+4. produce/confirm the reset contract from the current code before deleting anything.
+
+Implementation invariants:
+
+- use the existing shared `AppDatabase`; never create a second database instance for reset;
+- do not delete/recreate the SQLite database file merely to simulate a fresh install;
+- use a controlled atomic database transaction for dependent destructive operations where practical;
+- determine delete order/cascade behavior from actual foreign keys; never guess;
+- a deliberate full Reset Data may physically remove Finote-owned user financial records even where ordinary CRUD uses soft delete, but only after auditing the actual schema and backup semantics;
+- preserve canonical seed/default initialization and recreate required defaults exactly once; never duplicate seed lists in Settings UI;
+- preserve ordinary non-financial preferences such as Theme unless the audited reset contract explicitly requires otherwise;
+- do not implement App Lock / biometric behavior during 7E.6;
+- external legacy database files are read-only and must never be modified/deleted;
+- reset Portfolio source records and stale/rebuildable local financial cache so deleted holdings/value cannot reappear;
+- never persist or restore derived totals as independent reset state; recalculate from remaining/default source records;
+- preserve Drift/Riverpod reactivity; no broad refresh loops, no manual-refresh requirement, and no Market API request caused by reset;
+- reset must be idempotent and safe on an already-fresh database;
+- do not force process restart unless the current architecture proves it necessary.
+
+Required UX:
+
+- place Reset Data in the appropriate Settings Data/Storage area;
+- clearly label it as destructive;
+- require strong explicit confirmation before execution; two confirmations are preferred when no existing equivalent pattern exists;
+- mention Backup as the user's recovery option without silently creating one;
+- prevent double submission while reset is running;
+- use privacy-safe logs and user-friendly Bahasa Indonesia errors; never show raw Drift/SQLite exceptions.
+
+Required regression:
+
+```text
+representative finance + portfolio data
+→ Backup
+→ Reset Data
+→ fresh valid state
+→ close/reopen
+→ data remains reset
+→ Reset Data again
+→ still valid, no duplicate defaults
+→ Restore backup
+→ original source data and derived values return correctly
+```
+
+Also verify Transaction CRUD/reactivity, Accounts/Transfers, Reports, Dashboard, Portfolio, Net Worth, Backup/Restore, offline startup, and no automatic market refresh. Run targeted tests, `flutter analyze`, relevant full tests, and Android manual validation before marking 7E.6 complete.
+
+After 7E.6 is complete, stop and report results. Wait for explicit user instruction before starting **7E.7 App Lock / Biometric Authentication**.

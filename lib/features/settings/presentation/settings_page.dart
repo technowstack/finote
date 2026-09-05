@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/theme_mode_provider.dart';
+import '../../market/data/portfolio_market_quotes_provider.dart';
+import '../data/reset_data_service.dart';
 
 /// Settings hub page that links to Accounts, Categories, Backup, Legacy Import,
 /// Security screens, and display preferences.
@@ -48,6 +50,7 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: 'Migrasi data dari versi sebelumnya',
                 onTap: () => context.push('/legacy-import'),
               ),
+              const _ResetDataTile(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -90,6 +93,96 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _ResetDataTile extends ConsumerStatefulWidget {
+  const _ResetDataTile();
+
+  @override
+  ConsumerState<_ResetDataTile> createState() => _ResetDataTileState();
+}
+
+class _ResetDataTileState extends ConsumerState<_ResetDataTile> {
+  bool _resetting = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.delete_forever_outlined),
+      title: const Text('Reset data'),
+      subtitle: const Text('Hapus seluruh data keuangan dan portofolio'),
+      trailing: _resetting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.chevron_right, size: 20),
+      onTap: _resetting ? null : _confirmReset,
+    );
+  }
+
+  Future<void> _confirmReset() async {
+    final first = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reset semua data?'),
+        content: const Text(
+          'Semua transaksi, akun, transfer, kategori, dan portofolio akan dihapus. '
+          'Pastikan sudah memiliki backup jika ingin memulihkannya.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Lanjut'),
+          ),
+        ],
+      ),
+    );
+    if (first != true || !mounted) return;
+
+    final second = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi terakhir'),
+        content: const Text(
+          'Tindakan ini tidak dapat dibatalkan tanpa backup.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset data'),
+          ),
+        ],
+      ),
+    );
+    if (second != true || !mounted) return;
+
+    setState(() => _resetting = true);
+    try {
+      ref.invalidate(portfolioMarketQuotesProvider);
+      await ref.read(resetDataServiceProvider).reset();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Data berhasil direset.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mereset data. Silakan coba lagi.')),
+      );
+    } finally {
+      if (mounted) setState(() => _resetting = false);
+    }
   }
 }
 
