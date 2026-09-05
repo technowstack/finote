@@ -244,7 +244,7 @@ class _ExportDialogState extends ConsumerState<_ExportDialog> {
             Text('Pemasukan: ${formatIdr(document.totalIncome)}'),
             Text('Pengeluaran: ${formatIdr(document.totalExpense)}'),
             Text('Saldo periode: ${formatIdr(document.balance)}'),
-            Text('Total aset saat ini: ${formatIdr(document.totalAssets)}'),
+            Text('Kas & dompet saat ini: ${formatIdr(document.totalAssets)}'),
             Text(
               '${document.transfers.length} transfer: '
               '${formatIdr(document.transferVolume)}',
@@ -674,7 +674,7 @@ class _AccountBalancesSection extends StatelessWidget {
                     ),
                   const Divider(indent: 16, endIndent: 16),
                   ListTile(
-                    title: const Text('Total aset'),
+                    title: const Text('Kas & dompet'),
                     subtitle: archivedCount == 0
                         ? const Text('Saldo seluruh akun saat ini')
                         : Text(

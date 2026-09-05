@@ -2109,9 +2109,33 @@ Last-known API quote cache is rebuildable and does not have to be backup-critica
 
 Restore must work offline and preserve referential integrity.
 
+Additional restore rules:
+
+- manual prices and pricing mode are backup-critical user data;
+- deterministic scaled quantities must round-trip exactly;
+- never infer holdings or asset activities from legacy investment transactions;
+- close the current shared `AppDatabase` before replacement, then rebind one
+  shared instance through the root database provider;
+- reset stale/in-flight market quote state without broad cyclic invalidation;
+- restore and subsequent Portfolio opening must never auto-refresh market data;
+- holdings, Portfolio value, Net Worth, and investment cashflow are recalculated
+  after restore and are never restored as independent totals.
+
 ## 65.15 Migration and Legacy Safety
 
 Prefer additive Drift migrations.
+
+Migration rules:
+
+- preserve production data; never delete/recreate the production database as
+  migration-error recovery;
+- never synthesize holdings from historical investment transactions;
+- keep one shared `AppDatabase` through the root provider after migration or
+  restore;
+- migration regression tests must verify reactive transaction and Dashboard
+  updates after create, edit, and soft delete;
+- opening the migrated database, Home, or Portfolio must not refresh market
+  data automatically.
 
 Before any schema work:
 
@@ -2184,3 +2208,37 @@ Before coding, inspect:
 11. Finote Market API integration contract.
 
 7A.1 must produce an implementation plan and identify blockers. Do not create asset tables, UI, or Market API integration until the user explicitly proceeds to 7A.2.
+
+## 65.18 Portfolio Performance and Offline Safety
+
+- Portfolio, Home, Reports, Net Worth, and provider builds must have no network
+  side effects. Market data is requested only by explicit `Refresh Harga`.
+- Never issue per-row market requests. Use one deduplicated batch containing only
+  eligible positive Stock/Crypto holdings and minimal market identifiers.
+- Avoid N+1 database queries. Holdings and prices must be loaded as aggregate or
+  batched local snapshots rather than queried once per Portfolio row.
+- Keep one shared `AppDatabase` through the root provider. Detail-scoped provider
+  families must release subscriptions when their route is disposed.
+- Local Drift changes must update Portfolio and Net Worth reactively without
+  causing a Market API request or a provider rebuild loop.
+- Last-known API prices remain usable regardless of age. Missing prices remain
+  unknown and must never be converted to zero.
+- Performance work must preserve deterministic quantity, current valuation, Net
+  Worth, investment cashflow, Income/Expense, transfers, and account balances.
+- Add indexes only after actual query-plan or timing evidence demonstrates need.
+
+## 65.19 Portfolio UI Invariants
+
+- `Belum ada posisi` is reserved for assets without holdings activity. A closed
+  position with activity is displayed as zero, not as missing.
+- Current holding and Opening Position are separate values in Asset Detail.
+- Archived assets remain readable but cannot receive new activities until
+  reactivated.
+- Editing Buy/Sell must preserve its linked cashflow account. An unchanged
+  archived account is valid; silently switching to another account is not.
+- Asset activity edits, deletes, and Opening Position changes must not produce
+  negative holdings.
+- Account-only balances use `Kas & Dompet`; `Portofolio` and `Kekayaan Bersih`
+  remain separate point-in-time concepts.
+- Portfolio copy and controls must remain usable on narrow screens and enlarged
+  text without moving financial values into constrained trailing layouts.

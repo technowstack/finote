@@ -39,7 +39,7 @@ class AppDatabase extends _$AppDatabase {
     : super(executor ?? driftDatabase(name: 'finote'));
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -98,6 +98,12 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'CREATE INDEX IF NOT EXISTS asset_prices_fetched_at '
           'ON asset_prices (fetched_at)',
+        );
+      }
+      if (from < 11) {
+        await customStatement(
+          'CREATE INDEX IF NOT EXISTS transactions_receipt_fingerprint '
+          'ON transactions (receipt_fingerprint)',
         );
       }
     },

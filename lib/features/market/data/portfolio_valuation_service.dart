@@ -130,8 +130,8 @@ final portfolioValuationProvider = Provider<AsyncValue<PortfolioSnapshot>>((
   );
 });
 
-final assetValuationProvider =
-    Provider.family<AsyncValue<AssetValuation?>, int>((ref, assetId) {
+final assetValuationProvider = Provider.autoDispose
+    .family<AsyncValue<AssetValuation?>, int>((ref, assetId) {
       final holding = ref.watch(holdingProvider(assetId));
       final price = ref.watch(currentAssetPriceProvider(assetId));
       if (holding.hasError) {

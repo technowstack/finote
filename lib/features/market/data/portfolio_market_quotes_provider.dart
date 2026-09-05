@@ -44,13 +44,22 @@ class PortfolioMarketQuotesController
 
   final Ref _ref;
   bool _inFlight = false;
-  Future<void> refresh({bool force = true}) async {
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  Future<void> refresh() async {
     if (_inFlight) return;
     final holdings = _ref.read(assetHoldingsProvider).valueOrNull;
     if (holdings == null) return;
 
     final requests = <MarketQuoteRequest>[];
     final keys = <AssetMarketKey>{};
+    final assetIdsByKey = <AssetMarketKey, int>{};
     for (final holding in holdings) {
       final asset = holding.asset;
       if (!holding.hasActivity ||
@@ -67,7 +76,10 @@ class PortfolioMarketQuotesController
         symbol: asset.symbol!,
         assetType: asset.assetType,
       );
-      if (keys.add(request.key)) requests.add(request);
+      if (keys.add(request.key)) {
+        requests.add(request);
+        assetIdsByKey[request.key] = asset.id;
+      }
     }
 
     if (requests.isEmpty) {
@@ -80,32 +92,31 @@ class PortfolioMarketQuotesController
     }
 
     _inFlight = true;
-    final assetIdsByKey = <AssetMarketKey, int>{};
-    for (final holding in holdings) {
-      final asset = holding.asset;
-      if (asset.symbol == null) continue;
-      final key = AssetMarketKey(
-        asset.symbol!.trim().toUpperCase(),
-        asset.assetType,
-      );
-      if (requests.any((request) => request.key == key)) {
-        assetIdsByKey[key] = asset.id;
-      }
-    }
     state = state.copyWith(isRefreshing: true, clearFailure: true);
     try {
       final result = await _ref
           .read(marketRepositoryProvider)
           .getQuotes(requests);
+      if (_disposed) return;
       await _ref.read(assetPriceRepositoryProvider).saveQuotes({
         for (final entry in result.quotes.entries)
           if (assetIdsByKey[entry.key] != null)
             assetIdsByKey[entry.key]!: entry.value,
       });
+      if (_disposed) return;
       state = PortfolioMarketQuoteState(result: result);
     } on MarketFailure catch (error) {
+      if (_disposed) return;
       // Keep the last successful quotes when a refresh fails.
       state = state.copyWith(isRefreshing: false, failure: error);
+    } catch (_) {
+      if (_disposed) return;
+      state = state.copyWith(
+        isRefreshing: false,
+        failure: const MarketInvalidResponse(
+          'Harga terbaru belum dapat disimpan.',
+        ),
+      );
     } finally {
       _inFlight = false;
     }

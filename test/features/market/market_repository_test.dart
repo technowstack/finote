@@ -84,24 +84,19 @@ void main() {
     expect(quote.marketStatus, MarketStatus.open);
   });
 
-  test(
-    'allows zero price and treats invalid optional timestamp as absent',
-    () async {
-      final repository = MarketRepository(
-        client('''{
+  test('rejects zero price without accepting malformed market data', () async {
+    final repository = MarketRepository(
+      client('''{
         "symbol":"BTC", "asset_type":"crypto", "price":0,
         "currency":"IDR", "updated_at":"not-a-date"
       }'''),
-      );
+    );
 
-      final quote = await repository.getQuote(
-        symbol: 'BTC',
-        assetType: AssetType.crypto,
-      );
-      expect(quote.price, 0);
-      expect(quote.updatedAt, isNull);
-    },
-  );
+    await expectLater(
+      repository.getQuote(symbol: 'BTC', assetType: AssetType.crypto),
+      throwsA(isA<MarketInvalidResponse>()),
+    );
+  });
 
   test('manual asset is rejected before network request', () async {
     var called = false;

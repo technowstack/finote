@@ -37,7 +37,7 @@ void main() {
         _app(points, totalAssets: 13950000, archivedCount: 1),
       );
 
-      expect(find.text('Total Aset'), findsOneWidget);
+      expect(find.text('Kas & Dompet'), findsOneWidget);
       expect(find.text('Rp13.950.000'), findsOneWidget);
       expect(find.text('Termasuk 1 akun diarsipkan'), findsOneWidget);
       expect(find.text('Rp12 jt'), findsOneWidget);

@@ -71,7 +71,7 @@ class SettingsPage extends ConsumerWidget {
               _SettingsTile(
                 icon: Icons.info_outline,
                 title: 'Finote',
-                subtitle: 'Versi 1.2.0',
+                subtitle: 'Versi 1.3.0',
                 onTap: () async {
                   final Uri url = Uri.parse(
                     'https://github.com/technowstack/finote/releases',

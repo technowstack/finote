@@ -2579,6 +2579,20 @@ Finote boleh menyimpan local last-known price / price cache agar Portfolio tetap
 
 Price cache bukan portfolio source of truth dan tidak wajib dibackup karena dapat di-refresh kembali. Persistent holdings dan manual asset configuration wajib dibackup.
 
+Backup harus mempertahankan seluruh source data Portfolio yang dibuat pengguna:
+
+- asset master dan archived state;
+- Opening Position, Buy, Sell, Adjustment, dan soft-delete state;
+- deterministic scaled quantity tanpa konversi floating-point;
+- relasi Buy/Sell ke Transaction;
+- pricing mode dan manual current price.
+
+Current Holdings, Current Asset Value, Portfolio Total, Net Worth, dan
+Investment Cashflow Summary tidak disimpan sebagai restore truth. Nilai tersebut
+wajib dihitung ulang dari source data setelah restore. Last-known API quote
+tetap cache opsional; restore tanpa cache harus berhasil dan tidak boleh memicu
+Market API secara otomatis.
+
 ## 53.15 Current Value
 
 Stock:
@@ -2633,6 +2647,20 @@ Last Updated
 ```
 
 Portfolio tidak boleh menunggu API sebelum menampilkan data lokal.
+
+Portfolio UI must preserve these distinctions and lifecycle rules:
+
+- `Belum ada posisi` means no holdings activity exists; a closed holding is a
+  valid current position of zero;
+- opening quantity is historical input and must not replace the displayed
+  current holding after Buy, Sell, or Adjustment;
+- archived assets remain inspectable but cannot receive new activities until
+  reactivated;
+- editing linked Buy/Sell preserves its current account, including an archived
+  account when unchanged;
+- account-only current balances are labelled `Kas & Dompet`, separately from
+  `Portofolio` and `Kekayaan Bersih`;
+- missing prices remain explicit unknown states and are never rendered as Rp0.
 
 ## 53.18 Net Worth
 
@@ -2708,6 +2736,11 @@ Setiap schema change harus:
 - preserve existing user data;
 - diuji fresh install dan upgrade dari v1.2.x;
 - tidak merekonstruksi portfolio dari historical investment cashflow.
+
+Existing Finote users must upgrade without reinstalling and without automatic
+Portfolio reconstruction. Historical `Pembelian Aset` and `Penjualan Aset`
+transactions remain historical investment cashflow only; migrations must never
+turn them into Assets, AssetTransactions, Opening Positions, or Holdings.
 
 ## 53.21 Backup / Restore v1.3.0
 

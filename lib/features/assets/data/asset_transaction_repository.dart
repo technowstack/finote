@@ -103,25 +103,42 @@ class AssetTransactionRepository {
       null,
       totalAmount,
     );
-    final count =
-        await (_database.update(_database.assetTransactions)..where(
-              (activity) =>
-                  activity.id.equals(id) &
-                  activity.action.equals(
-                    AssetTransactionAction.openingPosition.name,
-                  ) &
-                  activity.deletedAt.isNull(),
-            ))
-            .write(
-              AssetTransactionsCompanion(
-                quantityScaled: Value(quantity.scaled),
-                totalAmount: Value(totalAmount),
-                transactionDate: Value(transactionDate),
-                note: Value(note?.trim()),
-                updatedAt: Value(DateTime.now().toUtc()),
-              ),
-            );
-    return count == 1;
+    return _database.transaction(() async {
+      final opening =
+          await (_database.select(_database.assetTransactions)..where(
+                (activity) =>
+                    activity.id.equals(id) &
+                    activity.action.equals(
+                      AssetTransactionAction.openingPosition.name,
+                    ) &
+                    activity.deletedAt.isNull(),
+              ))
+              .getSingleOrNull();
+      if (opening == null) return false;
+      final base = await currentHoldingExcluding(opening.assetId, id);
+      if ((base + quantity).isNegative) {
+        throw StateError('Opening position would make holdings negative');
+      }
+      final count =
+          await (_database.update(_database.assetTransactions)..where(
+                (activity) =>
+                    activity.id.equals(id) &
+                    activity.action.equals(
+                      AssetTransactionAction.openingPosition.name,
+                    ) &
+                    activity.deletedAt.isNull(),
+              ))
+              .write(
+                AssetTransactionsCompanion(
+                  quantityScaled: Value(quantity.scaled),
+                  totalAmount: Value(totalAmount),
+                  transactionDate: Value(transactionDate),
+                  note: Value(note?.trim()),
+                  updatedAt: Value(DateTime.now().toUtc()),
+                ),
+              );
+      return count == 1;
+    });
   }
 
   Future<bool> removeOpeningPosition(int id) async {
@@ -165,7 +182,8 @@ SELECT COALESCE(SUM(
   CASE
     WHEN action IN ('openingPosition', 'buy') THEN quantity_scaled
     WHEN action = 'sell' THEN -quantity_scaled
-    ELSE quantity_scaled
+    WHEN action = 'adjustment' THEN quantity_scaled
+    ELSE 0
   END
 ), 0) AS quantity_scaled
 FROM asset_transactions
@@ -211,7 +229,8 @@ SELECT a.*, COALESCE(SUM(
   CASE
     WHEN at.action IN ('openingPosition', 'buy') THEN at.quantity_scaled
     WHEN at.action = 'sell' THEN -at.quantity_scaled
-    ELSE at.quantity_scaled
+    WHEN at.action = 'adjustment' THEN at.quantity_scaled
+    ELSE 0
   END
  ), 0) AS holding_quantity_scaled,
  COUNT(at.id) > 0 AS has_activity
@@ -318,8 +337,8 @@ final assetTransactionRepositoryProvider = Provider<AssetTransactionRepository>(
   (ref) => AssetTransactionRepository(ref.watch(databaseProvider)),
 );
 
-final assetActivitiesProvider =
-    StreamProvider.family<List<AssetTransactionRecord>, int>((ref, assetId) {
+final assetActivitiesProvider = StreamProvider.autoDispose
+    .family<List<AssetTransactionRecord>, int>((ref, assetId) {
       return ref
           .watch(assetTransactionRepositoryProvider)
           .watchByAsset(assetId);
@@ -333,12 +352,13 @@ final allAssetHoldingsProvider = StreamProvider<List<AssetHolding>>(
   (ref) => ref.watch(assetTransactionRepositoryProvider).watchAllHoldings(),
 );
 
-final holdingProvider = Provider.family<AsyncValue<AssetHolding?>, int>(
-  (ref, assetId) => ref
-      .watch(allAssetHoldingsProvider)
-      .whenData(
-        (holdings) => holdings
-            .where((holding) => holding.asset.id == assetId)
-            .firstOrNull,
-      ),
-);
+final holdingProvider = Provider.autoDispose
+    .family<AsyncValue<AssetHolding?>, int>(
+      (ref, assetId) => ref
+          .watch(allAssetHoldingsProvider)
+          .whenData(
+            (holdings) => holdings
+                .where((holding) => holding.asset.id == assetId)
+                .firstOrNull,
+          ),
+    );

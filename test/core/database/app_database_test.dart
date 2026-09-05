@@ -25,7 +25,7 @@ void main() {
 
   tearDown(() => database.close());
 
-  test('fresh database creates version 10 tables and indexes', () async {
+  test('fresh database creates version 11 tables and indexes', () async {
     final schema = await database
         .customSelect(
           "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'index')",
@@ -33,7 +33,7 @@ void main() {
         .get();
     final names = schema.map((row) => row.read<String>('name')).toSet();
 
-    expect(database.schemaVersion, 10);
+    expect(database.schemaVersion, 11);
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
         .getSingle();
@@ -44,6 +44,7 @@ void main() {
         'accounts',
         'categories',
         'transactions',
+        'transfers',
         'settings',
         'assets',
         'asset_transactions',
@@ -219,7 +220,7 @@ void main() {
   });
 
   test(
-    'version 1 database migrates to version 10 without recreation',
+    'version 1 database migrates to version 11 without recreation',
     () async {
       await database.close();
       database = AppDatabase(
@@ -246,7 +247,7 @@ void main() {
           .customSelect('SELECT value FROM phase_zero_marker')
           .getSingle();
 
-      expect(version.read<int>('user_version'), 10);
+      expect(version.read<int>('user_version'), 11);
       expect(marker.read<String>('value'), 'preserved');
       expect(
         tables.map((row) => row.read<String>('name')),
@@ -322,7 +323,7 @@ void main() {
         .customSelect('PRAGMA table_info(transactions)')
         .get();
 
-    expect(database.schemaVersion, 10);
+    expect(database.schemaVersion, 11);
     expect(transaction.uuid, 'transaction-v2');
     expect(transaction.amount, 25000);
     expect(transaction.transactionDate, DateTime(2026, 8, 29));

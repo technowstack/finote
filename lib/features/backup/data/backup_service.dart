@@ -152,6 +152,8 @@ class BackupService {
         accountCount: stats.accountCount,
         transferCount: stats.transferCount,
         transferVolume: stats.transferVolume,
+        assetCount: stats.assetCount,
+        assetActivityCount: stats.assetActivityCount,
         totalIncome: stats.totalIncome,
         totalExpense: stats.totalExpense,
         oldestTransactionAt: stats.oldestTransactionAt,
@@ -324,6 +326,7 @@ class BackupService {
             'settings',
             'assets',
             'asset_transactions',
+            'asset_prices',
           }) ||
           !_hasColumns(db, 'categories', {
             'id',
@@ -406,23 +409,70 @@ class BackupService {
             'updated_at',
             'deleted_at',
           }) ||
+          !_hasColumns(db, 'asset_prices', {
+            'id',
+            'asset_id',
+            'price_amount',
+            'currency',
+            'market_updated_at',
+            'fetched_at',
+            'is_backend_stale',
+          }) ||
           !indexes.containsAll({
             'accounts_active',
+            'categories_type',
+            'categories_deleted_at',
+            'transactions_date',
+            'transactions_category_id',
+            'transactions_type',
+            'transactions_deleted_at',
             'transactions_account_id',
+            'transactions_receipt_fingerprint',
+            'transactions_legacy_source_id',
             'assets_active',
             'assets_type_normalized_symbol',
             'asset_transactions_asset_id',
             'asset_transactions_date',
             'asset_transactions_deleted_at',
             'asset_transactions_source_transaction_id',
+            'asset_prices_asset_id',
+            'asset_prices_fetched_at',
             'transfers_from_account_id',
             'transfers_to_account_id',
             'transfers_date',
             'transfers_deleted_at',
           }) ||
+          !_hasOnlyValues(db, 'categories', 'type', {'income', 'expense'}) ||
+          !_hasOnlyValues(db, 'transactions', 'type', {'income', 'expense'}) ||
+          !_hasOnlyValues(db, 'transactions', 'source', {
+            'manual',
+            'legacy_import',
+            'receipt_scan',
+            'recurring',
+          }) ||
+          !_hasOnlyValues(db, 'accounts', 'type', {
+            'cash',
+            'bank',
+            'e_wallet',
+            'savings',
+          }) ||
+          !_hasOnlyValues(db, 'assets', 'asset_type', {
+            'stock',
+            'crypto',
+            'mutualFund',
+            'gold',
+            'other',
+          }) ||
+          !_hasOnlyValues(db, 'assets', 'pricing_mode', {'api', 'manual'}) ||
+          !_hasOnlyValues(db, 'asset_transactions', 'action', {
+            'openingPosition',
+            'buy',
+            'sell',
+            'adjustment',
+          }) ||
           foreignKeyErrors.isNotEmpty ||
           _count(db, 'transactions WHERE account_id IS NULL') != 0 ||
-          _count(db, 'accounts WHERE is_default = 1') != 1 ||
+          _count(db, 'accounts WHERE is_default = 1 AND is_active = 1') != 1 ||
           _count(db, 'transfers WHERE from_account_id = to_account_id') != 0) {
         throw const RestoreError.integrityCheckFailed();
       }
@@ -486,6 +536,11 @@ class BackupService {
         WHERE deleted_at IS NULL
       ''').single;
       final accountCount = _count(db, 'accounts');
+      final assetCount = _count(db, 'assets');
+      final assetActivityCount = _count(
+        db,
+        'asset_transactions WHERE deleted_at IS NULL',
+      );
       final transferRow = db.select('''
         SELECT COUNT(*) AS transfer_count,
                COALESCE(SUM(amount), 0) AS transfer_volume
@@ -498,6 +553,8 @@ class BackupService {
         accountCount: accountCount,
         transferCount: transferRow['transfer_count'] as int,
         transferVolume: transferRow['transfer_volume'] as int,
+        assetCount: assetCount,
+        assetActivityCount: assetActivityCount,
         totalIncome: row['total_income'] as int,
         totalExpense: row['total_expense'] as int,
         oldestTransactionAt: _readDate(row['oldest']),
@@ -517,6 +574,19 @@ class BackupService {
         .map((row) => row['name'])
         .toSet();
     return columns.containsAll(required);
+  }
+
+  bool _hasOnlyValues(
+    Database db,
+    String table,
+    String column,
+    Set<String> supported,
+  ) {
+    final values = db
+        .select('SELECT DISTINCT "$column" AS value FROM "$table"')
+        .map((row) => row['value'])
+        .whereType<String>();
+    return values.every(supported.contains);
   }
 
   int _count(Database db, String from) =>
@@ -568,6 +638,8 @@ class _RestoreStats {
     required this.accountCount,
     required this.transferCount,
     required this.transferVolume,
+    required this.assetCount,
+    required this.assetActivityCount,
     required this.totalIncome,
     required this.totalExpense,
     required this.oldestTransactionAt,
@@ -579,6 +651,8 @@ class _RestoreStats {
   final int accountCount;
   final int transferCount;
   final int transferVolume;
+  final int assetCount;
+  final int assetActivityCount;
   final int totalIncome;
   final int totalExpense;
   final DateTime? oldestTransactionAt;

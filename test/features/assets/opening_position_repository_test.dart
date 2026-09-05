@@ -112,4 +112,29 @@ void main() {
       AssetQuantity.parse('6.25'),
     );
   });
+
+  test('opening position edit cannot make later holdings negative', () async {
+    final asset = await createAsset(AssetType.gold);
+    final opening = await repository.createOpeningPosition(
+      assetId: asset.id,
+      quantity: AssetQuantity.parse('5'),
+      transactionDate: DateTime(2026, 9, 3),
+    );
+    await repository.create(
+      assetId: asset.id,
+      action: AssetTransactionAction.sell,
+      quantity: AssetQuantity.parse('4'),
+      transactionDate: DateTime(2026, 9, 4),
+    );
+
+    await expectLater(
+      repository.updateOpeningPosition(
+        id: opening.id,
+        quantity: AssetQuantity.parse('3'),
+        transactionDate: DateTime(2026, 9, 3),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(await repository.currentHolding(asset.id), AssetQuantity.parse('1'));
+  });
 }

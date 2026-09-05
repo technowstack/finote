@@ -98,7 +98,7 @@ Future<List<int>> buildPdfExport(ExportDocument document) async {
         else
           ...accountTables,
         pw.SizedBox(height: 6),
-        pw.Text('Total aset saat ini: ${formatIdr(document.totalAssets)}'),
+        pw.Text('Kas & dompet saat ini: ${formatIdr(document.totalAssets)}'),
         pw.SizedBox(height: 16),
         pw.Text(
           'Transfer Antar Akun',

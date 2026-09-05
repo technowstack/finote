@@ -276,7 +276,7 @@ void main() {
       expect(document.transferVolume, report.transferSummary.volume);
 
       final text = buildTextExport(document);
-      expect(text, contains('Total aset saat ini: Rp14.000.000'));
+      expect(text, contains('Kas & dompet saat ini: Rp14.000.000'));
       expect(text, contains('BCA Utama -> BCA Tabungan'));
       expect(text, contains('Transfer Antar Akun'.toUpperCase()));
       expect(text, contains('Pemasukan | BCA Utama | Gaji'));
@@ -290,7 +290,7 @@ void main() {
       final transactionSheet = _sheet(workbook, 2);
       final accountSheet = _sheet(workbook, 3);
       final transferSheet = _sheet(workbook, 4);
-      expect(summarySheet, contains('Total aset saat ini'));
+      expect(summarySheet, contains('Kas &amp; dompet saat ini'));
       expect(summarySheet, contains('<v>14000000</v>'));
       expect(transactionSheet, contains('BCA Utama'));
       expect(accountSheet, contains('<v>12000000</v>'));

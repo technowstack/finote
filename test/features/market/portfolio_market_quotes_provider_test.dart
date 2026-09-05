@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:drift/native.dart';
@@ -119,7 +120,18 @@ void main() {
         {'symbol': 'BBCA', 'type': 'stock'},
         {'symbol': 'BTC', 'type': 'crypto'},
       ]);
-      expect(requestBody, isNot(contains('quantity')));
+      expect(sent.keys, {'assets', 'currency'});
+      expect(sentAssets.every((asset) => asset.keys.length == 2), isTrue);
+      for (final forbidden in [
+        'quantity',
+        'value',
+        'account',
+        'transaction',
+        'note',
+        'net_worth',
+      ]) {
+        expect(requestBody, isNot(contains(forbidden)));
+      }
       expect(state.result.quotes, hasLength(2));
       expect(
         state
@@ -208,4 +220,114 @@ void main() {
       );
     },
   );
+
+  test('disposing an in-flight refresh prevents stale price writes', () async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final asset = await AssetRepository(database).create(
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      assetType: AssetType.stock,
+      pricingMode: AssetPricingMode.api,
+    );
+    await AssetTransactionRepository(database).createOpeningPosition(
+      assetId: asset.id,
+      quantity: AssetQuantity.parse('100'),
+      transactionDate: DateTime(2026, 9, 1),
+    );
+    final response = Completer<MarketHttpResponse>();
+    final container = ProviderContainer(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        marketRepositoryProvider.overrideWithValue(
+          MarketRepository(
+            MarketApiClient(
+              baseUrl: 'https://market.example/',
+              post: (_, _) => response.future,
+            ),
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(assetHoldingsProvider.future);
+    final refresh = container
+        .read(portfolioMarketQuotesProvider.notifier)
+        .refresh();
+    container.invalidate(portfolioMarketQuotesProvider);
+    response.complete(
+      const MarketHttpResponse(200, '''{
+        "quotes": [{"symbol":"BBCA","asset_type":"stock","price":9000,"currency":"IDR"}]
+      }'''),
+    );
+    await refresh;
+
+    expect(
+      await AssetPriceRepository(database).getForAssets([asset.id]),
+      isEmpty,
+    );
+  });
+
+  test(
+    'unexpected persistence failure always releases refresh state',
+    () async {
+      final database = AppDatabase(NativeDatabase.memory());
+      addTearDown(database.close);
+      final asset = await AssetRepository(database).create(
+        symbol: 'BBCA',
+        name: 'Bank Central Asia',
+        assetType: AssetType.stock,
+        pricingMode: AssetPricingMode.api,
+      );
+      await AssetTransactionRepository(database).createOpeningPosition(
+        assetId: asset.id,
+        quantity: AssetQuantity.parse('100'),
+        transactionDate: DateTime(2026, 9, 1),
+      );
+      var calls = 0;
+      final container = ProviderContainer(
+        overrides: [
+          databaseProvider.overrideWithValue(database),
+          assetPriceRepositoryProvider.overrideWithValue(
+            _FailingAssetPriceRepository(database),
+          ),
+          marketRepositoryProvider.overrideWithValue(
+            MarketRepository(
+              MarketApiClient(
+                baseUrl: 'https://market.example/',
+                post: (_, _) async {
+                  calls++;
+                  return const MarketHttpResponse(200, '''{
+                  "quotes": [{"symbol":"BBCA","asset_type":"stock","price":9200,"currency":"IDR"}]
+                }''');
+                },
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(assetHoldingsProvider.future);
+
+      await container.read(portfolioMarketQuotesProvider.notifier).refresh();
+      final first = container.read(portfolioMarketQuotesProvider);
+      expect(first.isRefreshing, isFalse);
+      expect(first.failure, isA<MarketInvalidResponse>());
+
+      await container.read(portfolioMarketQuotesProvider.notifier).refresh();
+      expect(calls, 2);
+    },
+  );
+}
+
+class _FailingAssetPriceRepository extends AssetPriceRepository {
+  _FailingAssetPriceRepository(super.database);
+
+  @override
+  Future<void> saveQuotes(
+    Map<int, MarketQuote> quotes, {
+    DateTime? fetchedAt,
+  }) async {
+    throw StateError('synthetic persistence failure');
+  }
 }

@@ -30,6 +30,12 @@ class AssetRepository {
     )..where((asset) => asset.id.equals(id))).getSingleOrNull();
   }
 
+  Stream<AssetRecord?> watchById(int id) {
+    return (_database.select(
+      _database.assets,
+    )..where((asset) => asset.id.equals(id))).watchSingleOrNull();
+  }
+
   Future<AssetUsage?> getUsage(int id) async {
     final row = await _database
         .customSelect(
@@ -231,6 +237,6 @@ final allAssetsProvider = StreamProvider<List<AssetRecord>>(
   (ref) => ref.watch(assetRepositoryProvider).watchAll(),
 );
 
-final assetByIdProvider = FutureProvider.family<AssetRecord?, int>(
-  (ref, id) => ref.watch(assetRepositoryProvider).findById(id),
+final assetByIdProvider = StreamProvider.autoDispose.family<AssetRecord?, int>(
+  (ref, id) => ref.watch(assetRepositoryProvider).watchById(id),
 );

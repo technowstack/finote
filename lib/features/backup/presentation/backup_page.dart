@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/services/app_logger.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/utils/currency_formatter.dart';
+import '../../market/data/portfolio_market_quotes_provider.dart';
 import '../data/backup_service.dart';
 import '../domain/restore_error.dart';
 import '../domain/restore_preview.dart';
@@ -354,6 +355,11 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
           label: 'Volume transfer',
           value: formatIdr(preview.transferVolume),
         ),
+        _PreviewRow(label: 'Jumlah aset', value: preview.assetCount.toString()),
+        _PreviewRow(
+          label: 'Aktivitas aset aktif',
+          value: preview.assetActivityCount.toString(),
+        ),
         _PreviewRow(
           label: 'Total pemasukan',
           value: formatIdr(preview.totalIncome),
@@ -614,12 +620,14 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
     setState(() => _step = _RestoreStep.restoring);
 
     try {
+      ref.invalidate(portfolioMarketQuotesProvider);
       try {
         await ref
             .read(backupServiceProvider)
             .restoreFromArchive(_preview!.archiveBytes);
       } finally {
         ref.invalidate(databaseProvider);
+        ref.invalidate(portfolioMarketQuotesProvider);
       }
 
       if (!mounted) return;

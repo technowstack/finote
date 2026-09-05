@@ -23,7 +23,7 @@ String buildTextExport(ExportDocument document) {
     ..writeln('Pengeluaran : ${formatIdr(document.totalExpense)}')
     ..writeln('Saldo periode: ${formatIdr(document.balance)}')
     ..writeln('Transaksi   : ${document.transactions.length}')
-    ..writeln('Total aset saat ini: ${formatIdr(document.totalAssets)}')
+    ..writeln('Kas & dompet saat ini: ${formatIdr(document.totalAssets)}')
     ..writeln('Transfer    : ${document.transfers.length}')
     ..writeln('Volume transfer: ${formatIdr(document.transferVolume)}')
     ..writeln()

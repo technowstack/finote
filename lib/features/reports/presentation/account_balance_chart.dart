@@ -71,7 +71,7 @@ class AccountBalanceChart extends StatelessWidget {
     final archived = archivedCount == 0
         ? ''
         : ', termasuk $archivedCount akun diarsipkan';
-    return 'Saldo per Akun. Total Aset ${formatIdr(totalAssets)}$archived. '
+    return 'Saldo per Akun. Kas dan Dompet ${formatIdr(totalAssets)}$archived. '
         '${points.map((point) => '${point.accountName}, ${point.accountType.label}, ${formatIdr(point.balance)}').join('. ')}';
   }
 }
@@ -90,7 +90,10 @@ class _TotalAssets extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Total Aset', style: Theme.of(context).textTheme.labelLarge),
+              Text(
+                'Kas & Dompet',
+                style: Theme.of(context).textTheme.labelLarge,
+              ),
               Text(
                 archivedCount == 0
                     ? 'Saldo seluruh akun saat ini'

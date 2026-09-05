@@ -81,8 +81,22 @@ class AssetPriceRepository {
     if (quotes.isEmpty) return;
     final fetched = (fetchedAt ?? DateTime.now()).toUtc();
     await _database.transaction(() async {
+      final assets = await (_database.select(
+        _database.assets,
+      )..where((asset) => asset.id.isIn(quotes.keys))).get();
+      final assetsById = {for (final asset in assets) asset.id: asset};
       for (final entry in quotes.entries) {
         final quote = entry.value;
+        final asset = assetsById[entry.key];
+        if (asset == null ||
+            !asset.isActive ||
+            asset.pricingMode != AssetPricingMode.api ||
+            asset.assetType != quote.assetType ||
+            asset.normalizedSymbol != quote.symbol.trim().toUpperCase() ||
+            asset.currency != quote.currency.trim().toUpperCase() ||
+            quote.price <= 0) {
+          continue;
+        }
         final companion = AssetPricesCompanion(
           assetId: Value(entry.key),
           priceAmount: Value(quote.price),
@@ -181,7 +195,8 @@ final activeAssetPricesProvider = StreamProvider<Map<int, LocalAssetPrice>>(
   (ref) => ref.watch(assetPriceRepositoryProvider).watchActive(),
 );
 
-final currentAssetPriceProvider = StreamProvider.family<LocalAssetPrice?, int>(
-  (ref, assetId) =>
-      ref.watch(assetPriceRepositoryProvider).watchCurrentPrice(assetId),
-);
+final currentAssetPriceProvider = StreamProvider.autoDispose
+    .family<LocalAssetPrice?, int>(
+      (ref, assetId) =>
+          ref.watch(assetPriceRepositoryProvider).watchCurrentPrice(assetId),
+    );

@@ -155,6 +155,13 @@ class AssetActivityService {
     return _database.transaction(() async {
       final activity = await _activity(activityId);
       if (activity == null) return false;
+      final remaining = await _holdings.currentHoldingExcluding(
+        activity.assetId,
+        activityId,
+      );
+      if (remaining.isNegative) {
+        throw StateError('Delete would make holdings negative');
+      }
       final now = DateTime.now().toUtc();
       if (activity.sourceTransactionId case final transactionId?) {
         await (_database.update(_database.transactions)..where(
@@ -252,12 +259,17 @@ class AssetActivityService {
         activity.assetId,
         activityId,
       );
-      if (action == AssetTransactionAction.sell &&
-          base.scaled < quantity.scaled) {
-        throw StateError('Sell quantity exceeds holdings');
+      final result = action == AssetTransactionAction.sell
+          ? base - quantity
+          : base + quantity;
+      if (result.isNegative) {
+        throw StateError(
+          action == AssetTransactionAction.sell
+              ? 'Sell quantity exceeds holdings'
+              : 'Activity would make holdings negative',
+        );
       }
       final asset = await _requireAsset(activity.assetId);
-      await _requireAccount(accountId);
       final categoryId = await _requireCategory(categoryName, type);
       final total = _total(quantity, priceAmount, asset.assetType);
       final transactionId = activity.sourceTransactionId;
@@ -268,6 +280,7 @@ class AssetActivityService {
               ))
               .getSingleOrNull();
       if (transaction == null) throw StateError('Linked cashflow is missing');
+      await _requireAccountForUpdate(accountId, transaction.accountId);
       await (_database.update(_database.transactions)..where(
             (row) => row.id.equals(transactionId) & row.deletedAt.isNull(),
           ))
@@ -366,6 +379,15 @@ class AssetActivityService {
               ..where((row) => row.id.equals(id) & row.isActive.equals(true)))
             .getSingleOrNull();
     if (account == null) throw StateError('Active account not found');
+  }
+
+  Future<void> _requireAccountForUpdate(int id, int? currentAccountId) async {
+    final account = await (_database.select(
+      _database.accounts,
+    )..where((row) => row.id.equals(id))).getSingleOrNull();
+    if (account == null || (!account.isActive && currentAccountId != id)) {
+      throw StateError('Active account not found');
+    }
   }
 
   Future<int> _requireCategory(String name, TransactionType type) async {

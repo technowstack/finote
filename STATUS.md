@@ -66,9 +66,8 @@ Current focus:
 ## Current Product State
 
 ```text
-Finote v1.2.0
-REPORTS VISUALIZATION & ANALYTICS COMPLETE
- FINOTE v1.3.0 ASSETS / INVESTMENTS — PHASE 7D.5B BLOCKED
+Finote v1.3.0
+ASSETS / INVESTMENTS - PHASE 7E.5 FINAL RELEASE AUDIT BLOCKED
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -127,16 +126,16 @@ These external tasks do not reopen the v1.0 feature scope.
 - [x] 7D.2 Net Worth Integration
 - [x] 7D.3 Reports Integration
 - [x] 7D.4 Dashboard Integration
-- [ ] 7D.5 Transaction Edit Hang Audit & Stabilization (blocked: runtime reproduction unavailable)
-- [ ] 7D.5A Core Transaction Save Hang Fix (blocked: runtime CRUD matrix unavailable)
-- [ ] 7D.5B Reactive Transaction State & Main-Isolate Hang Fix (automated correction complete; blocked: Android runtime stack and CRUD matrix unavailable)
+- [x] 7D.5 Transaction Edit Hang Audit & Stabilization
+- [x] 7D.5A Core Transaction Save Hang Fix
+- [x] 7D.5B Reactive Transaction State & Main-Isolate Hang Fix
 
 ### Phase 7E — Reliability & Release
 
-- [ ] 7E.1 Backup / Restore Integration
-- [ ] 7E.2 Backward Compatibility & Migration Tests
-- [ ] 7E.3 Portfolio Performance & Offline Audit
-- [ ] 7E.4 UI/UX Polish
+- [x] 7E.1 Backup / Restore Integration
+- [x] 7E.2 Backward Compatibility & Migration Tests
+- [ ] 7E.3 Portfolio Performance & Offline Audit (blocked: no Android device/AVD for required runtime/profile matrix)
+- [ ] 7E.4 UI/UX Polish (blocked: connected Pixel 6a remained behind secure keyguard for required visual matrix)
 - [ ] 7E.5 v1.3.0 Final Audit & Release Preparation
 
 ---
@@ -475,9 +474,9 @@ Current rules:
 9. Net Worth = Cash / Wallet Assets + Current Portfolio Value.
 10. Keep AI, realtime trading, WebSocket, automated trading, and unrelated feature expansion out of v1.3.0.
 
-Next active implementation:
+Next active task:
 
-> **Phase 7D.5B — Reactive Transaction State & Main-Isolate Hang Fix**
+> **Phase 7E.5 - Final Release Audit / Runtime Validation**
 
 
 ---
@@ -504,7 +503,7 @@ Next active implementation:
 
 ### Current active task
 
-> **Phase 7D.5B — Reactive Transaction State & Main-Isolate Hang Fix**
+> **Phase 7E.5 - Final Release Audit / Runtime Validation**
 
 7A.1 through 7A.6, 7B.1 through 7B.5, and 7C.1 are complete. Phase 7C.2
 implementation is locally complete but blocked pending real BBCA verification.
@@ -513,7 +512,7 @@ pending required manual Gold and Mutual Fund verification on Android.
 Phase 7C.5 implementation and automated validation are complete but blocked
 pending required mixed-Portfolio verification on Android.
 Phase 7C.6 implementation and automated validation are complete. Android
-runtime verification remains blocked because no emulator/device is connected.
+runtime verification remains blocked because the connected device is locked.
 Phase 7D.1 implementation and automated validation are complete. Historical
 investment cashflow is derived from active Transactions only; no schema
 migration was required. Category identity remains name plus transaction type
@@ -527,15 +526,49 @@ Cash, Portfolio, and Net Worth summaries.
 Phase 7D.4 implementation and automated validation are complete. Home now uses the shared Net Worth
 snapshot as its primary current-position summary, removes the duplicate
 account-only headline, and provides Portfolio navigation from the breakdown.
-Phase 7D.5 is blocked pending runtime reproduction of the reported transaction
-edit hang. Submit double-tap protection and loading-state exception cleanup are
-implemented; Phase 7E.1 remains not started.
-Phase 7D.5A is blocked pending runtime reproduction of the reported core save
-hang on the existing user database. Layered Drift, repository, and UI tests
-pass; Phase 7E.1 remains not started.
-Phase 7D.5B automated correction is complete. Build-time form validation and
+Phase 7D.5 through 7D.5B are complete. Build-time form validation and
 post-navigation loading mutation were removed, Dashboard and account summaries
-now use direct Drift-watched query emissions, and active-stream CRUD regression
-tests pass. The phase remains blocked pending the Android CRUD/refresh matrix
-and a frozen main-isolate stack if the hang persists; Phase 7E.1 remains not
-started.
+use direct Drift-watched query emissions, active-stream CRUD regressions pass,
+and the corrected Android build no longer reproduced the reported hang.
+Phase 7E.1 Backup / Restore Integration is complete. The raw SQLite snapshot
+preserves Portfolio source records and exact quantities, validates the schema-10
+    price table and indexes, resets stale quote state without automatic market
+requests, and rebinds one shared database after replacement. Automated gates
+pass with 288 tests. A Pixel 6a backup, app-data reset, restore, and process
+restart preserved the original 5,833 transactions and Dashboard totals.
+Phase 7E.2 is complete. Additive
+release-schema migrations from v1.0/schema 3 and v1.1-v1.2/schema 8 preserve
+financial records, account relations, transfers, settings, soft deletes, and
+legacy identity without reconstructing Portfolio holdings. Schema 11 repairs
+the historical receipt-fingerprint index gap. Analyzer, all 294 tests, the
+debug APK build, and diff checks pass. No ADB device or emulator AVD was
+available; the user explicitly waived that runtime gate. Later 7E.3 and 7E.4
+work is recorded below.
+Phase 7E.3 automated performance/offline audit is complete. Portfolio remains
+local-first with zero automatic market requests, one batched explicit refresh,
+batched local holdings/prices, settled provider emissions, one shared production
+database, and exact financial calculations. Tests cover 10/25/50/100 assets,
+5,000 unrelated Transactions, 5,000 activities on one detail, a 30-asset batch,
+offline price restart, provider disposal, malformed quote protection, restore,
+migration, and transaction reactivity. Analyzer and all 303 tests pass, and the
+debug APK builds. The required airplane-mode/profile/navigation/lifecycle device
+matrix was unavailable during the audit and remains incomplete. Phase 7E.3
+therefore remains open.
+Phase 7E.4 implementation and automated validation are complete. Portfolio now
+preserves linked accounts during Buy/Sell edits, distinguishes a closed zero
+position from no position, blocks changes that would create negative holdings,
+keeps asset creation reachable for archived-only portfolios, improves narrow
+and enlarged-text layouts, and uses `Kas & Dompet` for account-only values.
+Analyzer and all 308 tests pass, the debug APK builds, and diff checks pass. The
+APK installs and launches on a connected Pixel 6a without a runtime crash, but
+the device remained behind secure keyguard/AOD, so the required visual
+Light/Dark, large-font, navigation, form, scroll, and airplane-mode matrix could
+not be completed. Phase 7E.4 therefore remains open.
+
+Phase 7E.5 final audit is in progress. Release metadata now targets v1.3.0 with
+build number 3. Formatting, analyzer, all 308 tests, release APK, release AAB,
+and diff checks pass. The final audit remains blocked because the required
+unlocked Android visual/offline matrix could not be completed, and the crypto
+holdings UI remains unchecked as a separately audited phase. See
+`docs/assets_phase_7e5_final_release_audit.md` for the evidence and release
+decision.

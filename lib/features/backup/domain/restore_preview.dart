@@ -15,6 +15,8 @@ class RestorePreview {
     required this.accountCount,
     required this.transferCount,
     required this.transferVolume,
+    required this.assetCount,
+    required this.assetActivityCount,
     required this.totalIncome,
     required this.totalExpense,
     required this.oldestTransactionAt,
@@ -32,6 +34,8 @@ class RestorePreview {
   final int accountCount;
   final int transferCount;
   final int transferVolume;
+  final int assetCount;
+  final int assetActivityCount;
   final int totalIncome;
   final int totalExpense;
   final DateTime? oldestTransactionAt;

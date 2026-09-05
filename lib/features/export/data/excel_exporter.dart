@@ -38,7 +38,7 @@ String _summarySheet(ExportDocument document) => _sheet([
   _row([_text('Total pengeluaran'), _number(document.totalExpense)]),
   _row([_text('Saldo'), _number(document.balance)]),
   _row([_text('Jumlah transaksi'), _number(document.transactions.length)]),
-  _row([_text('Total aset saat ini'), _number(document.totalAssets)]),
+  _row([_text('Kas & dompet saat ini'), _number(document.totalAssets)]),
   _row([_text('Jumlah akun'), _number(document.accounts.length)]),
   _row([_text('Jumlah transfer'), _number(document.transfers.length)]),
   _row([_text('Total volume transfer'), _number(document.transferVolume)]),

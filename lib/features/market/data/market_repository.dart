@@ -142,7 +142,7 @@ class MarketRepository {
       ),
     };
     final price = _requiredInteger(json, 'price');
-    if (price < 0) {
+    if (price <= 0) {
       throw const MarketInvalidResponse('Harga market tidak valid.');
     }
     final currency = _requiredString(json, 'currency').toUpperCase();

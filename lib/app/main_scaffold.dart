@@ -22,6 +22,7 @@ class MainScaffold extends ConsumerWidget {
       body: navigationShell,
       floatingActionButton: showAddButton && !keyboardOpen && !modalOpen
           ? FloatingActionButton(
+              heroTag: null,
               onPressed: () => _showAddMenu(context, ref),
               tooltip: 'Tambah transaksi',
               child: const Icon(Icons.add),

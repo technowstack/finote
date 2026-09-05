@@ -24,12 +24,14 @@ Portfolio holdings load from Drift first. Active cached prices are then read
 reactively from Drift. API refresh remains asynchronous and writes only valid
 successful quotes. Missing or failed quotes do not delete an existing cache.
 
-Automatic refresh uses a 15-minute local freshness window. Manual refresh
-bypasses that window. Market failures therefore leave the last-known price
-visible and do not block offline portfolio use.
+Market refresh is explicit only and is never triggered by cache age, Portfolio
+opening, or provider rebuilds. Manual refresh writes valid successful quotes;
+market failures therefore leave the last-known price visible and do not block
+offline portfolio use.
 
 Changing an asset's symbol, type, pricing mode, or currency invalidates its
 cached price. Deleting an unused asset removes its cache row before deletion.
 
-Price cache data is not used for current portfolio valuation, profit/loss,
-reports, dashboard totals, or cashflow. Those remain deferred to later phases.
+Price cache data is used for current portfolio valuation and point-in-time Net
+Worth when a valid price exists. It is not used for profit/loss, reports,
+dashboard period totals, or cashflow.

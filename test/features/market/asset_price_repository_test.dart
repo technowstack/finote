@@ -140,6 +140,49 @@ void main() {
     expect(await prices.getForAssets([apiAsset.id]), isEmpty);
   });
 
+  test('stale or invalid API responses never replace a usable price', () async {
+    final asset = await assets.create(
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      assetType: AssetType.stock,
+      pricingMode: AssetPricingMode.api,
+    );
+    MarketQuote quote({
+      String symbol = 'BBCA',
+      AssetType type = AssetType.stock,
+      int price = 9200,
+      String currency = 'IDR',
+    }) => MarketQuote(
+      symbol: symbol,
+      name: null,
+      assetType: type,
+      price: price,
+      currency: currency,
+      change: null,
+      changePercent: null,
+      marketStatus: MarketStatus.unknown,
+      isStale: false,
+      updatedAt: null,
+    );
+
+    await prices.saveQuotes({asset.id: quote()});
+    await prices.saveQuotes({asset.id: quote(price: 0)});
+    await prices.saveQuotes({asset.id: quote(currency: 'USD')});
+    await prices.saveQuotes({asset.id: quote(symbol: 'BBRI')});
+    expect((await prices.getForAssets([asset.id]))[asset.id]?.price, 9200);
+
+    await assets.update(
+      id: asset.id,
+      symbol: asset.symbol,
+      name: asset.name,
+      assetType: asset.assetType,
+      pricingMode: AssetPricingMode.manual,
+    );
+    await prices.setManualPrice(assetId: asset.id, price: 10000);
+    await prices.saveQuotes({asset.id: quote(price: 9500)});
+    expect((await prices.getForAssets([asset.id]))[asset.id]?.price, 10000);
+  });
+
   test('zero manual price is rejected and no record is created', () async {
     final other = await assets.create(
       name: 'Koleksi',
@@ -172,6 +215,50 @@ void main() {
       final restored = await AssetPriceRepository(reopened)
           .getForAssets([other.id]);
       expect(restored[other.id]?.price, 500000);
+    } finally {
+      await reopened.close();
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('old API price survives an offline database restart', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'finote-api-price-',
+    );
+    final path = '${directory.path}/finote.sqlite';
+    final first = AppDatabase(NativeDatabase(File(path)));
+    final asset = await AssetRepository(first).create(
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      assetType: AssetType.stock,
+      pricingMode: AssetPricingMode.api,
+    );
+    await AssetPriceRepository(first).saveQuotes({
+      asset.id: MarketQuote(
+        symbol: 'BBCA',
+        name: null,
+        assetType: AssetType.stock,
+        price: 9200,
+        currency: 'IDR',
+        change: null,
+        changePercent: null,
+        marketStatus: MarketStatus.unknown,
+        isStale: true,
+        updatedAt: DateTime.utc(2020),
+      ),
+    }, fetchedAt: DateTime.utc(2020));
+    await first.close();
+
+    final reopened = AppDatabase(NativeDatabase(File(path)));
+    try {
+      final restored = await AssetPriceRepository(reopened)
+          .getForAssets([asset.id]);
+      expect(restored[asset.id]?.price, 9200);
+      expect(restored[asset.id]?.isBackendStale, isTrue);
+      expect(
+        restored[asset.id]?.fetchedAt.isAtSameMomentAs(DateTime.utc(2020)),
+        isTrue,
+      );
     } finally {
       await reopened.close();
       await directory.delete(recursive: true);

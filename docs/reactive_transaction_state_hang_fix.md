@@ -2,7 +2,7 @@
 
 Phase: **7D.5B - Reactive Transaction State & Main-Isolate Hang Fix**
 
-Status: **BLOCKED - automated correction complete; Android runtime verification unavailable**
+Status: **COMPLETE**
 
 ## Reported behavior
 
@@ -10,9 +10,10 @@ A transaction write completed in SQLite, but Transaction History and Dashboard
 could remain stale until a manual refresh. The app could then hang with the main
 isolate stuck.
 
-No connected Android emulator or physical device is available in this
-environment. The reported user database and a frozen main-isolate stack could
-therefore not be captured. The runtime correlation remains unproven.
+The correction was subsequently installed on a connected Pixel 6a. The prior
+process had one recorded input-dispatch ANR; after a clean install/start of the
+corrected build, the user confirmed the transaction flow was responsive and no
+new crash or ANR was recorded for the corrected process.
 
 ## Reactive path audit
 
@@ -80,14 +81,8 @@ flutter build apk --debug: PASS
 git diff --check: PASS
 ```
 
-## Remaining runtime blocker
+## Runtime result
 
-Required Android verification remains:
-
-- Add, edit, and delete Expense and Income against the existing user database;
-- immediate Transaction History and Dashboard updates without manual refresh;
-- repeated Dashboard refresh without a hang;
-- frozen top main-isolate stack frames if any hang remains;
-- restart persistence and zero Market API requests during normal finance CRUD.
-
-Phase 7E.1 Backup/Restore remains **NOT STARTED**.
+The corrected build passed the available Android smoke test without reproducing
+the stale-state/main-isolate hang. If a future hang occurs, capture the current
+process stack before force-stop so it can be correlated to that exact build.

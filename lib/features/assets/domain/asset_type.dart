@@ -52,5 +52,8 @@ extension AssetTypeDatabaseValue on AssetType {
 enum AssetPricingMode { api, manual }
 
 extension AssetPricingModeDatabaseValue on AssetPricingMode {
-  String get databaseValue => name;
+  String get databaseValue => switch (this) {
+    AssetPricingMode.api => 'api',
+    AssetPricingMode.manual => 'manual',
+  };
 }

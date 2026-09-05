@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/assets/data/asset_activity_service.dart';
 import 'package:finote/features/assets/data/asset_repository.dart';
 import 'package:finote/features/assets/data/asset_transaction_repository.dart';
@@ -173,6 +174,67 @@ void main() {
         date: DateTime(2026, 9, 5),
       ),
       throwsA(isA<StateError>()),
+    );
+  });
+
+  test('editing preserves an archived linked account', () async {
+    final accounts = AccountRepository(database);
+    final archived = await accounts.create(
+      name: 'Rekening Investasi',
+      type: AccountType.bank,
+    );
+    final buy = await service.createBuy(
+      assetId: asset.id,
+      quantity: shares(2),
+      priceAmount: 10000,
+      accountId: archived.id,
+      date: DateTime(2026, 9, 3),
+    );
+    await accounts.archive(archived.id);
+
+    await service.updateBuy(
+      activityId: buy.id,
+      quantity: shares(3),
+      priceAmount: 11000,
+      accountId: archived.id,
+      date: DateTime(2026, 9, 4),
+    );
+
+    final transaction = await TransactionRepository(database)
+        .findActiveById(buy.sourceTransactionId!);
+    expect(transaction?.accountId, archived.id);
+  });
+
+  test('editing or deleting a buy cannot make holdings negative', () async {
+    final buy = await service.createBuy(
+      assetId: asset.id,
+      quantity: shares(2),
+      priceAmount: 10000,
+      accountId: account.id,
+      date: DateTime(2026, 9, 3),
+    );
+    await service.createSell(
+      assetId: asset.id,
+      quantity: shares(2),
+      priceAmount: 10000,
+      accountId: account.id,
+      date: DateTime(2026, 9, 4),
+    );
+
+    await expectLater(
+      service.updateBuy(
+        activityId: buy.id,
+        quantity: shares(1),
+        priceAmount: 10000,
+        accountId: account.id,
+        date: DateTime(2026, 9, 3),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    await expectLater(service.delete(buy.id), throwsA(isA<StateError>()));
+    expect(
+      await AssetTransactionRepository(database).currentHolding(asset.id),
+      AssetQuantity.fromScaled(0),
     );
   });
 

@@ -17,8 +17,8 @@ import '../../accounts/data/account_repository.dart';
 import '../../market/data/portfolio_market_quotes_provider.dart';
 import '../../market/data/asset_price_repository.dart';
 import '../../market/data/portfolio_valuation_service.dart';
-import '../../market/domain/market_quote.dart';
 import '../../market/domain/portfolio_valuation.dart';
+import '../../transactions/data/transaction_repository.dart';
 
 class AssetsPage extends ConsumerStatefulWidget {
   const AssetsPage({super.key, this.routePrefix = '/portfolio/assets'});
@@ -70,7 +70,8 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
         title: const Text('Arsipkan aset?'),
         content: const Text(
           'Aset tidak aktif akan disembunyikan dari daftar aset aktif. '
-          'Data aktivitasnya tetap aman.',
+          'Nilainya tidak dihitung dalam Portofolio dan Kekayaan Bersih '
+          'hingga diaktifkan kembali. Data aktivitasnya tetap aman.',
         ),
         actions: [
           TextButton(
@@ -157,12 +158,12 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
         actions: [
           IconButton(
             tooltip: 'Refresh Harga',
-            onPressed: market.isRefreshing
+            onPressed: market.isRefreshing || !assets.hasValue
                 ? null
                 : () async {
                     await ref
                         .read(portfolioMarketQuotesProvider.notifier)
-                        .refresh(force: true);
+                        .refresh();
                     if (!context.mounted) return;
                     final state = ref.read(portfolioMarketQuotesProvider);
                     final message = state.failure != null
@@ -189,7 +190,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
         loading: () => const AppLoadingState(),
         error: (_, _) => AppErrorState(
           message: 'Aset belum dapat dimuat.',
-          onRetry: () => ref.invalidate(allAssetsProvider),
+          onRetry: () => ref.invalidate(assetHoldingsProvider),
         ),
         data: (active) {
           final all = allAssets.valueOrNull ?? active;
@@ -210,18 +211,6 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
               if (portfolio != null)
                 _PortfolioSummary(snapshot: portfolio, market: market),
               if (portfolio != null) const SizedBox(height: AppSpacing.md),
-              if (market.isRefreshing)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text('Memperbarui harga...'),
-                ),
-              if (market.failure != null || market.result.failures.isNotEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    'Harga terbaru belum dapat diperbarui. Harga terakhir tetap digunakan.',
-                  ),
-                ),
               if (active.isNotEmpty)
                 ..._groupedAssets(active, market, prices, portfolio),
               if (archived.isNotEmpty) ...[
@@ -250,8 +239,9 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
           );
         },
       ),
-      floatingActionButton: assets.valueOrNull?.isNotEmpty == true
+      floatingActionButton: allAssets.valueOrNull?.isNotEmpty == true
           ? FloatingActionButton(
+              heroTag: null,
               onPressed: _openForm,
               tooltip: 'Tambah aset',
               child: const Icon(Icons.add),
@@ -267,6 +257,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
     PortfolioSnapshot? portfolio,
   ) {
     final widgets = <Widget>[];
+    final valuations = portfolio?.byAssetId ?? const <int, AssetValuation>{};
     for (final type in AssetType.values) {
       final group =
           holdings.where((holding) => holding.asset.assetType == type).toList()
@@ -289,8 +280,7 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
               quantity: holding.quantity,
               hasActivity: holding.hasActivity,
               price: prices[holding.asset.id],
-              valuation: portfolio?.byAssetId[holding.asset.id],
-              quoteUnavailable: _quoteUnavailable(holding, market, prices),
+              valuation: valuations[holding.asset.id],
               onTap: () =>
                   context.push('${widget.routePrefix}/${holding.asset.id}'),
               onEdit: () => _openForm(holding.asset),
@@ -305,28 +295,6 @@ class _AssetsPageState extends ConsumerState<AssetsPage> {
   }
 }
 
-bool _quoteUnavailable(
-  AssetHolding holding,
-  PortfolioMarketQuoteState market,
-  Map<int, LocalAssetPrice> prices,
-) {
-  if (!holding.hasActivity ||
-      holding.quantity.isNegative ||
-      holding.quantity.isZero ||
-      holding.asset.pricingMode != AssetPricingMode.api ||
-      (holding.asset.assetType != AssetType.stock &&
-          holding.asset.assetType != AssetType.crypto) ||
-      holding.asset.symbol == null) {
-    return false;
-  }
-  final key = AssetMarketKey(
-    holding.asset.symbol!.trim().toUpperCase(),
-    holding.asset.assetType,
-  );
-  return !prices.containsKey(holding.asset.id) &&
-      (market.failure != null || market.result.failures.containsKey(key));
-}
-
 class AssetDetailPage extends ConsumerWidget {
   const AssetDetailPage({required this.assetId, super.key});
 
@@ -339,9 +307,9 @@ class AssetDetailPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Detail Aset')),
       body: asset.when(
         loading: () => const AppLoadingState(),
-        error: (_, _) => const AppErrorState(
+        error: (_, _) => AppErrorState(
           message: 'Detail aset belum dapat dimuat.',
-          onRetry: _noop,
+          onRetry: () => ref.invalidate(assetByIdProvider(assetId)),
         ),
         data: (item) => item == null
             ? const AppEmptyState(
@@ -354,8 +322,6 @@ class AssetDetailPage extends ConsumerWidget {
   }
 }
 
-void _noop() {}
-
 class _AssetDetail extends ConsumerWidget {
   const _AssetDetail({required this.asset});
 
@@ -365,11 +331,31 @@ class _AssetDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final activities = ref.watch(assetActivitiesProvider(asset.id));
-    final holding = ref.watch(holdingProvider(asset.id)).valueOrNull;
+    final holdingState = ref.watch(holdingProvider(asset.id));
     final currentPrice = ref.watch(currentAssetPriceProvider(asset.id));
     final currentValuation = ref.watch(assetValuationProvider(asset.id));
-    final opening = activities.valueOrNull
-        ?.where(
+    if (activities.hasError ||
+        holdingState.hasError ||
+        currentPrice.hasError ||
+        currentValuation.hasError) {
+      return AppErrorState(
+        message: 'Detail aset belum dapat dimuat.',
+        onRetry: () {
+          ref.invalidate(assetActivitiesProvider(asset.id));
+          ref.invalidate(allAssetHoldingsProvider);
+          ref.invalidate(currentAssetPriceProvider(asset.id));
+        },
+      );
+    }
+    if (!activities.hasValue ||
+        !holdingState.hasValue ||
+        !currentPrice.hasValue ||
+        !currentValuation.hasValue) {
+      return const AppLoadingState();
+    }
+    final holding = holdingState.requireValue;
+    final opening = activities.requireValue
+        .where(
           (activity) =>
               activity.action == AssetTransactionAction.openingPosition,
         )
@@ -488,10 +474,12 @@ class _AssetDetail extends ConsumerWidget {
                 children: [
                   Text('Posisi', style: theme.textTheme.titleMedium),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    _formatAssetQuantity(
+                  _DetailRow(
+                    label: 'Posisi saat ini',
+                    value: _formatAssetQuantity(
                       asset,
-                      AssetQuantity.fromScaled(opening.quantityScaled),
+                      holding!.quantity,
+                      hasActivity: true,
                     ),
                   ),
                   _DetailRow(
@@ -572,15 +560,21 @@ class _AssetDetail extends ConsumerWidget {
                   activity: activity,
                   onEdit: () =>
                       _showActivityForm(context, ref, asset, activity),
-                  onDelete: () => _deleteActivity(context, ref, activity.id),
+                  onDelete: () => _deleteActivity(context, ref, activity),
                 ),
           ],
         const SizedBox(height: AppSpacing.lg),
-        FilledButton.icon(
-          onPressed: () => _showActivityMenu(context, ref, asset),
-          icon: const Icon(Icons.add),
-          label: const Text('Tambah Aktivitas'),
-        ),
+        if (asset.isActive)
+          FilledButton.icon(
+            onPressed: () => _showActivityMenu(context, ref, asset),
+            icon: const Icon(Icons.add),
+            label: const Text('Tambah Aktivitas'),
+          )
+        else
+          const Text(
+            'Aktifkan kembali aset untuk menambah aktivitas.',
+            textAlign: TextAlign.center,
+          ),
       ],
     );
   }
@@ -1158,7 +1152,9 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${widget.asset.symbol ?? widget.asset.name}\n${widget.asset.name}',
+                  widget.asset.symbol == null
+                      ? widget.asset.name
+                      : '${widget.asset.symbol}\n${widget.asset.name}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -1210,7 +1206,9 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
-                  if (selected != null) setState(() => _date = selected);
+                  if (selected != null && mounted) {
+                    setState(() => _date = selected);
+                  }
                 },
               ),
               if (widget.opening == null)
@@ -1402,12 +1400,21 @@ Future<void> _showActivityForm(
 }) async {
   final selectedAction = action ?? activity?.action;
   if (selectedAction == null) return;
+  final sourceTransactionId = activity?.sourceTransactionId;
+  final initialAccountId = sourceTransactionId == null
+      ? null
+      : (await ref
+                .read(transactionRepositoryProvider)
+                .findActiveById(sourceTransactionId))
+            ?.accountId;
+  if (!context.mounted) return;
   final data = await showDialog<_ActivityFormData>(
     context: context,
     builder: (_) => _ActivityFormDialog(
       asset: asset,
       action: selectedAction,
       activity: activity,
+      initialAccountId: initialAccountId,
     ),
   );
   if (data == null || !context.mounted) return;
@@ -1481,6 +1488,9 @@ Future<void> _showActivityForm(
           error is StateError &&
               error.message == 'Sell quantity exceeds holdings'
           ? 'Jumlah yang dijual melebihi aset yang dimiliki.'
+          : error is StateError &&
+                error.message == 'Activity would make holdings negative'
+          ? 'Perubahan akan membuat posisi aset menjadi negatif.'
           : 'Aktivitas gagal disimpan. Coba lagi.';
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
@@ -1491,13 +1501,17 @@ Future<void> _showActivityForm(
 Future<void> _deleteActivity(
   BuildContext context,
   WidgetRef ref,
-  int id,
+  AssetTransactionRecord activity,
 ) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
       title: const Text('Hapus aktivitas?'),
-      content: const Text('Transaksi kas yang terhubung juga akan dihapus.'),
+      content: Text(
+        activity.sourceTransactionId == null
+            ? 'Aktivitas ini akan dihapus dari riwayat aset.'
+            : 'Transaksi kas yang terhubung juga akan dihapus.',
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
@@ -1512,12 +1526,16 @@ Future<void> _deleteActivity(
   );
   if (confirmed != true || !context.mounted) return;
   try {
-    await ref.read(assetActivityServiceProvider).delete(id);
-  } catch (_) {
+    await ref.read(assetActivityServiceProvider).delete(activity.id);
+  } catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Aktivitas gagal dihapus.')));
+      final message =
+          error is StateError &&
+              error.message == 'Delete would make holdings negative'
+          ? 'Aktivitas tidak dapat dihapus karena posisi aset akan menjadi negatif.'
+          : 'Aktivitas gagal dihapus.';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 }
@@ -1545,7 +1563,7 @@ class _ActivityTile extends StatelessWidget {
       AssetTransactionAction.openingPosition => 'Posisi Awal',
     };
     final prefix = activity.action == AssetTransactionAction.sell
-        ? ''
+        ? '-'
         : activity.action == AssetTransactionAction.adjustment &&
               quantity.isNegative
         ? ''
@@ -1557,23 +1575,19 @@ class _ActivityTile extends StatelessWidget {
       child: ListTile(
         title: Text(label),
         subtitle: Text(
-          '${_formatPositionDate(context, activity.transactionDate)}\n'
-          '$prefix${_formatAssetQuantity(asset, quantity)}'
-          '${historicalPrice == null ? '' : ' @ $historicalPrice'}',
+          [
+            _formatPositionDate(context, activity.transactionDate),
+            '$prefix${_formatAssetQuantity(asset, quantity)}'
+                '${historicalPrice == null ? '' : ' @ $historicalPrice'}',
+            if (activity.totalAmount != null) formatIdr(activity.totalAmount!),
+          ].join('\n'),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (activity.totalAmount != null)
-              Text(formatIdr(activity.totalAmount!)),
-            PopupMenuButton<String>(
-              tooltip: 'Tindakan aktivitas',
-              onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'edit', child: Text('Ubah')),
-                PopupMenuItem(value: 'delete', child: Text('Hapus')),
-              ],
-            ),
+        trailing: PopupMenuButton<String>(
+          tooltip: 'Tindakan aktivitas',
+          onSelected: (value) => value == 'edit' ? onEdit() : onDelete(),
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'edit', child: Text('Ubah')),
+            PopupMenuItem(value: 'delete', child: Text('Hapus')),
           ],
         ),
       ),
@@ -1602,11 +1616,13 @@ class _ActivityFormDialog extends ConsumerStatefulWidget {
     required this.asset,
     required this.action,
     this.activity,
+    this.initialAccountId,
   });
 
   final AssetRecord asset;
   final AssetTransactionAction action;
   final AssetTransactionRecord? activity;
+  final int? initialAccountId;
 
   @override
   ConsumerState<_ActivityFormDialog> createState() =>
@@ -1650,6 +1666,7 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
     _note = TextEditingController(text: activity?.note ?? '');
     _date = activity?.transactionDate ?? DateTime.now();
     _increase = activity?.quantityScaled.isNegative != true;
+    _accountId = widget.initialAccountId;
   }
 
   @override
@@ -1705,7 +1722,9 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
                       _increase,
                       exactStockShares: _exactStockShares,
                     );
-                    return quantity.isZero ? 'Jumlah harus lebih dari 0' : null;
+                    return quantity.isZero || quantity.isNegative
+                        ? 'Jumlah harus lebih dari 0'
+                        : null;
                   } catch (_) {
                     return _exactStockShares
                         ? 'Masukkan jumlah lembar bulat yang valid'
@@ -1770,20 +1789,25 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
                   ),
                   error: (_, _) => const Text('Akun belum dapat dimuat.'),
                   data: (items) {
-                    final active = items
-                        .where((item) => item.isActive)
+                    final options = items
+                        .where((item) => item.isActive || item.id == _accountId)
                         .toList();
-                    _accountId ??= active.firstOrNull?.id;
+                    _accountId ??= options.firstOrNull?.id;
                     return DropdownButtonFormField<int>(
-                      initialValue: active.any((item) => item.id == _accountId)
+                      initialValue: options.any((item) => item.id == _accountId)
                           ? _accountId
                           : null,
+                      isExpanded: true,
                       decoration: const InputDecoration(labelText: 'Akun'),
                       items: [
-                        for (final account in active)
+                        for (final account in options)
                           DropdownMenuItem(
                             value: account.id,
-                            child: Text(account.name),
+                            child: Text(
+                              '${account.name}${account.isActive ? '' : ' (Tidak aktif)'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                       ],
                       onChanged: (value) => setState(() => _accountId = value),
@@ -1810,7 +1834,9 @@ class _ActivityFormDialogState extends ConsumerState<_ActivityFormDialog> {
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
-                  if (date != null) setState(() => _date = date);
+                  if (date != null && mounted) {
+                    setState(() => _date = date);
+                  }
                 },
               ),
               TextFormField(
@@ -1873,6 +1899,9 @@ AssetQuantity _parseActivityQuantity(
   final parsed = exactStockShares
       ? _parseExactStockShares(value)
       : _parseOpeningQuantity(asset, value);
+  if (parsed.isNegative) {
+    throw const FormatException('Quantity must be positive');
+  }
   if (parsed.isZero) return parsed;
   return increase ? parsed : AssetQuantity.fromScaled(-parsed.scaled);
 }
@@ -1978,7 +2007,6 @@ class _AssetCard extends StatelessWidget {
     required this.hasActivity,
     this.price,
     this.valuation,
-    this.quoteUnavailable = false,
     required this.onTap,
     required this.onEdit,
     required this.onArchive,
@@ -1990,7 +2018,6 @@ class _AssetCard extends StatelessWidget {
   final bool hasActivity;
   final LocalAssetPrice? price;
   final AssetValuation? valuation;
-  final bool quoteUnavailable;
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onArchive;
@@ -2027,7 +2054,6 @@ class _AssetCard extends StatelessWidget {
               'Nilai ${formatIdr(valuation!.currentValue!)}',
             if (valuation != null && !valuation!.isValued)
               'Nilai belum tersedia',
-            if (price == null && quoteUnavailable) 'Harga belum tersedia',
             if (asset.pricingMode == AssetPricingMode.api) 'Otomatis',
           ].join(' • '),
         ),
@@ -2183,12 +2209,12 @@ class _AssetFormDialogState extends State<_AssetFormDialog> {
                 textCapitalization: TextCapitalization.characters,
                 decoration: InputDecoration(
                   labelText:
-                      'Symbol / kode${requiresSymbol ? '' : ' (opsional)'}',
+                      'Simbol / kode${requiresSymbol ? '' : ' (opsional)'}',
                   hintText: requiresSymbol ? 'Contoh: BBCA' : null,
                 ),
                 validator: (value) =>
                     requiresSymbol && (value == null || value.trim().isEmpty)
-                    ? 'Symbol wajib diisi.'
+                    ? 'Simbol wajib diisi.'
                     : null,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -2207,7 +2233,7 @@ class _AssetFormDialogState extends State<_AssetFormDialog> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   _type.defaultPricingMode == AssetPricingMode.api
-                      ? 'Harga otomatis dari sumber market.'
+                      ? 'Harga otomatis dari sumber pasar.'
                       : 'Harga dapat diatur dari detail aset.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
@@ -2242,7 +2268,7 @@ IconData _assetIcon(AssetType type) => switch (type) {
 
 String _assetError(Object error, {required bool editing}) {
   if (error is StateError && error.message == 'Asset symbol already exists') {
-    return 'Aset dengan symbol tersebut sudah tersedia.';
+    return 'Aset dengan simbol tersebut sudah tersedia.';
   }
   return editing
       ? 'Aset gagal diperbarui. Coba lagi.'

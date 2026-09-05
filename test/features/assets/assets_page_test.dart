@@ -1,6 +1,9 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
+import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
+import 'package:finote/features/assets/data/asset_activity_service.dart';
 import 'package:finote/features/assets/data/asset_repository.dart';
 import 'package:finote/features/assets/data/asset_transaction_repository.dart';
 import 'package:finote/features/assets/domain/asset_quantity.dart';
@@ -83,6 +86,12 @@ void main() {
     expect(find.text('BBCA'), findsOneWidget);
     expect(find.textContaining('Bank Central Asia'), findsOneWidget);
     expect(find.text('Belum ada aset'), findsNothing);
+    expect(
+      tester
+          .widget<FloatingActionButton>(find.byType(FloatingActionButton))
+          .heroTag,
+      isNull,
+    );
 
     await tester.tap(find.text('BBCA'));
     await tester.pumpAndSettle();
@@ -163,6 +172,7 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Arsipkan'));
     await tester.pumpAndSettle();
     expect(find.text('Aset Diarsipkan'), findsOneWidget);
+    expect(find.byTooltip('Tambah aset'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Tindakan aset'));
     await tester.pumpAndSettle();
@@ -318,4 +328,114 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1));
     },
   );
+
+  testWidgets('editing a buy preserves its archived linked account', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(640, 1200);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await database.ensureDefaultAccount();
+    await CategoryRepository(database).initializeDefaults();
+    final accounts = AccountRepository(database);
+    final linkedAccount = await accounts.create(
+      name: 'Rekening Investasi Jangka Panjang',
+      type: AccountType.bank,
+    );
+    final asset = await AssetRepository(database).create(
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      assetType: AssetType.stock,
+      pricingMode: AssetPricingMode.api,
+    );
+    final buy = await AssetActivityService(database).createBuy(
+      assetId: asset.id,
+      quantity: AssetQuantity.parse('100'),
+      priceAmount: 9000,
+      accountId: linkedAccount.id,
+      date: DateTime(2026, 9, 4),
+    );
+    await accounts.archive(linkedAccount.id);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+            child: AssetDetailPage(assetId: asset.id),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byTooltip('Tindakan aktivitas'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byTooltip('Tindakan aktivitas'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ubah'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Rekening Investasi Jangka Panjang (Tidak aktif)'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.widgetWithText(FilledButton, 'Simpan'));
+    await tester.pumpAndSettle();
+
+    final transaction = await (database.select(
+      database.transactions,
+    )..where((row) => row.id.equals(buy.sourceTransactionId!))).getSingle();
+    expect(transaction.accountId, linkedAccount.id);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('asset detail distinguishes a closed position from no position', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final asset = await AssetRepository(database).create(
+      symbol: 'BBCA',
+      name: 'Bank Central Asia',
+      assetType: AssetType.stock,
+      pricingMode: AssetPricingMode.api,
+    );
+    final transactions = AssetTransactionRepository(database);
+    await transactions.createOpeningPosition(
+      assetId: asset.id,
+      quantity: AssetQuantity.parse('100'),
+      transactionDate: DateTime(2026, 9, 3),
+    );
+    await transactions.create(
+      assetId: asset.id,
+      action: AssetTransactionAction.sell,
+      quantity: AssetQuantity.parse('100'),
+      transactionDate: DateTime(2026, 9, 4),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: MaterialApp(home: AssetDetailPage(assetId: asset.id)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Belum ada posisi'), findsNothing);
+    expect(find.text('Posisi saat ini'), findsAtLeastNWidgets(1));
+    expect(find.text('0 lot'), findsAtLeastNWidgets(1));
+    expect(find.text('Posisi awal'), findsOneWidget);
+    expect(find.text('1 lot'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
 }

@@ -154,7 +154,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Export laporan'));
     await tester.pumpAndSettle();
-    expect(find.text('Total aset saat ini: Rp9.500.000'), findsOneWidget);
+    expect(find.text('Kas & dompet saat ini: Rp9.500.000'), findsOneWidget);
     expect(find.text('1 transfer: Rp2.000.000'), findsOneWidget);
     await tester.tap(find.text('Semua jenis'));
     await tester.pumpAndSettle();

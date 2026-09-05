@@ -97,17 +97,29 @@ void main() {
         deleted_at INTEGER
       )
     ''');
+    for (final statement in [
+      'CREATE INDEX categories_type ON categories (type)',
+      'CREATE INDEX categories_deleted_at ON categories (deleted_at)',
+      'CREATE INDEX transactions_date ON transactions (transaction_date)',
+      'CREATE INDEX transactions_category_id ON transactions (category_id)',
+      'CREATE INDEX transactions_type ON transactions (type)',
+      'CREATE INDEX transactions_deleted_at ON transactions (deleted_at)',
+      'CREATE INDEX transactions_receipt_fingerprint ON transactions (receipt_fingerprint)',
+      'CREATE UNIQUE INDEX transactions_legacy_source_id ON transactions (legacy_source, legacy_id)',
+    ]) {
+      db.execute(statement);
+    }
     db.execute(
       "INSERT INTO categories VALUES "
       "(1, 'category-income-v1', 'Gaji', 'income', NULL, 1, 1, NULL), "
-      "(2, 'category-expense-v1', 'Makan', 'expense', NULL, 1, 1, NULL)",
+      "(2, 'category-expense-v1', 'Pembelian Aset', 'expense', NULL, 1, 1, NULL)",
     );
     db.execute("INSERT INTO settings VALUES ('test-setting', 'preserved', 1)");
     db.execute(
       "INSERT INTO transactions VALUES "
       "(1, 'transaction-income-v1', 'income', 1, 10000000, 'Gaji', NULL, "
       "'2026-08-01', 'legacy_import', NULL, 'legacy-v1', 10, 1, 1, NULL), "
-      "(2, 'transaction-expense-v1', 'expense', 2, 1000000, 'Makan', "
+      "(2, 'transaction-expense-v1', 'expense', 2, 1000000, 'Pembelian lama', "
       "'Kantor', '2026-08-02', 'manual', 'fingerprint-v1', NULL, NULL, "
       "1, 1, NULL), "
       "(3, 'transaction-deleted-v1', 'expense', 2, 700000, 'Dihapus', NULL, "
@@ -375,6 +387,8 @@ void main() {
       expect(preview.accountCount, 1);
       expect(preview.transferCount, 0);
       expect(preview.transferVolume, 0);
+      expect(preview.assetCount, 0);
+      expect(preview.assetActivityCount, 0);
       expect(preview.totalIncome, 0);
       expect(preview.totalExpense, 10000);
       expect(preview.oldestTransactionAt, DateTime(2026, 8, 1));
@@ -753,6 +767,8 @@ void main() {
       expect(preview.transactionCount, 2);
       expect(preview.accountCount, 1);
       expect(preview.transferCount, 0);
+      expect(preview.assetCount, 0);
+      expect(preview.assetActivityCount, 0);
       expect(preview.totalIncome, 10000000);
       expect(preview.totalExpense, 1000000);
 
@@ -766,7 +782,7 @@ void main() {
       final version = await live
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(version.read<int>('user_version'), 10);
+      expect(version.read<int>('user_version'), 11);
       final restoredAccounts = await live.select(live.accounts).get();
       expect(restoredAccounts, hasLength(1));
       expect(restoredAccounts.single.name, 'Tunai');
@@ -794,6 +810,9 @@ void main() {
         isNotNull,
       );
       expect(await live.select(live.transfers).get(), isEmpty);
+      expect(await live.select(live.assets).get(), isEmpty);
+      expect(await live.select(live.assetTransactions).get(), isEmpty);
+      expect(await live.select(live.assetPrices).get(), isEmpty);
       expect((await live.select(live.settings).getSingle()).value, 'preserved');
 
       final summary = (await AccountRepository(
@@ -813,6 +832,16 @@ void main() {
         (10000000, 1000000, 9000000),
       );
       expect(report.transferSummary.count, 0);
+      final investmentCashflow = await ReportRepository(live)
+          .watchInvestmentCashflow(
+            ReportRange(
+              start: DateTime(2026, 8, 1),
+              end: DateTime(2026, 8, 31),
+            ),
+          )
+          .first;
+      expect(investmentCashflow.totalPurchases, 1000000);
+      expect(investmentCashflow.transactionCount, 1);
       expect(
         await FinancialActivityRepository(live)
             .watch(const FinancialActivityQuery())
