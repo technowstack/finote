@@ -67,7 +67,7 @@ Current focus:
 
 ```text
 Finote v1.3.0
-ASSETS / INVESTMENTS - PHASE 7E.6 RESET DATA IN PROGRESS
+ASSETS / INVESTMENTS - PHASE 7E.7 APP LOCK / BIOMETRIC AUTHENTICATION
 ```
 
 Finote v1.0.0 remains the first local production-final baseline. v1.1.0 added Accounts & Transfers. v1.2.0 added Reports Visualization & Analytics. v1.3.0 now extends Finote with local-first Assets / Investments without turning Finote into a trading platform. External Play Store upload/testing/publication remains a separate activity from local feature readiness.
@@ -137,8 +137,8 @@ These external tasks do not reopen the v1.0 feature scope.
 - [ ] 7E.3 Portfolio Performance & Offline Audit (blocked: no Android device/AVD for required runtime/profile matrix)
 - [ ] 7E.4 UI/UX Polish (blocked: connected Pixel 6a remained behind secure keyguard for required visual matrix)
 - [~] 7E.5 v1.3.0 Final Audit & Release Preparation (superseded by new pre-release hardening scope)
-- [ ] 7E.6 Reset Data — implementation complete; Android manual validation pending
-- [ ] 7E.7 App Lock / Biometric Authentication
+- [ ] 7E.6 Reset Data — implementation/validation evidence must remain truthful
+- [ ] 7E.7 App Lock / Biometric Authentication — CURRENT
 - [ ] 7E.8 v1.3.0 Final Audit & Release Preparation
 
 ---
@@ -584,14 +584,14 @@ decision.
 Before tagging Finote v1.3.0, the release scope has been explicitly extended with two fundamental local safety features.
 
 ```text
-7E.6 Reset Data — CURRENT
-7E.7 App Lock / Biometric Authentication — NEXT
+7E.6 Reset Data — prerequisite; retain actual PASS/BLOCKED evidence
+7E.7 App Lock / Biometric Authentication — CURRENT
 7E.8 Final v1.3.0 Audit / Release Preparation — AFTER 7E.6 + 7E.7
 ```
 
 ### Phase 7E.6 — Reset Data
 
-Status: **IMPLEMENTED / AUTOMATED VALIDATION PASSED, ANDROID MANUAL VALIDATION PENDING**
+Status: **IN PROGRESS / DOCUMENTED, IMPLEMENTATION NOT YET STARTED**
 
 Required outcome:
 
@@ -612,8 +612,36 @@ Required outcome:
 
 The existing Phase 7E.5 audit is retained as historical evidence, but it is no longer the final release decision because v1.3.0 scope changed before release. Final release validation moves to Phase 7E.8.
 
-### Next after 7E.6
+### Phase 7E.7 — App Lock / Biometric Authentication
 
-> **Phase 7E.7 — App Lock / Biometric Authentication**
+Status: **IMPLEMENTATION / AUTOMATED VALIDATION PASSED, ANDROID RUNTIME VALIDATION BLOCKED**
 
-Do not start Phase 7E.7 automatically.
+Required outcome:
+
+- implement local App Lock, not a Finote account/login system;
+- use supported device authentication/biometrics and never store biometric templates;
+- enable/disable flows must be protected by appropriate device authentication;
+- unsupported, not-enrolled, cancelled, failed, and lockout states must be safe;
+- prevent duplicate biometric prompts caused by rebuilds, navigation, or lifecycle churn;
+- define and implement a deterministic cold-start/background-resume lock policy after auditing current lifecycle architecture;
+- financial UI must not be exposed before the required authentication succeeds;
+- feature must remain fully offline and must not alter financial source-of-truth semantics;
+- Reset Data and Backup/Restore interactions must be audited and preserved;
+- automated tests, analyzer, and Android runtime validation are required before full completion.
+
+Implementation evidence:
+
+- biometric App Lock uses `local_auth` with biometric-only authentication;
+- the existing PIN lock remains supported;
+- biometric preference is stored locally in SharedPreferences without biometric data;
+- root-level locking, guarded authentication state, lifecycle locking, Settings enable/disable flows, and focused controller/widget tests are implemented;
+- `flutter analyze`, focused App Lock tests, full `flutter test` (317 tests), debug APK build, installation, and launch passed;
+- Android runtime biometric validation is blocked because the connected Pixel 6a is asleep/behind secure keyguard and interactive biometric flows could not be executed.
+
+Important: Phase 7E.6 must not be marked PASS retroactively without its actual validation evidence. If its implementation/report has not yet been recorded, keep that status explicit while working on 7E.7.
+
+### Next after 7E.7
+
+> **Phase 7E.8 — v1.3.0 Final Audit & Release Preparation**
+
+Do not start Phase 7E.8 automatically.

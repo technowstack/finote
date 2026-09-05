@@ -45,6 +45,7 @@ dependencies:
   sqlite3: ^3.5.2
   path: ^1.9.1
   flutter_secure_storage: ^11.0.0
+  local_auth: ^2.3.0
   cryptography: ^2.9.0
   shared_preferences: ^2.5.5
   image_picker: ^1.2.3

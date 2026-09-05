@@ -96,7 +96,7 @@ Before coding:
 
 # 4. Current Product Direction
 
-Finote is currently hardening **Finote v1.3.0 — Assets / Investments** before release. Portfolio work remains part of v1.3.0, and the explicit current task is **Phase 7E.6 — Reset Data**, followed by **7E.7 App Lock / Biometric Authentication** and a rerun of the final release audit in **7E.8**.
+Finote is currently hardening **Finote v1.3.0 — Assets / Investments** before release. Portfolio work remains part of v1.3.0, and the explicit current task is **Phase 7E.7 — App Lock / Biometric Authentication**. Phase 7E.6 Reset Data remains a prerequisite whose actual validation status must be recorded truthfully, and the final release audit is rerun in **7E.8**.
 
 Current priorities:
 
@@ -2190,7 +2190,7 @@ Legacy source databases remain READ ONLY.
 7E.8 v1.3.0 Final Audit & Release Preparation
 ```
 
-Current task: **7E.6 Reset Data**. Implement only the explicitly requested sub-phase. Do not start 7E.7 automatically.
+Current task: **7E.7 App Lock / Biometric Authentication**. Implement only the explicitly requested sub-phase. Do not start 7E.8 automatically. Do not fabricate a PASS for 7E.6 if its validation evidence has not been recorded.
 
 ## 65.17 Phase 7A.1 Gate
 
@@ -2303,4 +2303,59 @@ representative finance + portfolio data
 
 Also verify Transaction CRUD/reactivity, Accounts/Transfers, Reports, Dashboard, Portfolio, Net Worth, Backup/Restore, offline startup, and no automatic market refresh. Run targeted tests, `flutter analyze`, relevant full tests, and Android manual validation before marking 7E.6 complete.
 
-After 7E.6 is complete, stop and report results. Wait for explicit user instruction before starting **7E.7 App Lock / Biometric Authentication**.
+Phase 7E.6 rules remain authoritative for Reset Data regression. The user has explicitly authorized Phase 7E.7; do not modify Reset Data semantics casually while implementing App Lock.
+
+
+# 67. Phase 7E.7 — App Lock / Biometric Authentication Engineering Rules
+
+The current explicit implementation phase is **7E.7 App Lock / Biometric Authentication**. Treat it as a local access-control feature, not as user-account authentication.
+
+Before coding:
+
+1. read `PRD.md`, `STATUS.md`, and this `AGENTS.md`;
+2. inspect current Settings/security implementation, app startup, `WidgetsBindingObserver`/lifecycle handling, GoRouter/root shell, Riverpod root providers, Android configuration, existing PIN/basic-security code, Reset Data, and Backup/Restore;
+3. inspect current dependencies before adding a maintained local-authentication package;
+4. define the exact lock boundary for cold start and background/resume before implementing prompts.
+
+Security invariants:
+
+- use OS/device authentication APIs; never implement biometric recognition or store biometric templates in Finote;
+- do not add a Finote account, cloud login, remote auth, database encryption, or custom cryptography;
+- persist only minimal non-sensitive App Lock preference/state; never store PIN plaintext, biometric data, or successful-authentication secrets in ordinary SQLite/SharedPreferences;
+- enabling App Lock requires successful authentication; disabling it must also be protected where supported;
+- unsupported/not-enrolled/cancelled/failed/temporary-lockout states must fail closed without crashing;
+- only one biometric prompt may be active at a time; widget rebuilds, Riverpod changes, navigation, and lifecycle callbacks must not cause prompt storms;
+- do not briefly expose Home/Transactions/Portfolio/Reports underneath an unlock overlay before authentication; design the gate so protected content is not available until the session is unlocked;
+- authentication must never mutate financial records or trigger Market API refresh.
+
+Lifecycle invariants:
+
+- audit actual Flutter/Android lifecycle behavior; do not guess;
+- define a deterministic protected-session policy for cold start and background/resume;
+- avoid immediately re-locking because the OS biometric activity itself changes lifecycle state;
+- cancellation/failure keeps the session locked; success unlocks only the intended local session;
+- avoid repeated prompts when returning from system biometric UI, permission/settings UI, file picker, backup/restore picker, or other external activities.
+
+Reset/Backup invariants:
+
+- App Lock state is not financial data; do not silently change the already-defined Reset Data contract without an explicit audited reason;
+- Backup/Restore must never serialize biometric templates/device secrets;
+- restoring financial data must not silently bypass or create an unusable device-lock configuration;
+- verify Reset Data still works while App Lock is enabled and that the user cannot bypass the access gate through navigation.
+
+Required regression:
+
+```text
+App Lock OFF → app behaves exactly as before
+App Lock ON → cold start → locked → authenticate → Finote usable
+App Lock ON → background/resume according to audited policy → authenticate if required
+cancel/fail authentication → remains locked, no crash
+unsupported/not enrolled → cannot enable unusable lock
+rebuild/navigation/lifecycle churn → no duplicate prompts
+Reset Data + Backup/Restore → semantics preserved
+transaction CRUD + portfolio + reports → unchanged after unlock
+```
+
+Run targeted tests, `dart format .`, `flutter analyze`, `flutter test`, and Android runtime validation. Do not claim full PASS if real-device/emulator biometric/lifecycle validation is unavailable.
+
+After Phase 7E.7, update `STATUS.md` with the true PASS/BLOCKED state and stop. Do not start **7E.8 Final Audit & Release Preparation** without explicit user instruction.

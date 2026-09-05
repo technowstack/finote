@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/biometric_lock.dart';
 import '../data/pin_repository.dart';
 
 class SecurityPage extends ConsumerStatefulWidget {
@@ -69,6 +70,8 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const _BiometricCard(),
+                const SizedBox(height: 16),
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
@@ -237,4 +240,28 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
 
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+}
+
+class _BiometricCard extends ConsumerWidget {
+  const _BiometricCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lock = ref.watch(appLockControllerProvider);
+    final controller = ref.read(appLockControllerProvider.notifier);
+    return Card(
+      margin: EdgeInsets.zero,
+      child: SwitchListTile(
+        secondary: const Icon(Icons.fingerprint),
+        title: const Text('Kunci Aplikasi'),
+        subtitle: Text(lock.error ?? 'Gunakan biometrik untuk membuka Finote'),
+        value: lock.biometricEnabled,
+        onChanged: !lock.initialized || lock.authenticating
+            ? null
+            : (enabled) async {
+                await controller.setBiometricEnabled(enabled);
+              },
+      ),
+    );
+  }
 }

@@ -2862,9 +2862,9 @@ Sebelum coding Phase 7:
 
 Current active phase:
 
-> **Phase 7E.6 — Reset Data**
+> **Phase 7E.7 — App Lock / Biometric Authentication**
 
-Phase 7E.6 is a pre-release data-safety hardening task. Implement it incrementally and do not start Phase 7E.7 automatically. Phase 7E.8 becomes the final v1.3.0 release audit after Reset Data and App Lock / Biometric Authentication are completed and validated.
+The user has explicitly authorized moving to Phase 7E.7. Reset Data remains a prerequisite whose final PASS evidence must still be recorded truthfully in `STATUS.md`; do not fabricate completion evidence. Phase 7E.8 remains the final v1.3.0 release audit after Reset Data and App Lock / Biometric Authentication are completed and validated.
 
 
 ---
@@ -2950,7 +2950,83 @@ Acceptance criteria:
 
 ## 54.2 Phase 7E.7 — App Lock / Biometric Authentication
 
-This phase is explicitly planned after Reset Data but is not part of the current implementation task. It will provide local app locking using supported device authentication/biometrics without introducing a Finote cloud account or login dependency. Detailed implementation requirements must be audited before coding Phase 7E.7.
+Goal:
+
+> Protect access to Finote with device-supported local authentication while preserving Finote's offline-first, account-free architecture.
+
+Product semantics:
+
+- this feature is **App Lock**, not a Finote login/account system;
+- use the operating system's supported local authentication/biometric mechanism;
+- user-facing copy should prefer `Biometrik` / `Kunci Aplikasi`, not assume every device uses fingerprint;
+- Finote must never store fingerprint, face, or other biometric templates/data;
+- no cloud account, server session, internet connection, or remote authentication may be introduced;
+- enabling App Lock is opt-in and must require successful device authentication before the preference becomes enabled;
+- disabling App Lock must also require successful authentication when supported by the current platform flow;
+- if the device does not support/enroll usable authentication, explain this safely and do not enable App Lock;
+- cancellation, failed authentication, temporary lockout, background/resume, and unsupported-device states must not crash Finote or expose financial content unexpectedly.
+
+Lock lifecycle:
+
+- audit the current Flutter lifecycle and navigation architecture before implementation;
+- when App Lock is enabled, Finote must protect financial UI when a new protected app session starts;
+- define a deterministic policy for cold start and background/resume based on current architecture;
+- avoid repeated biometric prompts caused by widget rebuilds, Riverpod updates, route transitions, dialogs, or configuration changes;
+- only one authentication attempt/prompt may be active at a time;
+- successful authentication unlocks the current protected session;
+- unsuccessful/cancelled authentication keeps Finote locked;
+- do not rely on navigating to a normal financial route and then visually covering it after sensitive content has already been exposed.
+
+Persistence and security:
+
+- persist only the minimum non-sensitive App Lock preference/state required by the feature;
+- never persist biometric data, authentication results, PIN plaintext, or secrets in ordinary SQLite/SharedPreferences;
+- prefer maintained platform authentication APIs/packages compatible with the project's current Flutter/Android versions;
+- do not add database encryption, custom cryptography, account credentials, or a custom biometric implementation in this phase;
+- do not log financial content or sensitive authentication details.
+
+Settings UX:
+
+```text
+Settings
+→ Keamanan
+→ Kunci Aplikasi
+→ Gunakan Biometrik
+```
+
+Exact labels may follow the existing Settings design, but the feature must clearly explain that device authentication protects access to Finote. Keep the UI simple and consistent with Material 3 and existing Settings patterns.
+
+Reset/Backup interaction:
+
+- App Lock is security preference state, not financial data;
+- Phase 7E.7 must audit how it interacts with the implemented Reset Data semantics rather than silently changing Reset Data behavior;
+- Backup/Restore must not export/import biometric templates or device authentication secrets;
+- restoring a financial backup must not bypass the current device's authentication capability or silently enable an unusable lock state.
+
+Acceptance criteria:
+
+- App Lock can be enabled only after successful supported device authentication;
+- when enabled, protected Finote content cannot be accessed at the required lock boundary before authentication succeeds;
+- successful authentication unlocks Finote without modifying financial data;
+- cancel/failure leaves the app locked and stable;
+- unsupported/not-enrolled states are handled with clear user-facing feedback;
+- repeated rebuilds/navigation do not create biometric prompt loops;
+- app background/resume behavior follows the audited lock policy;
+- feature works offline;
+- transaction CRUD, Drift/Riverpod reactivity, Portfolio, Reports, Backup/Restore, and Reset Data remain unchanged except for the intended access gate;
+- `flutter analyze` passes;
+- relevant automated tests pass;
+- Android real-device/emulator validation is required before Phase 7E.7 is marked fully complete.
+
+Out of scope:
+
+- Finote account/login;
+- cloud authentication;
+- remote session management;
+- database encryption;
+- custom biometric storage/recognition;
+- broad PIN redesign;
+- Phase 7E.8 release work.
 
 ## 54.3 Phase 7E.8 — Final v1.3.0 Release Gate
 
