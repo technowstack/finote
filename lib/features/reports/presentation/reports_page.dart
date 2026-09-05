@@ -389,6 +389,8 @@ class _SummaryTab extends StatelessWidget {
           )
         else
           _CompactSummary(data: data),
+        const SizedBox(height: AppSpacing.lg),
+        _AccountBalancesSection(accounts: accounts),
         _InvestmentCashflowSection(summary: investmentCashflow),
         _CurrentPositionSection(netWorth: netWorth),
         const SizedBox(height: AppSpacing.xl),
@@ -436,7 +438,6 @@ class _SummaryTab extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        _AccountBalancesSection(accounts: accounts),
         const SizedBox(height: AppSpacing.lg),
         _TransferSummarySection(summary: data.transferSummary),
       ],
