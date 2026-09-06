@@ -493,9 +493,57 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                 for (final category in widget.categories)
                   DropdownMenuItem(
                     value: category.id,
-                    child: Text(
-                      '${category.name} (${category.type == TransactionType.income ? 'pemasukan' : 'pengeluaran'})',
-                      overflow: TextOverflow.ellipsis,
+                    child: Row(
+                      children: [
+                        Icon(
+                          category.type == TransactionType.income
+                              ? Icons.south_west_rounded
+                              : Icons.north_east_rounded,
+                          size: 18,
+                          color: category.type == TransactionType.income
+                              ? Theme.of(context).colorScheme.incomeColor
+                              : Theme.of(context).colorScheme.expenseColor,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            category.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: category.type == TransactionType.income
+                                ? Theme.of(context).colorScheme.incomeColor
+                                      .withValues(alpha: 0.12)
+                                : Theme.of(context).colorScheme.expenseColor
+                                      .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            category.type == TransactionType.income
+                                ? 'Pemasukan'
+                                : 'Pengeluaran',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: category.type == TransactionType.income
+                                      ? Theme.of(context)
+                                            .colorScheme
+                                            .incomeColor
+                                      : Theme.of(context)
+                                            .colorScheme
+                                            .expenseColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
               ],
