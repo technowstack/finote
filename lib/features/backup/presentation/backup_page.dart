@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -532,11 +533,20 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
 
   /// STEP 1 + 2: pilih file → validasi
   Future<void> _selectAndValidate() async {
-    final file = await FilePicker.pickFile(
-      dialogTitle: 'Pilih file backup',
-      type: FileType.custom,
-      allowedExtensions: ['zip'],
-    );
+    final appLock = ref.read(appLockControllerProvider.notifier);
+
+    appLock.beginExternalActivity();
+
+    PlatformFile? file;
+    try {
+      file = await FilePicker.pickFile(
+        dialogTitle: 'Pilih file backup',
+        type: FileType.custom,
+        allowedExtensions: ['zip'],
+      );
+    } finally {
+      appLock.endExternalActivity();
+    }
     if (file == null) return;
 
     final path = file.path;

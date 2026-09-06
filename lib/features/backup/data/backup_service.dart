@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:drift/native.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -18,9 +19,10 @@ import '../domain/restore_error.dart';
 import '../domain/restore_preview.dart';
 
 class BackupService {
-  BackupService(this._database, {this.databasePath});
+  BackupService(this._database, this._appLock, {this.databasePath});
 
   final AppDatabase _database;
+  final AppLockController _appLock;
   final String? databasePath;
 
   static const _maximumArchiveBytes = 100 * 1024 * 1024;
@@ -32,13 +34,19 @@ class BackupService {
   Future<bool> createAndSave() async {
     final packageInfo = await PackageInfo.fromPlatform();
     final backup = await buildBackup(appVersion: packageInfo.version);
-    final uri = await FilePicker.saveFile(
-      dialogTitle: 'Simpan backup',
-      fileName: backup.fileName,
-      bytes: backup.bytes,
-      mimeType: 'application/zip',
-    );
-    return uri != null;
+    _appLock.beginExternalActivity();
+    try {
+      final uri = await FilePicker.saveFile(
+        dialogTitle: 'Simpan backup',
+        fileName: backup.fileName,
+        bytes: backup.bytes,
+        mimeType: 'application/zip',
+      );
+
+      return uri != null;
+    } finally {
+      _appLock.endExternalActivity();
+    }
   }
 
   Future<BackupArchive> buildBackup({
@@ -672,5 +680,8 @@ class BackupArchive {
 }
 
 final backupServiceProvider = Provider<BackupService>(
-  (ref) => BackupService(ref.watch(databaseProvider)),
+  (ref) => BackupService(
+    ref.watch(databaseProvider),
+    ref.read(appLockControllerProvider.notifier),
+  ),
 );

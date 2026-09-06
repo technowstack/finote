@@ -1,4 +1,5 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -385,10 +386,19 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
   // ---------------------------------------------------------------------------
 
   Future<void> _pickAndDetect() async {
-    final file = await FilePicker.pickFile(
-      dialogTitle: 'Pilih database legacy',
-      type: FileType.any,
-    );
+    final appLock = ref.read(appLockControllerProvider.notifier);
+    appLock.beginExternalActivity();
+    PlatformFile? file;
+
+    try {
+      file = await FilePicker.pickFile(
+        dialogTitle: 'Pilih database legacy',
+        type: FileType.any,
+      );
+    } finally {
+      appLock.endExternalActivity();
+    }
+
     if (file == null) return;
 
     final path = file.path;

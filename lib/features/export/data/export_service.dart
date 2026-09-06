@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -35,6 +36,9 @@ extension ExportFormatDetails on ExportFormat {
 }
 
 class ExportService {
+  ExportService(this._appLock);
+
+  final AppLockController _appLock;
   Future<Uint8List> buildBytes(
     ExportDocument document,
     ExportFormat format,
@@ -53,30 +57,44 @@ class ExportService {
 
   Future<bool> save(ExportDocument document, ExportFormat format) async {
     final name = fileName(format);
-    final uri = await FilePicker.saveFile(
-      dialogTitle: 'Simpan laporan',
-      fileName: name,
-      bytes: await buildBytes(document, format),
-      mimeType: format.mimeType,
-    );
-    return uri != null;
+
+    // Buat file terlebih dahulu saat Finote masih aktif normal.
+    final bytes = await buildBytes(document, format);
+    _appLock.beginExternalActivity();
+
+    try {
+      final uri = await FilePicker.saveFile(
+        dialogTitle: 'Simpan laporan',
+        fileName: name,
+        bytes: bytes,
+        mimeType: format.mimeType,
+      );
+      return uri != null;
+    } finally {
+      _appLock.endExternalActivity();
+    }
   }
 
   Future<void> share(ExportDocument document, ExportFormat format) async {
     final name = fileName(format);
-    await SharePlus.instance.share(
-      ShareParams(
-        files: [
-          XFile.fromData(
-            await buildBytes(document, format),
-            name: name,
-            mimeType: format.mimeType,
-          ),
-        ],
-        fileNameOverrides: [name],
-      ),
-    );
+
+    final bytes = await buildBytes(document, format);
+    final file = XFile.fromData(bytes, name: name, mimeType: format.mimeType);
+
+    _appLock.beginExternalActivity();
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [file], fileNameOverrides: [name]),
+      );
+    } finally {
+      _appLock.endExternalActivity();
+    }
   }
 }
 
-final exportServiceProvider = Provider<ExportService>((ref) => ExportService());
+final exportServiceProvider = Provider<ExportService>(
+  (ref) => ExportService(
+    ref.read(appLockControllerProvider.notifier),
+  ),
+);

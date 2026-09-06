@@ -178,23 +178,37 @@ class AppLockController extends StateNotifier<AppLockState> {
     }
   }
 
-  void handleLifecycle(AppLifecycleState state) {
-    // Authentication is marked active before the platform UI opens, so all
-    // lifecycle boundaries can safely lock except during that operation.
-    if ((state == AppLifecycleState.inactive ||
-            state == AppLifecycleState.paused ||
-            state == AppLifecycleState.hidden) &&
-        !this.state.authenticating &&
-        this.state.protectionEnabled &&
-        !_disposed) {
-      this.state = this.state.copyWith(
-        sessionUnlocked: false,
-        clearError: true,
-      );
+  void beginExternalActivity() {
+    _externalActivityActive = true;
+  }
+
+  void endExternalActivity() {
+    _externalActivityActive = false;
+  }
+
+  void handleLifecycle(AppLifecycleState lifecycleState) {
+    if (_disposed) return;
+
+    if (_externalActivityActive) {
+      return;
+    }
+
+    if (state.authenticating) {
+      return;
+    }
+
+    if (!state.protectionEnabled) {
+      return;
+    }
+
+    if (lifecycleState == AppLifecycleState.paused ||
+        lifecycleState == AppLifecycleState.hidden) {
+      state = state.copyWith(sessionUnlocked: false, clearError: true);
     }
   }
 
   bool _disposed = false;
+  bool _externalActivityActive = false;
 
   @override
   void dispose() {
