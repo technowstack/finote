@@ -55,6 +55,23 @@ void main() {
     );
   });
 
+  test(
+    'default initialization tolerates duplicate legacy categories',
+    () async {
+      await repository.initializeDefaults();
+      await database
+          .into(database.categories)
+          .insert(
+            CategoriesCompanion.insert(
+              name: 'Gaji',
+              type: TransactionType.income,
+            ),
+          );
+
+      await expectLater(repository.initializeDefaults(), completes);
+    },
+  );
+
   test('create, rename, and soft delete update reactive lists', () async {
     final category = await repository.create(
       name: '  Olahraga  ',

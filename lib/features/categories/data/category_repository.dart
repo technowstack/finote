@@ -46,8 +46,8 @@ class CategoryRepository {
                     row.name.equals(category.name) &
                     row.type.equals(category.type.name),
               ))
-              .getSingleOrNull();
-      if (existing == null) {
+              .get();
+      if (existing.isEmpty) {
         await _database
             .into(_database.categories)
             .insert(
