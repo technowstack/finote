@@ -1123,7 +1123,7 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
     _cost = TextEditingController(
       text: opening?.totalAmount == null
           ? ''
-          : formatIdr(opening!.totalAmount!),
+          : opening!.totalAmount!.toString(),
     );
     _note = TextEditingController(text: opening?.note ?? '');
     _date = opening?.transactionDate ?? DateTime.now();
@@ -1228,18 +1228,34 @@ class _OpeningPositionDialogState extends State<_OpeningPositionDialog> {
                 value: _hasCost,
                 onChanged: (value) => setState(() => _hasCost = value),
               ),
-              if (_hasCost)
+              if (_hasCost) ...[
                 TextFormField(
                   controller: _cost,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   decoration: const InputDecoration(
-                    labelText: 'Modal Awal (IDR)',
+                    labelText: 'Modal Awal',
+                    prefixText: 'Rp ',
                   ),
+                  onChanged: (_) => setState(() {}),
                   validator: (value) =>
                       _hasCost && _parseMoney(value ?? '') <= 0
                       ? 'Modal harus lebih dari 0'
                       : null,
                 ),
+
+                if (_parseMoney(_cost.text) > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: AppSpacing.xs),
+                      child: Text(
+                        formatIdr(_parseMoney(_cost.text)),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ),
+              ],
               const SizedBox(height: AppSpacing.sm),
               TextFormField(
                 controller: _note,

@@ -152,11 +152,15 @@ class _Summary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final monthlyBalance = summary.monthlyIncome - summary.monthlyExpense;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _NetWorthCard(netWorth: netWorth, onOpenPortfolio: onOpenPortfolio),
+        const SizedBox(height: AppSpacing.md),
+        _MonthlyBalanceCard(amount: monthlyBalance),
+
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
@@ -315,6 +319,102 @@ class _MetricTile extends StatelessWidget {
   }
 }
 
+class _MonthlyBalanceCard extends StatelessWidget {
+  const _MonthlyBalanceCard({required this.amount});
+
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final isPositive = amount >= 0;
+
+    return Card(
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              colors.primaryContainer,
+              colors.primaryContainer.withValues(alpha: 0.55),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.account_balance_wallet_outlined,
+                    color: colors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Saldo Bulan Ini',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: AppSpacing.md),
+
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                formatIdr(amount),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: AppSpacing.xs),
+
+            Row(
+              children: [
+                Icon(
+                  isPositive ? Icons.trending_up : Icons.trending_down,
+                  size: 16,
+                  color: isPositive ? colors.incomeColor : colors.expenseColor,
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  isPositive
+                      ? 'Arus kas bulan ini positif'
+                      : 'Pengeluaran melebihi pemasukan',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 // ---------------------------------------------------------------------------
 // Recent transactions — flat list wrapped in a single card
 // ---------------------------------------------------------------------------
