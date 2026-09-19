@@ -1,4 +1,4 @@
-package com.finote.app
+package com.technowstack.finote
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

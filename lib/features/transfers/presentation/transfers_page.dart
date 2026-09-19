@@ -1,3 +1,4 @@
+import 'package:finote/core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -306,6 +307,7 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
                 onChanged: (value) => setState(() => _fromAccountId = value),
                 validator: (value) => value == null ? 'Pilih akun asal.' : null,
               ),
+              const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<int>(
                 initialValue: _toAccountId,
                 decoration: const InputDecoration(labelText: 'Ke'),
@@ -323,6 +325,7 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
                     ? 'Akun asal dan tujuan tidak boleh sama.'
                     : null,
               ),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _amount,
                 keyboardType: TextInputType.number,
@@ -337,6 +340,7 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
                       : null;
                 },
               ),
+              const SizedBox(height: AppSpacing.md),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Tanggal'),
@@ -352,6 +356,7 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
                   if (date != null && mounted) setState(() => _date = date);
                 },
               ),
+              const SizedBox(height: AppSpacing.md),
               TextFormField(
                 controller: _note,
                 maxLines: 2,

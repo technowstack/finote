@@ -98,6 +98,12 @@ class MainScaffold extends ConsumerWidget {
                   onTap: () => Navigator.pop(context, '/transactions/new'),
                 ),
                 ListTile(
+                  leading: const Icon(Icons.add_circle_outline),
+                  title: const Text('Tambah Transfer Antar Akun'),
+                  subtitle: const Text('Cara utama yang cepat dan andal'),
+                  onTap: () => Navigator.pop(context, '/transfers'),
+                ),
+                ListTile(
                   leading: const Icon(Icons.document_scanner_outlined),
                   title: const Text('Scan struk'),
                   subtitle: const Text('Ambil atau pilih foto struk'),
