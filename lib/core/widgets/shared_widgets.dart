@@ -66,7 +66,13 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 44, color: Theme.of(context).colorScheme.outline),
+            Icon(
+              icon,
+              size: 44,
+              color: Theme.of(context).brightness == Brightness.light
+                  ? Theme.of(context).colorScheme.onSurfaceVariant
+                  : Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text(message, textAlign: TextAlign.center),
             if (subtitle != null) ...[

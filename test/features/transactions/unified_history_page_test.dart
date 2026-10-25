@@ -99,6 +99,20 @@ void main() {
     expect(find.text('BCA Utama → BCA Tabungan'), findsOneWidget);
     expect(find.text('Rp2.000.000'), findsOneWidget);
     expect(find.text(formatDate(date)), findsOneWidget);
+    final mealCard = find.ancestor(
+      of: find.widgetWithText(ListTile, 'Makan'),
+      matching: find.byType(Card),
+    );
+    final salaryCard = find.ancestor(
+      of: find.widgetWithText(ListTile, 'Gaji').last,
+      matching: find.byType(Card),
+    );
+    final mealRect = tester.getRect(mealCard);
+    final salaryRect = tester.getRect(salaryCard);
+    final gap = mealRect.top < salaryRect.top
+        ? salaryRect.top - mealRect.bottom
+        : mealRect.top - salaryRect.bottom;
+    expect(gap, greaterThanOrEqualTo(8));
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Transfer'));
     await tester.pumpAndSettle();

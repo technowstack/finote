@@ -207,7 +207,7 @@ class _NetWorthCard extends StatelessWidget {
     final dark = theme.brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+        color: dark ? null : theme.colorScheme.dashboardHeroColor,
         borderRadius: BorderRadius.circular(24),
         gradient: dark
             ? const LinearGradient(
@@ -224,22 +224,28 @@ class _NetWorthCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: netWorth.when(
-          loading: () => const Column(
+          loading: () => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Kekayaan Bersih'),
-              SizedBox(height: 24),
-              LinearProgressIndicator(),
+              Text(
+                'Kekayaan Bersih',
+                style: TextStyle(color: dark ? null : Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const LinearProgressIndicator(),
             ],
           ),
-          error: (_, _) => const Text('Kekayaan bersih belum dapat dimuat.'),
+          error: (_, _) => Text(
+            'Kekayaan bersih belum dapat dimuat.',
+            style: TextStyle(color: dark ? null : Colors.white),
+          ),
           data: (snapshot) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Kekayaan Bersih',
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: dark ? const Color(0xFFF6F3FA) : null,
+                  color: dark ? const Color(0xFFF6F3FA) : Colors.white,
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
@@ -248,24 +254,15 @@ class _NetWorthCard extends StatelessWidget {
                 softWrap: true,
                 style: theme.textTheme.displayLarge?.copyWith(
                   fontSize: 32,
-                  color: dark ? const Color(0xFFF6F3FA) : null,
+                  color: dark ? const Color(0xFFF6F3FA) : Colors.white,
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              Divider(
-                color: dark
-                    ? const Color(0xFFB8B0C7).withValues(alpha: 0.35)
-                    : null,
-              ),
-              _NetWorthLine(
-                label: 'Kas & Dompet',
-                value: snapshot.cashValue,
-                dark: dark,
-              ),
+              Divider(color: theme.colorScheme.dashboardHeroDivider),
+              _NetWorthLine(label: 'Kas & Dompet', value: snapshot.cashValue),
               _NetWorthLine(
                 label: 'Portofolio',
                 value: snapshot.portfolioKnownValue,
-                dark: dark,
                 key: const Key('dashboard-portfolio-summary'),
                 onTap: onOpenPortfolio,
               ),
@@ -276,9 +273,7 @@ class _NetWorthCard extends StatelessWidget {
                       ? 'Nilai sementara • ${snapshot.unvaluedAssetCount} aset belum memiliki harga'
                       : 'Nilai sementara • terdapat posisi aset yang tidak valid',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: dark
-                        ? const Color(0xFFF6F3FA)
-                        : theme.colorScheme.onSurface,
+                    color: dark ? const Color(0xFFF6F3FA) : Colors.white,
                   ),
                 ),
               ],
@@ -295,18 +290,17 @@ class _NetWorthLine extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
-    required this.dark,
     this.onTap,
   });
 
   final String label;
   final int? value;
-  final bool dark;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -321,9 +315,7 @@ class _NetWorthLine extends StatelessWidget {
                   Text(
                     label,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: dark
-                          ? const Color(0xFFEEE7F3)
-                          : theme.colorScheme.onSurfaceVariant,
+                      color: theme.colorScheme.dashboardHeroLabel,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
@@ -331,7 +323,7 @@ class _NetWorthLine extends StatelessWidget {
                     value == null ? 'Belum tersedia' : formatIdr(value!),
                     softWrap: true,
                     style: theme.textTheme.titleLarge?.copyWith(
-                      color: dark ? const Color(0xFFF6F3FA) : null,
+                      color: dark ? const Color(0xFFF6F3FA) : Colors.white,
                     ),
                   ),
                 ],
@@ -340,7 +332,7 @@ class _NetWorthLine extends StatelessWidget {
             if (onTap != null)
               Icon(
                 Icons.chevron_right,
-                color: dark ? const Color(0xFFF6F3FA) : null,
+                color: dark ? const Color(0xFFF6F3FA) : Colors.white,
               ),
           ],
         ),

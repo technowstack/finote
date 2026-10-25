@@ -679,7 +679,10 @@ class _GroupedActivityList extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
               ),
-            _ActivityRow(item: item),
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _ActivityRow(item: item),
+            ),
           ],
         );
       },

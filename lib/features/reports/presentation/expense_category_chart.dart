@@ -53,14 +53,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
     }
 
     final colors = Theme.of(context).colorScheme;
-    final palette = [
-      colors.primary,
-      colors.secondary,
-      colors.tertiary,
-      colors.incomeColor,
-      colors.warningColor,
-      colors.outline,
-    ];
+    final palette = colors.categoryChartColors;
     final selected = _touchedIndex != null && _touchedIndex! < points.length
         ? points[_touchedIndex!]
         : null;
@@ -92,7 +85,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                             color:
                                 index == points.length - 1 &&
                                     point.categoryId == -1
-                                ? colors.outline
+                                ? colors.categoryChartOtherColor
                                 : palette[index % palette.length],
                             radius: index == _touchedIndex ? 70 : 62,
                             showTitle: false,
@@ -134,7 +127,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                 point: point,
                 total: total,
                 color: index == points.length - 1 && point.categoryId == -1
-                    ? colors.outline
+                    ? colors.categoryChartOtherColor
                     : palette[index % palette.length],
                 selected: index == _touchedIndex,
                 onTap: () => setState(() {

@@ -1,0 +1,8 @@
+# Finote Light Theme Polish
+
+- **Intent:** Improve Light theme surface separation and consistency while preserving the established Fresh Mint identity and readable finance values.
+- **Scope:** `lib/core/theme/app_theme.dart`, `lib/core/theme/app_colors.dart` only if contrast usage needs correction, and relevant theme tests. No business logic, routes, providers, persistence, dark theme, or other screens' behavior changes.
+- **Direction:** Preserve the current teal family (`#0D766A`) and make the mint canvas perceptible; use existing Material 3 roles to establish card/canvas hierarchy. Keep existing semantic income/expense text colors; brighter accents remain icon-only unless verified accessible as text. Define filled/outlined/text/disabled control states consistently from the Light ColorScheme.
+- **Approaches:** (1) Adjust only canvas/container contrast and format the theme, smallest and recommended. (2) Rework every Light component override, more comprehensive but risks unintended app-wide visual changes. Choose (1), adding only control overrides where a concrete inconsistency is evidenced.
+- **Verification:** Theme contrast/unit tests, Dashboard narrow-width/large-text and app widget tests, formatter, changed-file analysis; full project test/analyze result reported separately since baseline has known failures.
+- **Open to implementation:** Choose final mint canvas/container token values that create visible but restrained separation and pass contrast; do not alter Dark scheme.

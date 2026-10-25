@@ -20,12 +20,21 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [databaseProvider.overrideWithValue(database)],
-        child: const MaterialApp(home: DashboardPage()),
+        child: MaterialApp(theme: AppTheme.light, home: const DashboardPage()),
       ),
     );
     await tester.pumpAndSettle();
 
     expect(find.text('Kekayaan Bersih'), findsOneWidget);
+    final hero = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.text('Kekayaan Bersih'),
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect((hero.decoration! as BoxDecoration).color, const Color(0xFF1D2A50));
     expect(find.text('Kas & Dompet'), findsAtLeastNWidgets(1));
     expect(find.text('Pemasukan bulan ini'), findsOneWidget);
     expect(find.text('Pengeluaran bulan ini'), findsOneWidget);
@@ -188,6 +197,22 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Rp9.000.000.000.000.000'), findsWidgets);
+    final hero = tester.widget<Container>(
+      find
+          .ancestor(
+            of: find.text('Rp9.000.000.000.000.000').first,
+            matching: find.byType(Container),
+          )
+          .first,
+    );
+    expect(
+      (hero.decoration! as BoxDecoration).gradient,
+      const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF302544), Color(0xFF60445A), Color(0xFF75536F)],
+      ),
+    );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

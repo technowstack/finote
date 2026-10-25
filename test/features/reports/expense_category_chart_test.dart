@@ -58,6 +58,12 @@ void main() {
 
     expect(find.byType(PieChart), findsOneWidget);
     final chart = tester.widget<PieChart>(find.byType(PieChart));
+    expect(chart.data.sections.map((section) => section.color), [
+      const Color(0xFF4263EB),
+      const Color(0xFF0D806A),
+      const Color(0xFF7A92F1),
+      const Color(0xFF83619B),
+    ]);
     expect(chart.data.sections.map((section) => section.value), [
       2400000.0,
       1500000.0,
@@ -126,6 +132,15 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(PieChart), findsOneWidget);
+      expect(
+        tester
+            .widget<PieChart>(find.byType(PieChart))
+            .data
+            .sections
+            .first
+            .color,
+        AppTheme.dark.colorScheme.primary,
+      );
       expect(
         tester.widget<PieChart>(find.byType(PieChart)).data.sections,
         hasLength(1),
