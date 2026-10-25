@@ -63,7 +63,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     final recentTransactions = ref.watch(dashboardRecentTransactionsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Finote')),
+      appBar: AppBar(
+        title: Text('Finote', style: Theme.of(context).textTheme.headlineLarge),
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           await Future.wait([
@@ -73,12 +75,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
         },
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenH,
-            AppSpacing.screenV,
-            AppSpacing.screenH,
-            96,
-          ),
+          padding: const EdgeInsets.fromLTRB(20, AppSpacing.md, 20, 96),
           children: [
             summary.when(
               loading: () =>
@@ -93,19 +90,27 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 onOpenPortfolio: () => context.go('/portfolio'),
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.lg),
             OutlinedButton.icon(
               onPressed: () => context.push('/receipt-scan'),
               icon: const Icon(Icons.document_scanner_outlined),
               label: const Text('Scan struk'),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: 'Transaksi terbaru',
-              trailing: TextButton(
-                onPressed: () => context.go('/transactions'),
-                child: const Text('Lihat semua'),
-              ),
+            const SizedBox(height: AppSpacing.xxl),
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.sm,
+              children: [
+                Text(
+                  'Transaksi terbaru',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                TextButton(
+                  onPressed: () => context.go('/transactions'),
+                  child: const Text('Lihat semua'),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.xs),
             recentTransactions.when(
@@ -169,6 +174,7 @@ class _Summary extends StatelessWidget {
                 label: 'Pemasukan bulan ini',
                 amount: summary.monthlyIncome,
                 color: colors.incomeColor,
+                iconColor: colors.incomeAccentColor,
                 icon: Icons.south_west,
               ),
             ),
@@ -178,6 +184,7 @@ class _Summary extends StatelessWidget {
                 label: 'Pengeluaran bulan ini',
                 amount: summary.monthlyExpense,
                 color: colors.expenseColor,
+                iconColor: colors.expenseAccentColor,
                 icon: Icons.north_east,
               ),
             ),
@@ -196,43 +203,85 @@ class _NetWorthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+        gradient: dark
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF302544),
+                  Color(0xFF60445A),
+                  Color(0xFF75536F),
+                ],
+              )
+            : null,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: netWorth.when(
-          loading: () => const LinearProgressIndicator(),
+          loading: () => const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Kekayaan Bersih'),
+              SizedBox(height: 24),
+              LinearProgressIndicator(),
+            ],
+          ),
           error: (_, _) => const Text('Kekayaan bersih belum dapat dimuat.'),
           data: (snapshot) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Kekayaan Bersih',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  formatIdr(snapshot.totalKnownValue),
-                  style: Theme.of(context).textTheme.headlineSmall,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: dark ? const Color(0xFFF6F3FA) : null,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              _NetWorthLine(label: 'Kas & Dompet', value: snapshot.cashValue),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                formatIdr(snapshot.totalKnownValue),
+                softWrap: true,
+                style: theme.textTheme.displayLarge?.copyWith(
+                  fontSize: 32,
+                  color: dark ? const Color(0xFFF6F3FA) : null,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Divider(
+                color: dark
+                    ? const Color(0xFFB8B0C7).withValues(alpha: 0.35)
+                    : null,
+              ),
+              _NetWorthLine(
+                label: 'Kas & Dompet',
+                value: snapshot.cashValue,
+                dark: dark,
+              ),
               _NetWorthLine(
                 label: 'Portofolio',
                 value: snapshot.portfolioKnownValue,
+                dark: dark,
                 key: const Key('dashboard-portfolio-summary'),
                 onTap: onOpenPortfolio,
               ),
-              if (snapshot.isPartial)
+              if (snapshot.isPartial) ...[
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   snapshot.unvaluedAssetCount > 0
                       ? 'Nilai sementara • ${snapshot.unvaluedAssetCount} aset belum memiliki harga'
                       : 'Nilai sementara • terdapat posisi aset yang tidak valid',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: dark
+                        ? const Color(0xFFF6F3FA)
+                        : theme.colorScheme.onSurface,
+                  ),
                 ),
+              ],
             ],
           ),
         ),
@@ -246,25 +295,55 @@ class _NetWorthLine extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
+    required this.dark,
     this.onTap,
   });
 
   final String label;
   final int? value;
+  final bool dark;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
+    final theme = Theme.of(context);
+    return InkWell(
       onTap: onTap,
-      title: Text(label),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(value == null ? 'Belum tersedia' : formatIdr(value!)),
-          if (onTap != null) const Icon(Icons.chevron_right),
-        ],
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: dark
+                          ? const Color(0xFFEEE7F3)
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    value == null ? 'Belum tersedia' : formatIdr(value!),
+                    softWrap: true,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: dark ? const Color(0xFFF6F3FA) : null,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(
+                Icons.chevron_right,
+                color: dark ? const Color(0xFFF6F3FA) : null,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -275,12 +354,14 @@ class _MetricTile extends StatelessWidget {
     required this.label,
     required this.amount,
     required this.color,
+    required this.iconColor,
     required this.icon,
   });
 
   final String label;
   final int amount;
   final Color color;
+  final Color iconColor;
   final IconData icon;
 
   @override
@@ -293,24 +374,14 @@ class _MetricTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(icon, size: 16, color: color),
-                const SizedBox(width: AppSpacing.xs),
-                Text(label, style: textTheme.labelMedium),
-              ],
-            ),
+            Icon(icon, size: 18, color: iconColor),
+            const SizedBox(height: AppSpacing.xs),
+            Text(label, style: textTheme.bodyMedium),
             const SizedBox(height: AppSpacing.sm),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                formatIdr(amount),
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                ),
-              ),
+            Text(
+              formatIdr(amount),
+              softWrap: true,
+              style: textTheme.titleLarge?.copyWith(color: color),
             ),
           ],
         ),
@@ -331,83 +402,30 @@ class _MonthlyBalanceCard extends StatelessWidget {
     final isPositive = amount >= 0;
 
     return Card(
-      elevation: 0,
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              colors.primaryContainer,
-              colors.primaryContainer.withValues(alpha: 0.55),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: colors.primary,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'Saldo Bulan Ini',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            Text('Saldo Bulan Ini', style: theme.textTheme.titleMedium),
 
             const SizedBox(height: AppSpacing.md),
 
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                formatIdr(amount),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
+            Text(
+              formatIdr(amount),
+              softWrap: true,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: isPositive ? colors.incomeColor : colors.expenseColor,
               ),
             ),
 
             const SizedBox(height: AppSpacing.xs),
 
-            Row(
-              children: [
-                Icon(
-                  isPositive ? Icons.trending_up : Icons.trending_down,
-                  size: 16,
-                  color: isPositive ? colors.incomeColor : colors.expenseColor,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  isPositive
-                      ? 'Arus kas bulan ini positif'
-                      : 'Pengeluaran melebihi pemasukan',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
+            Text(
+              isPositive
+                  ? 'Arus kas bulan ini positif'
+                  : 'Pengeluaran melebihi pemasukan',
+              style: theme.textTheme.bodyMedium,
             ),
           ],
         ),
@@ -416,7 +434,7 @@ class _MonthlyBalanceCard extends StatelessWidget {
   }
 }
 // ---------------------------------------------------------------------------
-// Recent transactions — flat list wrapped in a single card
+// Recent transactions
 // ---------------------------------------------------------------------------
 
 class _RecentTransactionsList extends StatelessWidget {
@@ -426,15 +444,13 @@ class _RecentTransactionsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            _RecentTransactionRow(item: items[i]),
-            if (i < items.length - 1) const Divider(indent: 16, endIndent: 16),
-          ],
+    return Column(
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          _RecentTransactionRow(item: items[i]),
+          if (i < items.length - 1) const Divider(height: 1),
         ],
-      ),
+      ],
     );
   }
 }
@@ -450,19 +466,60 @@ class _RecentTransactionRow extends StatelessWidget {
     final isExpense = transaction.type == TransactionType.expense;
     final colors = Theme.of(context).colorScheme;
 
-    return ListTile(
+    final theme = Theme.of(context);
+    return InkWell(
       onTap: () => context.push('/transactions/${transaction.id}/edit'),
-      title: Text(
-        transaction.title.isEmpty ? item.category.name : transaction.title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: transaction.title.isEmpty ? null : Text(item.category.name),
-      trailing: CurrencyText(
-        amount: transaction.amount,
-        type: transaction.type,
-        style: Theme.of(context).textTheme.titleMedium
-            ?.copyWith(color: colors.amountColor(isExpense: isExpense)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                isExpense ? Icons.north_east : Icons.south_west,
+                color: colors.amountColor(isExpense: isExpense),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    transaction.title.isEmpty
+                        ? item.category.name
+                        : transaction.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  if (transaction.title.isNotEmpty)
+                    Text(item.category.name, style: theme.textTheme.bodySmall),
+                  if (MediaQuery.textScalerOf(context).scale(14) > 21)
+                    Text(
+                      '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.amountColor(isExpense: isExpense),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (MediaQuery.textScalerOf(context).scale(14) <= 21)
+              Flexible(
+                child: CurrencyText(
+                  amount: transaction.amount,
+                  type: transaction.type,
+                  style: theme.textTheme.titleMedium,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

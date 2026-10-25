@@ -1,0 +1,72 @@
+{
+  "project_name": "Finote",
+  "frameworks": ["Flutter", "Dart", "Material 3", "GoRouter", "Riverpod", "Drift"],
+  "architecture": "Feature-first Flutter application with Riverpod providers, repository/service data access, and a shared Drift SQLite database",
+  "state_management": "flutter_riverpod 2.6.1; StreamProvider, FutureProvider, StateProvider, StateNotifierProvider, autoDispose/family providers",
+  "database": {
+    "technology": "Drift over SQLite",
+    "schema_version": 11,
+    "source": "lib/core/database/app_database.dart",
+    "tables": ["accounts", "categories", "transactions", "transfers", "settings", "assets", "asset_transactions", "asset_prices"]
+  },
+  "entry_points": [
+    "lib/main.dart",
+    "lib/app/app.dart",
+    "lib/app/router.dart",
+    "lib/app/main_scaffold.dart"
+  ],
+  "screens": [
+    {"name": "Dashboard", "route": "/", "source": "lib/features/dashboard/presentation/dashboard_page.dart"},
+    {"name": "Transactions", "route": "/transactions", "source": "lib/features/transactions/presentation/transactions_page.dart"},
+    {"name": "Transaction form", "route": "/transactions/new and /transactions/:id/edit", "source": "lib/features/transactions/presentation/transaction_form_page.dart"},
+    {"name": "Transaction detail", "route": "/transactions/:id", "source": "lib/features/transactions/presentation/transaction_detail_page.dart"},
+    {"name": "Monthly history", "route": "/reports/history/:month", "source": "lib/features/transactions/presentation/monthly_transactions_page.dart"},
+    {"name": "Portfolio", "route": "/portfolio", "source": "lib/features/assets/presentation/assets_page.dart"},
+    {"name": "Reports", "route": "/reports", "source": "lib/features/reports/presentation/reports_page.dart"},
+    {"name": "Analytics", "route": "/reports/analytics", "source": "lib/features/reports/presentation/analytics_chart_page.dart"},
+    {"name": "Accounts", "route": "/accounts", "source": "lib/features/accounts/presentation/accounts_page.dart"},
+    {"name": "Transfers", "route": "/transfers", "source": "lib/features/transfers/presentation/transfers_page.dart"},
+    {"name": "Categories", "route": "/categories", "source": "lib/features/categories/presentation/category_page.dart"},
+    {"name": "Settings", "route": "/settings", "source": "lib/features/settings/presentation/settings_page.dart"},
+    {"name": "Security", "route": "/security", "source": "lib/features/app_lock/presentation/security_page.dart"},
+    {"name": "Backup/restore", "route": "/backup", "source": "lib/features/backup/presentation/backup_page.dart"},
+    {"name": "Legacy import", "route": "/legacy-import", "source": "lib/features/legacy_import/presentation/legacy_import_page.dart"},
+    {"name": "Receipt scanner", "route": "/receipt-scan", "source": "lib/features/receipt_scanner/presentation/receipt_scanner_page.dart"}
+  ],
+  "themes": ["AppTheme.light", "AppTheme.dark", "ThemeMode.system", "ThemeMode.light", "ThemeMode.dark"],
+  "design_tokens_locations": [
+    "lib/core/theme/app_theme.dart",
+    "lib/core/theme/app_colors.dart",
+    "lib/core/theme/app_spacing.dart",
+    "lib/core/theme/theme_mode_provider.dart"
+  ],
+  "reusable_components": [
+    "AppErrorState",
+    "AppEmptyState",
+    "AppLoadingState",
+    "CurrencyText",
+    "SectionHeader",
+    "MainScaffold"
+  ],
+  "key_business_logic_files": [
+    "lib/core/database/app_database.dart",
+    "lib/core/database/tables/transactions.dart",
+    "lib/features/transactions/data/transaction_repository.dart",
+    "lib/features/accounts/data/account_repository.dart",
+    "lib/features/transfers/data/transfer_repository.dart",
+    "lib/features/reports/data/report_repository.dart",
+    "lib/core/finance/net_worth.dart",
+    "lib/features/assets/data/asset_transaction_repository.dart",
+    "lib/features/assets/data/asset_activity_service.dart",
+    "lib/features/market/data/portfolio_valuation_service.dart",
+    "lib/features/backup/data/backup_service.dart",
+    "lib/features/legacy_import/data/legacy_importer.dart"
+  ],
+  "audit_limitations": [
+    "Read-only source audit; no application source/config/data was modified.",
+    "Secrets and private device data were not read or included.",
+    "Android runtime accessibility, biometric, lifecycle, reset/restore, and full release matrix were not independently revalidated.",
+    "iOS/web/desktop runtime behavior is not fully verified.",
+    "Market backend/TLS/privacy behavior is outside the client repository."
+  ]
+}

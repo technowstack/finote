@@ -1,96 +1,76 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppTheme {
-  // ---------------------------------------------------------------------------
-  // Color schemes — hand-tuned for comfort
-  // ---------------------------------------------------------------------------
-
-  /// Light palette: warm off-white background, soft teal primary, dark
-  /// charcoal text. Avoids pure #FFFFFF for surfaces.
+  // Fresh Mint Minimal: mint canvas, white cards, restrained teal actions.
   static const _lightScheme = ColorScheme(
     brightness: Brightness.light,
-    // Primary — soft teal
-    primary: Color(0xFF2A7F67),
-    onPrimary: Color(0xFFFFFFFF),
-    primaryContainer: Color(0xFFD0F0E4),
-    onPrimaryContainer: Color(0xFF0E3B2C),
-    // Secondary — muted sage
-    secondary: Color(0xFF4F6358),
+    primary: Color(0xFF00A985),
+    onPrimary: Color(0xFF102820),
+    primaryContainer: Color(0xFFD8F2E8),
+    onPrimaryContainer: Color(0xFF102820),
+    secondary: Color(0xFF008568),
     onSecondary: Color(0xFFFFFFFF),
-    secondaryContainer: Color(0xFFD2E8DA),
-    onSecondaryContainer: Color(0xFF0C1F16),
-    // Tertiary — soft warm accent
-    tertiary: Color(0xFF3D6373),
+    secondaryContainer: Color(0xFFD8F2E8),
+    onSecondaryContainer: Color(0xFF102820),
+    tertiary: Color(0xFF657970),
     onTertiary: Color(0xFFFFFFFF),
-    tertiaryContainer: Color(0xFFC1E8FB),
-    onTertiaryContainer: Color(0xFF001F2A),
-    // Error — muted coral-red
-    error: Color(0xFFC0392B),
+    tertiaryContainer: Color(0xFFF3F6F4),
+    onTertiaryContainer: Color(0xFF102820),
+    error: Color(0xFFAE4F42),
     onError: Color(0xFFFFFFFF),
-    errorContainer: Color(0xFFFCE4E4),
-    onErrorContainer: Color(0xFF410002),
-    // Surfaces — warm off-white, not pure white
-    surface: Color(0xFFF7F5F2),
-    onSurface: Color(0xFF1C1B1A),
-    onSurfaceVariant: Color(0xFF5C5C5A),
+    errorContainer: Color(0xFFFBE7E3),
+    onErrorContainer: Color(0xFF4A1710),
+    surface: Color(0xFFE8F1EC),
+    onSurface: Color(0xFF102820),
+    onSurfaceVariant: Color(0xFF5B6E65),
     surfaceContainerLowest: Color(0xFFFFFFFF),
-    surfaceContainerLow: Color(0xFFF1EFEC),
-    surfaceContainer: Color(0xFFEBE9E6),
-    surfaceContainerHigh: Color(0xFFE5E3E0),
-    surfaceContainerHighest: Color(0xFFDFDDDA),
-    // Outline
-    outline: Color(0xFF8E8E8C),
-    outlineVariant: Color(0xFFC8C6C3),
-    // Misc
+    surfaceContainerLow: Color(0xFFFFFFFF),
+    surfaceContainer: Color(0xFFF3F6F4),
+    surfaceContainerHigh: Color(0xFFEAF1EC),
+    surfaceContainerHighest: Color(0xFFE0EAE4),
+    outline: Color(0xFF657970),
+    outlineVariant: Color(0xFFE0EAE4),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFF313030),
-    onInverseSurface: Color(0xFFF3F0EE),
-    inversePrimary: Color(0xFF8DD4B8),
+    inverseSurface: Color(0xFF102820),
+    onInverseSurface: Color(0xFFFFFFFF),
+    inversePrimary: Color(0xFFEAFF86),
   );
 
-  /// Dark palette: very dark neutral (no pure black), slightly warm.
-  /// Green/teal is an accent, not the dominant background.
+  // Midnight Aurora: solid plum surfaces; only the Dashboard hero uses light.
   static const _darkScheme = ColorScheme(
     brightness: Brightness.dark,
-    // Primary — desaturated teal
-    primary: Color(0xFF8DD4B8),
-    onPrimary: Color(0xFF003828),
-    primaryContainer: Color(0xFF1A5E47),
-    onPrimaryContainer: Color(0xFFD0F0E4),
-    // Secondary — muted sage
-    secondary: Color(0xFFB6CCBF),
-    onSecondary: Color(0xFF21352B),
-    secondaryContainer: Color(0xFF374B41),
-    onSecondaryContainer: Color(0xFFD2E8DA),
-    // Tertiary — soft cool accent
-    tertiary: Color(0xFFA5CCDF),
-    onTertiary: Color(0xFF073544),
-    tertiaryContainer: Color(0xFF244B5B),
-    onTertiaryContainer: Color(0xFFC1E8FB),
-    // Error — muted peach-red
-    error: Color(0xFFEF8E7E),
-    onError: Color(0xFF601410),
-    errorContainer: Color(0xFF8C1D18),
-    onErrorContainer: Color(0xFFFCDAD5),
-    // Surfaces — dark neutral, not pure black
-    surface: Color(0xFF161615),
-    onSurface: Color(0xFFE3E2DF),
-    onSurfaceVariant: Color(0xFFADADAB),
-    surfaceContainerLowest: Color(0xFF101010),
-    surfaceContainerLow: Color(0xFF1D1D1C),
-    surfaceContainer: Color(0xFF222221),
-    surfaceContainerHigh: Color(0xFF2C2C2B),
-    surfaceContainerHighest: Color(0xFF373736),
-    // Outline
-    outline: Color(0xFF7A7A78),
-    outlineVariant: Color(0xFF484846),
-    // Misc
+    primary: Color(0xFFEAFF86),
+    onPrimary: Color(0xFF171B11),
+    primaryContainer: Color(0xFF423950),
+    onPrimaryContainer: Color(0xFFF6F3FA),
+    secondary: Color(0xFFB7A1D3),
+    onSecondary: Color(0xFF211D30),
+    secondaryContainer: Color(0xFF423950),
+    onSecondaryContainer: Color(0xFFF6F3FA),
+    tertiary: Color(0xFFC47D69),
+    onTertiary: Color(0xFF171B11),
+    tertiaryContainer: Color(0xFF423950),
+    onTertiaryContainer: Color(0xFFF6F3FA),
+    error: Color(0xFFE9A19B),
+    onError: Color(0xFF301717),
+    errorContainer: Color(0xFF59332F),
+    onErrorContainer: Color(0xFFF6F3FA),
+    surface: Color(0xFF0D0B16),
+    onSurface: Color(0xFFF6F3FA),
+    onSurfaceVariant: Color(0xFFB8B0C7),
+    surfaceContainerLowest: Color(0xFF0D0B16),
+    surfaceContainerLow: Color(0xFF211D30),
+    surfaceContainer: Color(0xFF211D30),
+    surfaceContainerHigh: Color(0xFF2C263B),
+    surfaceContainerHighest: Color(0xFF423950),
+    outline: Color(0xFFB8B0C7),
+    outlineVariant: Color(0xFF423950),
     shadow: Color(0xFF000000),
     scrim: Color(0xFF000000),
-    inverseSurface: Color(0xFFE3E2DF),
-    onInverseSurface: Color(0xFF313030),
-    inversePrimary: Color(0xFF2A7F67),
+    inverseSurface: Color(0xFFF6F3FA),
+    onInverseSurface: Color(0xFF211D30),
+    inversePrimary: Color(0xFF008568),
   );
 
   // ---------------------------------------------------------------------------
@@ -103,14 +83,14 @@ abstract final class AppTheme {
       displayLarge: TextStyle(
         fontFamily: baseFamily,
         fontSize: 34,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         letterSpacing: -0.5,
         color: colors.onSurface,
       ),
       displayMedium: TextStyle(
         fontFamily: baseFamily,
         fontSize: 28,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         letterSpacing: -0.25,
         color: colors.onSurface,
       ),
@@ -196,7 +176,7 @@ abstract final class AppTheme {
     elevation: 0,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
+      borderRadius: BorderRadius.all(Radius.circular(18)),
     ),
   );
 
@@ -208,19 +188,21 @@ abstract final class AppTheme {
   static const _inputTheme = InputDecorationTheme(
     filled: true,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
+      borderRadius: BorderRadius.all(Radius.circular(14)),
     ),
     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
   );
 
   static const _chipTheme = ChipThemeData(
     showCheckmark: false,
-    shape: StadiumBorder(),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    ),
     padding: EdgeInsets.symmetric(horizontal: 4),
   );
 
   static const _fabTheme = FloatingActionButtonThemeData(
-    elevation: 2,
+    elevation: 0,
     shape: CircleBorder(),
   );
 
@@ -250,8 +232,21 @@ abstract final class AppTheme {
       foregroundColor: _lightScheme.onSurface,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: _lightScheme.surfaceContainer,
+      backgroundColor: _lightScheme.surfaceContainerLow,
       indicatorColor: _lightScheme.primaryContainer,
+      labelTextStyle: const WidgetStatePropertyAll(
+        TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(foregroundColor: const Color(0xFF007A60)),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF007A60)),
     ),
     dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(
@@ -293,8 +288,15 @@ abstract final class AppTheme {
       foregroundColor: _darkScheme.onSurface,
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: _darkScheme.surfaceContainer,
+      backgroundColor: _darkScheme.surfaceContainerLow,
       indicatorColor: _darkScheme.primaryContainer,
+      labelTextStyle: const WidgetStatePropertyAll(
+        TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     ),
     dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(
