@@ -228,6 +228,8 @@ class _TransfersPageState extends ConsumerState<TransfersPage> {
 
 enum _TransferAction { edit, delete }
 
+const _maxTransferAmount = 9223372036854775807;
+
 class _TransferFormDialog extends StatefulWidget {
   const _TransferFormDialog({required this.accounts, this.transfer});
 
@@ -251,7 +253,9 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
   void initState() {
     super.initState();
     final transfer = widget.transfer;
-    _amount = TextEditingController(text: transfer?.amount.toString() ?? '');
+    _amount = TextEditingController(
+      text: transfer == null ? '' : _formatTransferAmount(transfer.amount),
+    );
     _note = TextEditingController(text: transfer?.note ?? '');
     _fromAccountId = transfer?.fromAccountId;
     _toAccountId = transfer?.toAccountId;
@@ -267,8 +271,8 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
 
   void _submit() {
     if (_saving || !_formKey.currentState!.validate()) return;
-    final amount = int.tryParse(_amount.text);
-    if (amount == null || amount <= 0 || amount > 9223372036854775807) return;
+    final amount = _parseTransferAmount(_amount.text);
+    if (amount == null || amount <= 0) return;
     setState(() => _saving = true);
     Navigator.pop(
       context,
@@ -329,13 +333,13 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
               TextFormField(
                 controller: _amount,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: const [_ThousandsSeparatorInputFormatter()],
                 decoration: const InputDecoration(labelText: 'Nominal'),
                 validator: (value) {
-                  final amount = int.tryParse(value ?? '');
+                  final amount = _parseTransferAmount(value);
                   return amount == null ||
                           amount <= 0 ||
-                          amount > 9223372036854775807
+                          amount > _maxTransferAmount
                       ? 'Masukkan nominal transfer yang valid.'
                       : null;
                 },
@@ -378,6 +382,53 @@ class _TransferFormDialogState extends State<_TransferFormDialog> {
           child: Text(_saving ? 'Menyimpan...' : 'Transfer'),
         ),
       ],
+    );
+  }
+}
+
+int? _parseTransferAmount(String? value) {
+  final amount = int.tryParse((value ?? '').replaceAll('.', ''));
+  return amount != null && amount <= _maxTransferAmount ? amount : null;
+}
+
+String _formatTransferAmount(int amount) =>
+    formatIdr(amount).replaceFirst('Rp', '');
+
+class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  const _ThousandsSeparatorInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+    final amount = int.tryParse(digits);
+    if (amount == null || amount > _maxTransferAmount) return oldValue;
+
+    final formatted = _formatTransferAmount(amount);
+    final cursor = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    final digitsBeforeCursor = newValue.text
+        .substring(0, cursor)
+        .replaceAll(RegExp(r'\D'), '')
+        .length;
+    var formattedCursor = 0;
+    var seenDigits = 0;
+    while (formattedCursor < formatted.length &&
+        seenDigits < digitsBeforeCursor) {
+      if (RegExp(r'\d').hasMatch(formatted[formattedCursor])) seenDigits++;
+      formattedCursor++;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formattedCursor),
     );
   }
 }

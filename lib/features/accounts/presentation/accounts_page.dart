@@ -305,6 +305,8 @@ class _AccountCard extends StatelessWidget {
 
 enum _AccountAction { edit, archive, reactivate, delete }
 
+const _maxAccountBalance = 9223372036854775807;
+
 class _AccountFormData {
   const _AccountFormData(this.name, this.type, this.initialBalance);
 
@@ -335,7 +337,7 @@ class _AccountFormDialogState extends State<_AccountFormDialog> {
     final account = widget.account;
     _name = TextEditingController(text: account?.name);
     _balance = TextEditingController(
-      text: account?.initialBalance.toString() ?? '0',
+      text: _formatAccountBalance(account?.initialBalance ?? 0),
     );
     _type = account?.type ?? AccountType.cash;
   }
@@ -349,11 +351,10 @@ class _AccountFormDialogState extends State<_AccountFormDialog> {
 
   void _submit() {
     if (_saving || !_formKey.currentState!.validate()) return;
+    final balance = _parseAccountBalance(_balance.text);
+    if (balance == null) return;
     setState(() => _saving = true);
-    Navigator.pop(
-      context,
-      _AccountFormData(_name.text, _type, int.parse(_balance.text)),
-    );
+    Navigator.pop(context, _AccountFormData(_name.text, _type, balance));
   }
 
   @override
@@ -391,9 +392,9 @@ class _AccountFormDialogState extends State<_AccountFormDialog> {
               TextFormField(
                 controller: _balance,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: const [_ThousandsSeparatorInputFormatter()],
                 decoration: const InputDecoration(labelText: 'Saldo Awal'),
-                validator: (value) => int.tryParse(value ?? '') == null
+                validator: (value) => _parseAccountBalance(value) == null
                     ? 'Masukkan nominal yang valid.'
                     : null,
               ),
@@ -411,6 +412,53 @@ class _AccountFormDialogState extends State<_AccountFormDialog> {
           child: Text(editing ? 'Simpan' : 'Tambah'),
         ),
       ],
+    );
+  }
+}
+
+int? _parseAccountBalance(String? value) {
+  final balance = int.tryParse((value ?? '').replaceAll('.', ''));
+  return balance != null && balance <= _maxAccountBalance ? balance : null;
+}
+
+String _formatAccountBalance(int balance) =>
+    formatIdr(balance).replaceFirst('Rp', '');
+
+class _ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  const _ThousandsSeparatorInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
+      return const TextEditingValue(
+        text: '',
+        selection: TextSelection.collapsed(offset: 0),
+      );
+    }
+    final balance = int.tryParse(digits);
+    if (balance == null || balance > _maxAccountBalance) return oldValue;
+
+    final formatted = _formatAccountBalance(balance);
+    final cursor = newValue.selection.baseOffset.clamp(0, newValue.text.length);
+    final digitsBeforeCursor = newValue.text
+        .substring(0, cursor)
+        .replaceAll(RegExp(r'\D'), '')
+        .length;
+    var formattedCursor = 0;
+    var seenDigits = 0;
+    while (formattedCursor < formatted.length &&
+        seenDigits < digitsBeforeCursor) {
+      if (RegExp(r'\d').hasMatch(formatted[formattedCursor])) seenDigits++;
+      formattedCursor++;
+    }
+
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formattedCursor),
     );
   }
 }
