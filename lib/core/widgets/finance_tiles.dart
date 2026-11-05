@@ -229,107 +229,145 @@ class AssetTile extends StatelessWidget {
     this.info,
     this.change,
     this.changePositive,
+    this.emptyLabel = 'Belum ada harga',
+    this.maskable = false,
+    this.trailing,
     this.onTap,
   });
 
   final String name;
+
+  /// Current value in rupiah, or null when it is unknown (never zero).
   final int? value;
   final String? code;
   final String? info;
   final String? change;
   final bool? changePositive;
+
+  /// Shown instead of the value when it is unknown; pass null to show nothing.
+  final String? emptyLabel;
+
+  /// Mask the value while the user hides balances.
+  final bool maskable;
+
+  /// Optional trailing control (e.g. an actions menu). It must bring its own
+  /// 48dp hit area.
+  final Widget? trailing;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 21;
+
+    final heading = Wrap(
+      spacing: AppSpacing.sm,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(
+          name,
+          style: AppTypography.labelLg.copyWith(color: colors.onSurface),
+        ),
+        if (code != null)
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.surfaceContainer,
+              borderRadius: AppRadius.smAll,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.sm,
+                vertical: 2,
+              ),
+              child: Text(
+                code!,
+                style: AppTypography.captionMedium.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+
+    final valueColumn = Column(
+      crossAxisAlignment: largeText
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (value != null)
+          CurrencyText(
+            amount: value!,
+            maskable: maskable,
+            alignment: largeText ? Alignment.centerLeft : Alignment.centerRight,
+            style: AppTypography.amountMd.copyWith(color: colors.onSurface),
+          )
+        else if (emptyLabel != null)
+          Text(emptyLabel!, style: theme.textTheme.bodySmall),
+        if (change != null)
+          Text(
+            change!,
+            style: AppTypography.amountXs.copyWith(
+              fontWeight: FontWeight.w500,
+              color: changePositive == null
+                  ? colors.onSurfaceVariant
+                  : colors.amountColor(isExpense: !changePositive!),
+            ),
+          ),
+      ],
+    );
+
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+          padding: const EdgeInsets.only(
+            left: AppSpacing.lg,
+            right: AppSpacing.lg,
+            top: AppSpacing.md,
+            bottom: AppSpacing.md,
           ),
-          child: Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.xs,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Wrap(
-                    spacing: AppSpacing.sm,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        name,
-                        style: AppTypography.labelLg.copyWith(
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      if (code != null)
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: colors.surfaceContainer,
-                            borderRadius: AppRadius.smAll,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm,
-                              vertical: 2,
-                            ),
-                            child: Text(
-                              code!,
-                              style: AppTypography.captionMedium.copyWith(
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
+                      heading,
+                      if (info != null)
+                        Text(
+                          info!,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.bodySm.copyWith(
+                            color: colors.onSurfaceVariant,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
+                      if (largeText) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        valueColumn,
+                      ],
                     ],
                   ),
-                  if (info != null)
-                    Text(
-                      info!,
-                      style: AppTypography.bodySm.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontFeatures: const [FontFeature.tabularFigures()],
-                      ),
+                ),
+                if (!largeText) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * 0.45,
                     ),
+                    child: valueColumn,
+                  ),
                 ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (value == null)
-                    Text('Belum ada harga', style: theme.textTheme.bodySmall)
-                  else
-                    CurrencyText(
-                      amount: value!,
-                      style: AppTypography.amountMd.copyWith(
-                        color: colors.onSurface,
-                      ),
-                    ),
-                  if (change != null)
-                    Text(
-                      change!,
-                      style: AppTypography.amountXs.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: changePositive == null
-                            ? colors.onSurfaceVariant
-                            : colors.amountColor(isExpense: !changePositive!),
-                      ),
-                    ),
-                ],
-              ),
-            ],
+                ?trailing,
+              ],
+            ),
           ),
         ),
       ),

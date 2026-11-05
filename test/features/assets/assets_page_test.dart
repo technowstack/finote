@@ -10,6 +10,7 @@ import 'package:finote/features/assets/domain/asset_quantity.dart';
 import 'package:finote/features/assets/domain/asset_transaction_action.dart';
 import 'package:finote/features/assets/domain/asset_type.dart';
 import 'package:finote/features/assets/presentation/assets_page.dart';
+import 'package:finote/features/assets/presentation/widgets/asset_list_item.dart';
 import 'package:finote/features/market/data/market_api_client.dart';
 import 'package:finote/features/market/data/market_repository.dart';
 import 'package:finote/features/market/data/asset_price_repository.dart';
@@ -17,11 +18,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// The value column of an asset row (amounts are masked until the hide-balance
+/// preference has been read, so the tests mock it below).
+Finder _rowValue(String amount) => find.descendant(
+  of: find.byType(AssetListItem),
+  matching: find.text(amount),
+);
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('creates, edits, opens, archives, and restores an asset', (
     tester,
   ) async {
+    // Tall viewport: the hero and composition cards sit above the list, and
+    // the shell FAB would otherwise cover the last visible row's menu.
+    tester.view.physicalSize = const Size(800, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final database = AppDatabase(NativeDatabase.memory());
     addTearDown(database.close);
     await database.ensureDefaultAccount();
@@ -136,11 +153,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(marketCalls, 1);
     expect(find.textContaining('Harga Rp9.200'), findsOneWidget);
-    expect(find.textContaining('Nilai Rp11.040.000'), findsOneWidget);
+    expect(_rowValue('Rp11.040.000'), findsOneWidget);
 
     final card = find.ancestor(
       of: find.text('BBCA'),
-      matching: find.byType(Card),
+      matching: find.byType(AssetListItem),
     );
     await tester.tap(
       find.descendant(of: card, matching: find.byTooltip('Tindakan aset')),
@@ -158,7 +175,7 @@ void main() {
 
     final editedCard = find.ancestor(
       of: find.text('BBCA'),
-      matching: find.byType(Card),
+      matching: find.byType(AssetListItem),
     );
     await tester.tap(
       find.descendant(
@@ -178,7 +195,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Aktifkan kembali'));
     await tester.pumpAndSettle();
-    expect(find.text('Saham'), findsOneWidget);
+    expect(find.text('Aset aktif'), findsOneWidget);
     await tester.tap(find.text('BBCA'));
     await tester.pumpAndSettle();
     expect(find.text('12 lot'), findsAtLeastNWidgets(1));
@@ -242,7 +259,7 @@ void main() {
     await tester.tap(find.byTooltip('Refresh Harga'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Harga Rp1.000.000'), findsOneWidget);
-    expect(find.textContaining('Nilai Rp15.000'), findsOneWidget);
+    expect(_rowValue('Rp15.000'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
   });
@@ -314,14 +331,14 @@ void main() {
         find.textContaining('Nilai per Unit Rp1.845 / unit'),
         findsOneWidget,
       );
-      expect(find.textContaining('Nilai Rp227.778'), findsOneWidget);
+      expect(_rowValue('Rp227.778'), findsOneWidget);
       expect(find.text('Emas'), findsAtLeastNWidgets(1));
       expect(find.textContaining('5.25 gram'), findsOneWidget);
       expect(
         find.textContaining('Harga per Gram Rp1.500.000 / gram'),
         findsOneWidget,
       );
-      expect(find.textContaining('Nilai Rp7.875.000'), findsOneWidget);
+      expect(_rowValue('Rp7.875.000'), findsOneWidget);
       expect(find.text('Manual'), findsNothing);
       expect(marketCalls, 0);
       await tester.pumpWidget(const SizedBox.shrink());
