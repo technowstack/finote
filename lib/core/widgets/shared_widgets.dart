@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/transactions/domain/transaction_type.dart';
 import '../preferences/balance_visibility_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/currency_formatter.dart';
@@ -99,6 +100,7 @@ class AppEmptyState extends StatelessWidget {
     this.subtitle,
     this.actionLabel,
     this.onAction,
+    this.compact = false,
   });
 
   final IconData icon;
@@ -107,10 +109,53 @@ class AppEmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
+  /// Inline variant for an empty section inside a card (icon on the left,
+  /// text on the right) instead of a full-screen centered state.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
+    if (compact) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surfaceContainer,
+          borderRadius: AppRadius.mdAll,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StatusIcon(
+                icon: icon,
+                background: colors.primaryContainer,
+                foreground: colors.onPrimaryContainer,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message,
+                      style: AppTypography.titleCard.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(subtitle!, style: theme.textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),

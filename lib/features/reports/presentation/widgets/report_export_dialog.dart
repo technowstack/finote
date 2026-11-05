@@ -62,6 +62,7 @@ class _ExportDialogState extends ConsumerState<ReportExportDialog> {
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<ExportFormat>(
+              isExpanded: true,
               initialValue: _format,
               decoration: const InputDecoration(labelText: 'Format'),
               items: [
@@ -74,6 +75,7 @@ class _ExportDialogState extends ConsumerState<ReportExportDialog> {
             ),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<TransactionType?>(
+              isExpanded: true,
               initialValue: _type,
               decoration: const InputDecoration(labelText: 'Jenis transaksi'),
               items: const [

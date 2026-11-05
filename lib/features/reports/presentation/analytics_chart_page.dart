@@ -13,6 +13,7 @@ import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
 import 'account_balance_chart.dart';
 import 'expense_category_chart.dart';
+import '../../../core/widgets/finote_controls.dart';
 import 'financial_trend_chart.dart';
 import 'income_expense_chart.dart';
 import 'report_chart_section.dart';
@@ -105,10 +106,10 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                 _periodChip('Minggu ini', ReportPeriod.week),
                 _periodChip('Bulan ini', ReportPeriod.month),
                 _periodChip('Tahun ini', ReportPeriod.year),
-                ChoiceChip(
-                  label: const Text('Rentang'),
+                FinoteChip(
+                  label: 'Rentang',
                   selected: _period == ReportPeriod.custom,
-                  onSelected: (_) => _selectCustomRange(),
+                  onSelected: _selectCustomRange,
                 ),
               ],
             ),
@@ -290,10 +291,10 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
   }
 
   Widget _periodChip(String label, ReportPeriod period) {
-    return ChoiceChip(
-      label: Text(label),
+    return FinoteChip(
+      label: label,
       selected: _period == period,
-      onSelected: (_) => setState(() {
+      onSelected: () => setState(() {
         _period = period;
         _customRange = null;
         _range = resolveReportRange(period);

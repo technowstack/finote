@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../data/report_repository.dart';
 
@@ -31,34 +32,46 @@ class InvestmentCashflowSection extends StatelessWidget {
               error: (_, _) => const ListTile(
                 title: Text('Riwayat arus kas investasi belum dapat dimuat.'),
               ),
-              data: (data) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                child: Column(
-                  children: [
-                    _InvestmentAmount(
-                      label: 'Total Pembelian Aset',
-                      amount: data.totalPurchases,
-                    ),
-                    _InvestmentAmount(
-                      label: 'Total Penjualan Aset',
-                      amount: data.totalSales,
-                    ),
-                    const Divider(indent: 16, endIndent: 16),
-                    _InvestmentAmount(
-                      label: 'Dana Bersih Diinvestasikan',
-                      amount: data.netCashInvested,
-                      emphasized: true,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                      child: Text(
-                        'Berdasarkan riwayat transaksi, bukan nilai portofolio atau keuntungan investasi.',
-                        style: Theme.of(context).textTheme.bodySmall,
+              data: (data) => data.totalPurchases == 0 && data.totalSales == 0
+                  ? const Padding(
+                      padding: EdgeInsets.all(AppSpacing.md),
+                      child: AppEmptyState(
+                        compact: true,
+                        icon: Icons.trending_up_rounded,
+                        message: 'Belum ada arus kas investasi',
+                        subtitle: 'Pembelian atau penjualan aset akan muncul di sini.',
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Column(
+                        children: [
+                          _InvestmentAmount(
+                            label: 'Total Pembelian Aset',
+                            amount: data.totalPurchases,
+                          ),
+                          _InvestmentAmount(
+                            label: 'Total Penjualan Aset',
+                            amount: data.totalSales,
+                          ),
+                          const Divider(indent: 16, endIndent: 16),
+                          _InvestmentAmount(
+                            label: 'Dana Bersih Diinvestasikan',
+                            amount: data.netCashInvested,
+                            emphasized: true,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                            child: Text(
+                              'Berdasarkan riwayat transaksi, bukan nilai portofolio atau keuntungan investasi.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
             ),
           ),
         ],

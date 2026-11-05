@@ -41,12 +41,16 @@ class _ItemRow extends StatelessWidget {
     required this.title,
     required this.trailing,
     this.subtitle,
+    this.details = const [],
     this.onTap,
   });
 
   final Widget leading;
   final String title;
   final String? subtitle;
+
+  /// Extra muted lines under the subtitle, each on its own line.
+  final List<String> details;
   final List<Widget> trailing;
   final VoidCallback? onTap;
 
@@ -96,6 +100,13 @@ class _ItemRow extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.bodySmall,
                         ),
+                      for (final line in details)
+                        Text(
+                          line,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
                       if (largeText) trailingColumn,
                     ],
                   ),
@@ -128,6 +139,7 @@ class TransactionTile extends StatelessWidget {
     required this.amount,
     required this.type,
     this.subtitle,
+    this.details = const [],
     this.caption,
     this.maskable = false,
     this.onTap,
@@ -142,6 +154,9 @@ class TransactionTile extends StatelessWidget {
   /// Line under the title. When null it falls back to the category name for
   /// titled rows (the original Beranda behavior).
   final String? subtitle;
+
+  /// Extra muted lines under the subtitle (e.g. a note), one per line.
+  final List<String> details;
 
   /// Small muted text under the amount (e.g. the category).
   final String? caption;
@@ -160,6 +175,7 @@ class TransactionTile extends StatelessWidget {
       ),
       title: title.isEmpty ? categoryName : title,
       subtitle: subtitle ?? (title.isEmpty ? null : categoryName),
+      details: details,
       trailing: [
         CurrencyText(amount: amount, type: type, maskable: maskable),
         if (caption != null)
@@ -448,11 +464,19 @@ class CategoryBar extends StatelessWidget {
     required this.name,
     required this.fraction,
     required this.amount,
+    this.isExpense = true,
+    this.maskable = false,
   });
 
   final String name;
   final double fraction;
   final int amount;
+
+  /// Picks the red/green amount color; the bar itself uses the category color.
+  final bool isExpense;
+
+  /// Mask the amount while the user hides balances.
+  final bool maskable;
 
   @override
   Widget build(BuildContext context) {
@@ -475,10 +499,12 @@ class CategoryBar extends StatelessWidget {
                   color: theme.colorScheme.onSurface,
                 ),
               ),
-              Text(
-                formatIdr(amount),
+              CurrencyText(
+                amount: amount,
+                maskable: maskable,
+                alignment: Alignment.centerRight,
                 style: AppTypography.amountSm.copyWith(
-                  color: theme.colorScheme.expenseColor,
+                  color: theme.colorScheme.amountColor(isExpense: isExpense),
                 ),
               ),
             ],

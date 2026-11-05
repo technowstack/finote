@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/finote_colors.dart';
+import '../../../../core/widgets/finote_hero.dart';
 import '../../data/report_repository.dart';
 
+/// "Saldo periode": period cashflow in the same hero style as the Beranda
+/// net-worth card. It is explicitly *not* total wealth, which is why the
+/// caption says so; Posisi saat ini below is the point-in-time number.
 class CompactSummary extends StatelessWidget {
   const CompactSummary({super.key, required this.data});
 
@@ -12,53 +16,34 @@ class CompactSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: colors.secondaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    final f = Theme.of(context).finote;
+    return FinoteHero(
+      title: 'Saldo periode',
+      action: const BalanceVisibilityButton(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Saldo periode',
-            style: textTheme.labelLarge?.copyWith(
-              color: colors.onSecondaryContainer.withValues(alpha: 0.7),
-            ),
-          ),
+          FinoteHeroAmount(amount: data.netBalance),
           const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              formatIdr(data.netBalance),
-              style: textTheme.displayMedium?.copyWith(
-                color: colors.onSecondaryContainer,
-              ),
-            ),
+          Text(
+            'Arus kas periode ini, bukan total kekayaan',
+            style: AppTypography.captionRegular.copyWith(color: f.onHeroMuted),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.south_west, size: 14, color: colors.incomeColor),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                formatIdr(data.totalIncome),
-                style: textTheme.titleMedium?.copyWith(
-                  color: colors.incomeColor,
+              Expanded(
+                child: FinoteHeroTile(
+                  label: 'Pemasukan',
+                  amount: data.totalIncome,
                 ),
               ),
-              const SizedBox(width: AppSpacing.xl),
-              Icon(Icons.north_east, size: 14, color: colors.expenseColor),
-              const SizedBox(width: AppSpacing.xs),
-              Text(
-                formatIdr(data.totalExpense),
-                style: textTheme.titleMedium?.copyWith(
-                  color: colors.expenseColor,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: FinoteHeroTile(
+                  label: 'Pengeluaran',
+                  amount: data.totalExpense,
                 ),
               ),
             ],

@@ -1,6 +1,7 @@
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
+import 'package:finote/features/reports/presentation/widgets/account_balances_section.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/reports/presentation/reports_page.dart';
@@ -15,9 +16,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
+  // Amounts stay masked until the display preference is read.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('reports separates period flow, current assets, and transfers', (
     tester,
@@ -143,7 +147,14 @@ void main() {
     expect(find.text('BCA Utama'), findsOneWidget);
     expect(find.text('BCA Tabungan'), findsOneWidget);
     expect(find.text('Arsip Lama'), findsNothing);
-    expect(find.text('Rp9.500.000'), findsOneWidget);
+    // The cash total of the account section (Posisi saat ini repeats it).
+    expect(
+      find.descendant(
+        of: find.byType(AccountBalancesSection),
+        matching: find.text('Rp9.500.000'),
+      ),
+      findsOneWidget,
+    );
     expect(find.textContaining('termasuk 1 akun diarsipkan'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Transfer antar akun'),

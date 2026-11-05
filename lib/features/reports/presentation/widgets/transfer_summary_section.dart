@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/widgets/shared_widgets.dart';
 import '../../data/report_repository.dart';
 import 'report_amount.dart';
 
@@ -21,21 +22,31 @@ class TransferSummarySection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         Card(
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: colors.tertiaryContainer,
-              foregroundColor: colors.onTertiaryContainer,
-              child: const Icon(Icons.swap_horiz),
-            ),
-            title: Text('${summary.count} transfer'),
-            subtitle: const Text(
-              'Informasi periode ini, tidak memengaruhi pemasukan atau pengeluaran',
-            ),
-            trailing: ReportAmount(
-              amount: summary.volume,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-          ),
+          child: summary.count == 0
+              ? const Padding(
+                  padding: EdgeInsets.all(AppSpacing.md),
+                  child: AppEmptyState(
+                    compact: true,
+                    icon: Icons.swap_horiz,
+                    message: 'Belum ada transfer',
+                    subtitle: 'Transfer tidak memengaruhi total pemasukan dan pengeluaran.',
+                  ),
+                )
+              : ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: colors.tertiaryContainer,
+                    foregroundColor: colors.onTertiaryContainer,
+                    child: const Icon(Icons.swap_horiz),
+                  ),
+                  title: Text('${summary.count} transfer'),
+                  subtitle: const Text(
+                    'Informasi periode ini, tidak memengaruhi pemasukan atau pengeluaran',
+                  ),
+                  trailing: ReportAmount(
+                    amount: summary.volume,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
         ),
       ],
     );

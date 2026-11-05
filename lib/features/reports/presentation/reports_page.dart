@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/finance/net_worth.dart';
+import '../../../core/widgets/finote_controls.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../export/data/export_repository.dart';
@@ -22,23 +23,10 @@ class ReportsPage extends ConsumerStatefulWidget {
   ConsumerState<ReportsPage> createState() => _ReportsPageState();
 }
 
-class _ReportsPageState extends ConsumerState<ReportsPage>
-    with SingleTickerProviderStateMixin {
+class _ReportsPageState extends ConsumerState<ReportsPage> {
   ReportPeriod _period = ReportPeriod.month;
   DateTimeRange? _customRange;
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -52,24 +40,41 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Laporan'),
+        title: Text(
+          'Laporan',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
         actions: [
           IconButton(
             tooltip: 'Export laporan',
             onPressed: () => _openExport(range),
+            style: IconButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              fixedSize: const Size(40, 40),
+            ),
             icon: const Icon(Icons.file_download_outlined),
           ),
+          const SizedBox(width: AppSpacing.sm),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Ringkasan'),
-            Tab(text: 'Riwayat'),
-          ],
-        ),
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.xs,
+              AppSpacing.screenH,
+              0,
+            ),
+            child: FinoteSegmented<int>(
+              segments: const [
+                FinoteSegment(0, 'Ringkasan'),
+                FinoteSegment(1, 'Riwayat'),
+              ],
+              selected: _tab,
+              onChanged: (value) => setState(() => _tab = value),
+            ),
+          ),
           // ----- Period selector -----
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -87,10 +92,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
                 _periodChip('Minggu ini', ReportPeriod.week),
                 _periodChip('Bulan ini', ReportPeriod.month),
                 _periodChip('Tahun ini', ReportPeriod.year),
-                ChoiceChip(
-                  label: const Text('Rentang'),
+                FinoteChip(
+                  label: 'Rentang',
                   selected: _period == ReportPeriod.custom,
-                  onSelected: (_) => _selectCustomRange(),
+                  onSelected: _selectCustomRange,
                 ),
               ],
             ),
@@ -118,22 +123,18 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
                 message: 'Laporan belum dapat dimuat.',
                 onRetry: () => ref.invalidate(reportProvider(filter)),
               ),
-              data: (data) => TabBarView(
-                controller: _tabController,
-                children: [
-                  ReportSummaryTab(
-                    data: data,
-                    investmentCashflow: investmentCashflow,
-                    netWorth: netWorth,
-                    accounts: accounts,
-                    trend: trend,
-                    range: range,
-                    onRetryTrend: () =>
-                        ref.invalidate(financialTrendProvider(filter)),
-                  ),
-                  ReportHistoryTab(data: data),
-                ],
-              ),
+              data: (data) => _tab == 0
+                  ? ReportSummaryTab(
+                      data: data,
+                      investmentCashflow: investmentCashflow,
+                      netWorth: netWorth,
+                      accounts: accounts,
+                      trend: trend,
+                      range: range,
+                      onRetryTrend: () =>
+                          ref.invalidate(financialTrendProvider(filter)),
+                    )
+                  : ReportHistoryTab(data: data),
             ),
           ),
         ],
@@ -142,10 +143,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage>
   }
 
   Widget _periodChip(String label, ReportPeriod period) {
-    return ChoiceChip(
-      label: Text(label),
+    return FinoteChip(
+      label: label,
       selected: _period == period,
-      onSelected: (_) => setState(() => _period = period),
+      onSelected: () => setState(() => _period = period),
     );
   }
 
