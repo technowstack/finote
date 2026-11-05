@@ -129,12 +129,18 @@ class TransactionDateChip extends StatelessWidget {
     final isToday =
         date.year == now.year && date.month == now.month && date.day == now.day;
 
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: OutlinedButton.icon(
-        icon: const Icon(Icons.calendar_today_outlined, size: 16),
-        label: Text(isToday ? 'Hari ini' : formatDate(date)),
-        onPressed: onTap,
+    return InkWell(
+      borderRadius: AppRadius.mdAll,
+      onTap: onTap,
+      child: InputDecorator(
+        decoration: const InputDecoration(
+          labelText: 'Tanggal',
+          prefixIcon: Icon(Icons.calendar_today_outlined),
+          suffixIcon: Icon(Icons.arrow_drop_down),
+        ),
+        child: Text(
+          isToday ? 'Hari ini, ${formatDate(date)}' : formatDate(date),
+        ),
       ),
     );
   }

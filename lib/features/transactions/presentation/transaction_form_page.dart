@@ -11,7 +11,6 @@ import '../../../core/utils/date_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../categories/data/category_repository.dart';
 import '../../accounts/data/account_repository.dart';
-import '../../accounts/domain/account_type.dart';
 import '../../receipt_scanner/data/local_receipt_category_suggestion_service.dart';
 import '../../receipt_scanner/data/receipt_duplicate_detector.dart';
 import '../../receipt_scanner/domain/receipt_duplicate.dart';
@@ -202,6 +201,13 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: AppSpacing.lg),
 
             // ----- Amount (hero) -----
+            Text(
+              _type == TransactionType.income
+                  ? 'Nominal pemasukan'
+                  : 'Nominal pengeluaran',
+              style: textTheme.titleSmall,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             TextFormField(
               controller: _amountController,
               autofocus: !isEditing,
@@ -216,6 +222,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               textAlign: TextAlign.center,
               decoration: InputDecoration(
                 hintText: '0',
+                helperText: 'Bilangan bulat, tanpa desimal',
                 hintStyle: textTheme.displayMedium?.copyWith(
                   color: colors.onSurfaceVariant.withValues(alpha: 0.3),
                 ),
@@ -325,6 +332,9 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               ),
               data: (items) {
                 final selectedId = _selectedAccountId(items);
+                final selected = items.where((a) => a.id == selectedId);
+                final isDefaultSelected =
+                    selected.isNotEmpty && selected.first.isDefault;
                 final options = [
                   for (final account in items)
                     if (account.isActive || account.id == selectedId) account,
@@ -332,16 +342,19 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 return DropdownButtonFormField<int>(
                   initialValue: selectedId,
                   isExpanded: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Pilih akun',
-                    prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                    helperText: isDefaultSelected ? 'Akun default' : null,
+                    prefixIcon: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                    ),
                   ),
                   items: [
                     for (final account in options)
                       DropdownMenuItem(
                         value: account.id,
                         child: Text(
-                          '${account.name} · ${account.type.label}'
+                          '${account.name}'
                           '${account.isActive ? '' : ' (Tidak aktif)'}',
                         ),
                       ),
