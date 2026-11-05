@@ -38,7 +38,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Data pribadi'), findsOneWidget);
 
+    // Policy since dfaae36: `inactive` alone (biometric prompt, file picker,
+    // notification shade) must not relock; only paused/hidden does.
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    expect(find.text('Data pribadi'), findsOneWidget);
+
+    // Frames are disabled while paused, so the gate is observable on resume.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(find.text('Data pribadi'), findsNothing);
     expect(find.text('Buka Finote'), findsOneWidget);

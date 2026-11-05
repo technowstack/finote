@@ -37,8 +37,7 @@ void main() {
         'Hiburan',
         'Kesehatan',
         'Pendidikan',
-        'Rumah',
-        'Keluarga',
+        'Donasi',
         'Lainnya',
       ]),
     );
@@ -46,6 +45,7 @@ void main() {
       incomes.map((category) => category.name),
       containsAll([
         'Gaji',
+        'Deviden',
         'Bonus',
         'Bisnis',
         'Hadiah',

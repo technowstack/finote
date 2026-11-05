@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/core/finance/net_worth.dart';
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/core/theme/finote_colors.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/dashboard/presentation/dashboard_page.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
@@ -34,7 +35,10 @@ void main() {
           )
           .first,
     );
-    expect((hero.decoration! as BoxDecoration).color, const Color(0xFF1D2A50));
+    expect(
+      (hero.decoration! as BoxDecoration).color,
+      FinoteColors.light.heroTo,
+    );
     expect(find.text('Kas & Dompet'), findsAtLeastNWidgets(1));
     expect(find.text('Pemasukan bulan ini'), findsOneWidget);
     expect(find.text('Pengeluaran bulan ini'), findsOneWidget);

@@ -1,4 +1,6 @@
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/core/theme/category_style.dart';
+import 'package:finote/core/theme/finote_colors.dart';
 import 'package:finote/features/reports/domain/report_chart_data.dart';
 import 'package:finote/features/reports/presentation/expense_category_chart.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -58,11 +60,12 @@ void main() {
 
     expect(find.byType(PieChart), findsOneWidget);
     final chart = tester.widget<PieChart>(find.byType(PieChart));
+    const tokens = FinoteColors.light;
     expect(chart.data.sections.map((section) => section.color), [
-      const Color(0xFF4263EB),
-      const Color(0xFF0D806A),
-      const Color(0xFF7A92F1),
-      const Color(0xFF83619B),
+      tokens.primary,
+      tokens.categories[FinoteCategory.food]!.foreground,
+      tokens.categories[FinoteCategory.shopping]!.foreground,
+      tokens.categories[FinoteCategory.bills]!.foreground,
     ]);
     expect(chart.data.sections.map((section) => section.value), [
       2400000.0,

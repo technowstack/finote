@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../../helpers/fake_app_lock.dart';
+
 import 'package:archive/archive.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
@@ -158,11 +160,12 @@ void main() {
           transactionDate: DateTime(2026, 8, 29),
         );
 
-        final backup = await BackupService(database).buildBackup(
-          appVersion: '1.0.0',
-          createdAt: DateTime(2026, 8, 29, 14, 5),
-          temporaryDirectory: tempDirectory,
-        );
+        final backup = await BackupService(database, fakeAppLockController())
+            .buildBackup(
+              appVersion: '1.0.0',
+              createdAt: DateTime(2026, 8, 29, 14, 5),
+              temporaryDirectory: tempDirectory,
+            );
         final archive = ZipDecoder().decodeBytes(backup.bytes);
 
         expect(backup.fileName, 'finance_backup_2026-08-29_14-05-00-000.zip');
@@ -222,7 +225,7 @@ void main() {
 
     setUp(() {
       database = AppDatabase(NativeDatabase.memory());
-      service = BackupService(database);
+      service = BackupService(database, fakeAppLockController());
     });
 
     tearDown(() async {
@@ -452,7 +455,11 @@ void main() {
         amount: 1000,
         transferDate: DateTime(2026, 8, 1),
       );
-      final fileService = BackupService(live, databasePath: path);
+      final fileService = BackupService(
+        live,
+        fakeAppLockController(),
+        databasePath: path,
+      );
       final backup = await fileService.buildBackup(
         appVersion: '1.0.0',
         temporaryDirectory: tempDir,
@@ -596,7 +603,11 @@ void main() {
           "INSERT INTO settings (key, value, updated_at) VALUES ('phase', '6A.8', 1)",
         );
 
-        final service = BackupService(live, databasePath: path);
+        final service = BackupService(
+          live,
+          fakeAppLockController(),
+          databasePath: path,
+        );
         final backup = await service.buildBackup(
           appVersion: '1.1.0',
           temporaryDirectory: tempDir,
@@ -757,7 +768,11 @@ void main() {
       var live = AppDatabase(NativeDatabase(File(path)));
       await live.customSelect('SELECT 1').getSingle();
       final archive = await buildVersion3Backup(tempDir);
-      final oldBackupService = BackupService(live, databasePath: path);
+      final oldBackupService = BackupService(
+        live,
+        fakeAppLockController(),
+        databasePath: path,
+      );
 
       final preview = await oldBackupService.parseRestoreFile(
         archive,
@@ -974,6 +989,7 @@ void main() {
         );
         final backup = await BackupService(
           sourceDb,
+          fakeAppLockController(),
           databasePath: sourcePath,
         ).buildBackup(appVersion: '1.1.0', temporaryDirectory: tempDir);
         await sourceDb.close();
@@ -996,6 +1012,7 @@ void main() {
 
         await BackupService(
           container.read(databaseProvider),
+          fakeAppLockController(),
           databasePath: targetPath,
         ).restoreFromArchive(backup.bytes, temporaryDirectory: tempDir);
         container.invalidate(databaseProvider);

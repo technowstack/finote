@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../helpers/fake_app_lock.dart';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
@@ -216,6 +218,7 @@ void main() {
     stopwatch = Stopwatch()..start();
     final backup = await BackupService(
       database,
+      fakeAppLockController(),
       databasePath: databasePath,
     ).buildBackup(appVersion: '1.0.0', temporaryDirectory: tempDir);
     stopwatch.stop();
@@ -224,6 +227,7 @@ void main() {
     stopwatch = Stopwatch()..start();
     await BackupService(
       database,
+      fakeAppLockController(),
       databasePath: databasePath,
     ).restoreFromArchive(backup.bytes, temporaryDirectory: tempDir);
     database = AppDatabase(NativeDatabase(File(databasePath)));

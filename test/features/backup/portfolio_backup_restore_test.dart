@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import '../../helpers/fake_app_lock.dart';
+
 import 'package:archive/archive.dart';
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
@@ -143,7 +145,11 @@ void main() {
           .select(database.transactions)
           .get();
       final beforePrices = await database.select(database.assetPrices).get();
-      final service = BackupService(database, databasePath: path);
+      final service = BackupService(
+        database,
+        fakeAppLockController(),
+        databasePath: path,
+      );
       final backup = await service.buildBackup(
         appVersion: '1.3.0',
         temporaryDirectory: temp,
@@ -266,7 +272,11 @@ void main() {
 
     final targetPath = '${temp.path}/target.sqlite';
     var target = AppDatabase(NativeDatabase(File(targetPath)));
-    final service = BackupService(target, databasePath: targetPath);
+    final service = BackupService(
+      target,
+      fakeAppLockController(),
+      databasePath: targetPath,
+    );
     final preview = await service.parseRestoreFile(
       archive,
       temporaryDirectory: temp,
@@ -306,8 +316,10 @@ void main() {
     addTearDown(current.close);
 
     await expectLater(
-      BackupService(current)
-          .parseRestoreFile(archive, temporaryDirectory: temp),
+      BackupService(
+        current,
+        fakeAppLockController(),
+      ).parseRestoreFile(archive, temporaryDirectory: temp),
       throwsA(isA<RestoreError>()),
     );
   });
@@ -331,6 +343,7 @@ void main() {
       );
       final backup = await BackupService(
         source,
+        fakeAppLockController(),
         databasePath: sourcePath,
       ).buildBackup(appVersion: '1.3.0', temporaryDirectory: temp);
       await source.close();
@@ -355,7 +368,7 @@ void main() {
         raw.close();
 
         await expectLater(
-          BackupService(current).parseRestoreFile(
+          BackupService(current, fakeAppLockController()).parseRestoreFile(
             _buildArchive(
               await file.readAsBytes(),
               databaseVersion: current.schemaVersion,
@@ -390,6 +403,7 @@ void main() {
         .setManualPrice(assetId: asset.id, price: 1500000);
     final backup = await BackupService(
       source,
+      fakeAppLockController(),
       databasePath: sourcePath,
     ).buildBackup(appVersion: '1.3.0', temporaryDirectory: temp);
     await source.close();
@@ -421,6 +435,7 @@ void main() {
     container.invalidate(portfolioMarketQuotesProvider);
     await BackupService(
       container.read(databaseProvider),
+      fakeAppLockController(),
       databasePath: targetPath,
     ).restoreFromArchive(backup.bytes, temporaryDirectory: temp);
     container.invalidate(databaseProvider);

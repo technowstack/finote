@@ -106,8 +106,12 @@ void main() {
         ),
         isNull,
       );
-      final home = (await categories.watchByType(TransactionType.expense).first)
-          .singleWhere((category) => category.name == 'Rumah');
+      // 'Rumah' is no longer a default (73bb1a1); learning must work for a
+      // user-created category too.
+      final home = await categories.create(
+        name: 'Rumah',
+        type: TransactionType.expense,
+      );
       await service.learnItemCategory(
         itemName: 'Sabun Lifebuoy',
         categoryId: home.id,

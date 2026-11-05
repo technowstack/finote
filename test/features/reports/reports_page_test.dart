@@ -134,9 +134,10 @@ void main() {
     );
     chart = tester.widget<BarChart>(find.byType(BarChart));
     expect(chart.data.barGroups, hasLength(12));
+    // Account balances sit above the charts since b6973dd: scroll back up.
     await tester.scrollUntilVisible(
       find.text('Saldo akun saat ini'),
-      300,
+      -300,
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('BCA Utama'), findsOneWidget);
