@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/category_style.dart';
 import '../../../core/theme/finote_colors.dart';
 import '../../../core/widgets/app_snackbars.dart';
@@ -261,23 +263,70 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final f = Theme.of(context).finote;
     return AlertDialog(
       title: const Text('Tema'),
-      contentPadding: const EdgeInsets.only(top: AppSpacing.lg),
-      content: RadioGroup<ThemeMode>(
-        groupValue: _selected,
-        onChanged: (value) {
-          if (value == null) return;
-          setState(() => _selected = value);
-          Navigator.pop(context, value);
-        },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final mode in ThemeMode.values)
-              RadioListTile<ThemeMode>(title: Text(_label(mode)), value: mode),
-          ],
-        ),
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm,
+        AppSpacing.lg,
+        AppSpacing.sm,
+        0,
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // One row per mode. The selected row takes the brand's container
+          // color and a check; the choice applies and closes immediately.
+          for (final mode in ThemeMode.values)
+            Semantics(
+              button: true,
+              selected: _selected == mode,
+              child: Material(
+                color: _selected == mode
+                    ? colors.primaryContainer
+                    : Colors.transparent,
+                borderRadius: AppRadius.mdAll,
+                child: InkWell(
+                  borderRadius: AppRadius.mdAll,
+                  onTap: () {
+                    setState(() => _selected = mode);
+                    Navigator.pop(context, mode);
+                  },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 56),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg,
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _label(mode),
+                              style: AppTypography.labelLg.copyWith(
+                                color: _selected == mode
+                                    ? colors.onPrimaryContainer
+                                    : colors.onSurface,
+                              ),
+                            ),
+                          ),
+                          if (_selected == mode)
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: colors.primary,
+                            )
+                          else
+                            Icon(Icons.circle_outlined, color: f.outline),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
       actions: [
         TextButton(

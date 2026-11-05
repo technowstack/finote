@@ -111,7 +111,11 @@ void main() {
     await _pump(tester, AppTheme.light);
     await tester.tap(find.text('Tema'));
     await tester.pumpAndSettle();
-    expect(find.byType(RadioListTile<ThemeMode>), findsNWidgets(3));
+    // Theme options are brand-toned rows now, not RadioListTile.
+    expect(find.byType(RadioListTile<ThemeMode>), findsNothing);
+    for (final label in ['Ikuti sistem', 'Terang', 'Gelap']) {
+      expect(find.text(label), findsWidgets, reason: label);
+    }
     expect(tester.takeException(), isNull);
 
     await tester.tap(find.text('Gelap'));
@@ -119,4 +123,25 @@ void main() {
     expect(find.text('Gelap'), findsOneWidget);
     expect(find.text('Ikuti sistem'), findsNothing);
   });
+
+  testWidgets(
+    'theme dialog fits 320dp with 1.3× text and shows the selection',
+    (tester) async {
+      await _pump(tester, AppTheme.dark);
+      await tester.tap(find.text('Tema'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.circle_outlined), findsNWidgets(2));
+      for (final mode in ['Ikuti sistem', 'Terang', 'Gelap']) {
+        final row = find.ancestor(
+          of: find.text(mode),
+          matching: find.byType(InkWell),
+        );
+        expect(tester.getSize(row.first).height, greaterThanOrEqualTo(48));
+      }
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Batal'));
+      await tester.pumpAndSettle();
+    },
+  );
 }
