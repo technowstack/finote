@@ -1,0 +1,408 @@
+import 'package:flutter/material.dart';
+
+import '../../features/transactions/domain/transaction_type.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../theme/category_style.dart';
+import '../theme/finote_colors.dart';
+import '../utils/currency_formatter.dart';
+import 'shared_widgets.dart';
+
+/// 44×44 rounded icon tile in a category's colors.
+class CategoryIconTile extends StatelessWidget {
+  const CategoryIconTile({super.key, required this.style});
+
+  final CategoryStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: style.background,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Icon(style.icon, color: style.foreground),
+    );
+  }
+}
+
+/// Shared row layout for Item/* tiles: 48dp minimum hit area, leading tile,
+/// text column, trailing column. Switches the trailing column under the text
+/// at large text scales so amounts never squeeze titles.
+class _ItemRow extends StatelessWidget {
+  const _ItemRow({
+    required this.leading,
+    required this.title,
+    required this.trailing,
+    this.subtitle,
+    this.onTap,
+  });
+
+  final Widget leading;
+  final String title;
+  final String? subtitle;
+  final List<Widget> trailing;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final largeText = MediaQuery.textScalerOf(context).scale(14) > 21;
+    final titleText = Text(
+      title,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: AppTypography.labelLg.copyWith(color: theme.colorScheme.onSurface),
+    );
+    final trailingColumn = Column(
+      crossAxisAlignment: largeText
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: trailing,
+    );
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    titleText,
+                    if (subtitle != null)
+                      Text(subtitle!, style: theme.textTheme.bodySmall),
+                    if (largeText) trailingColumn,
+                  ],
+                ),
+              ),
+              if (!largeText) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(child: trailingColumn),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// components.md `Item/Pengeluaran` & `Item/Pemasukan`: category icon,
+/// red/green only on the signed amount.
+class TransactionTile extends StatelessWidget {
+  const TransactionTile({
+    super.key,
+    required this.title,
+    required this.categoryName,
+    required this.amount,
+    required this.type,
+    this.caption,
+    this.onTap,
+  });
+
+  /// Optional user title; falls back to the category name.
+  final String title;
+  final String categoryName;
+  final int amount;
+  final TransactionType type;
+
+  /// Small muted text under the amount (e.g. time).
+  final String? caption;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return _ItemRow(
+      onTap: onTap,
+      leading: CategoryIconTile(
+        style: theme.finote.categoryStyle(categoryName),
+      ),
+      title: title.isEmpty ? categoryName : title,
+      subtitle: title.isEmpty ? null : categoryName,
+      trailing: [
+        CurrencyText(amount: amount, type: type),
+        if (caption != null) Text(caption!, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// components.md `Item/Transfer`: neutral colors; a transfer is neither
+/// income nor expense.
+class TransferTile extends StatelessWidget {
+  const TransferTile({
+    super.key,
+    required this.title,
+    required this.route,
+    required this.amount,
+    this.onTap,
+  });
+
+  final String title;
+
+  /// e.g. "BCA → Dompet tunai · 09.15".
+  final String route;
+  final int amount;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return _ItemRow(
+      onTap: onTap,
+      leading: CategoryIconTile(style: theme.finote.transferStyle),
+      title: title,
+      subtitle: route,
+      trailing: [
+        CurrencyText(
+          amount: amount,
+          style: AppTypography.amountItem.copyWith(
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        Text('Transfer', style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+}
+
+/// components.md `Item/Aset`. A null [value] means no known price; it reads
+/// "Belum ada harga" and is never shown as zero.
+class AssetTile extends StatelessWidget {
+  const AssetTile({
+    super.key,
+    required this.name,
+    required this.value,
+    this.code,
+    this.info,
+    this.change,
+    this.changePositive,
+    this.onTap,
+  });
+
+  final String name;
+  final int? value;
+  final String? code;
+  final String? info;
+  final String? change;
+  final bool? changePositive;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        name,
+                        style: AppTypography.labelLg.copyWith(
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      if (code != null)
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: colors.surfaceContainer,
+                            borderRadius: AppRadius.smAll,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: 2,
+                            ),
+                            child: Text(
+                              code!,
+                              style: AppTypography.captionMedium.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  if (info != null)
+                    Text(
+                      info!,
+                      style: AppTypography.bodySm.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (value == null)
+                    Text('Belum ada harga', style: theme.textTheme.bodySmall)
+                  else
+                    CurrencyText(
+                      amount: value!,
+                      style: AppTypography.amountMd.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  if (change != null)
+                    Text(
+                      change!,
+                      style: AppTypography.amountXs.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: changePositive == null
+                            ? colors.onSurfaceVariant
+                            : colors.amountColor(isExpense: !changePositive!),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// components.md `Header Tanggal`: date label with an optional signed daily
+/// total (green when positive, red when negative).
+class DateHeader extends StatelessWidget {
+  const DateHeader({super.key, required this.label, this.total});
+
+  final String label;
+  final int? total;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final total = this.total;
+    final style = AppTypography.amountXs;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xs,
+        AppSpacing.sm,
+        AppSpacing.xs,
+        AppSpacing.xs,
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        spacing: AppSpacing.sm,
+        children: [
+          Text(
+            label,
+            style: AppTypography.labelSm.copyWith(
+              fontWeight: FontWeight.w600,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          if (total != null)
+            Text(
+              total == 0
+                  ? formatIdr(0)
+                  : '${total < 0 ? '-' : '+'}${formatIdr(total.abs())}',
+              style: style.copyWith(
+                color: total == 0
+                    ? colors.onSurfaceVariant
+                    : colors.amountColor(isExpense: total < 0),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// components.md `Bar Kategori`: name · percent, amount, and a track in the
+/// category's colors. [fraction] is 0..1 of the period total.
+class CategoryBar extends StatelessWidget {
+  const CategoryBar({
+    super.key,
+    required this.name,
+    required this.fraction,
+    required this.amount,
+  });
+
+  final String name;
+  final double fraction;
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.finote.categoryStyle(name);
+    final percent = (fraction * 100).round();
+    return Semantics(
+      label: '$name $percent persen, ${formatIdr(amount)}',
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: AppSpacing.sm,
+            children: [
+              Text(
+                '$name · $percent%',
+                style: AppTypography.bodyMd.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                formatIdr(amount),
+                style: AppTypography.amountSm.copyWith(
+                  color: theme.colorScheme.expenseColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: AppRadius.smAll,
+            child: LinearProgressIndicator(
+              value: fraction.clamp(0, 1),
+              minHeight: 8,
+              color: style.foreground,
+              backgroundColor: style.background,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

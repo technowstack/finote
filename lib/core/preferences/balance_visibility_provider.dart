@@ -20,6 +20,15 @@ class BalanceVisibilityNotifier extends AsyncNotifier<bool> {
   }
 }
 
+/// Masks until the preference is known so a hidden balance never flashes;
+/// a storage error falls back to visible rather than locking the user out.
+bool watchBalanceHidden(WidgetRef ref) =>
+    switch (ref.watch(balanceHiddenProvider)) {
+      AsyncData(:final value) => value,
+      AsyncError() => false,
+      _ => true,
+    };
+
 final balanceHiddenProvider =
     AsyncNotifierProvider<BalanceVisibilityNotifier, bool>(
       BalanceVisibilityNotifier.new,
