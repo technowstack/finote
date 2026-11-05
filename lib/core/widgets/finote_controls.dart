@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
+import '../theme/finote_colors.dart';
 import '../theme/app_typography.dart';
 
 /// components.md `Chip`: 34dp visual, 48dp hit area via transparent padding.
@@ -150,6 +151,36 @@ class FinoteSegmented<T> extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Large icon on a tonal circle, used as the hero of status-style screens
+/// (backup, restore, import, lock). [destructive] uses the error tokens.
+class FinoteIconBadge extends StatelessWidget {
+  const FinoteIconBadge({
+    super.key,
+    required this.icon,
+    this.destructive = false,
+    this.dimension = 96,
+  });
+
+  final IconData icon;
+  final bool destructive;
+  final double dimension;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final f = Theme.of(context).finote;
+    final background = destructive ? f.errorContainer : colors.primaryContainer;
+    final foreground = destructive ? f.error : colors.onPrimaryContainer;
+    return DecoratedBox(
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      child: SizedBox.square(
+        dimension: dimension,
+        child: Icon(icon, size: dimension * 0.46, color: foreground),
       ),
     );
   }

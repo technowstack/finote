@@ -4,6 +4,10 @@ import 'package:file_picker/file_picker.dart';
 import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/widgets/finote_controls.dart';
+import '../../../core/widgets/finote_list_tile.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../../core/services/app_logger.dart';
@@ -86,11 +90,7 @@ class _BackupTabState extends ConsumerState<_BackupTab> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                const FinoteIconBadge(icon: Icons.inventory_2_outlined),
                 const SizedBox(height: 16),
                 Text(
                   'Simpan salinan data Anda',
@@ -123,13 +123,11 @@ class _BackupTabState extends ConsumerState<_BackupTab> {
           ),
         ),
         const SizedBox(height: 16),
-        const ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4),
-          leading: Icon(Icons.folder_outlined),
-          title: Text('Pilih lokasi penyimpanan'),
-          subtitle: Text(
-            'Android akan membuka pemilih file sistem. Aplikasi tidak meminta akses ke seluruh penyimpanan.',
-          ),
+        const FinoteListTile(
+          icon: Icons.folder_outlined,
+          title: 'Pilih lokasi penyimpanan',
+          subtitle: 'Android akan membuka pemilih file sistem. Aplikasi tidak meminta akses ke seluruh penyimpanan.',
+          showChevron: false,
         ),
       ],
     );
@@ -259,11 +257,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildIdleContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.restore,
-          size: 56,
-          color: Theme.of(context).colorScheme.secondary,
-        ),
+        FinoteIconBadge(icon: Icons.restore),
         const SizedBox(height: 16),
         Text(
           'Pulihkan dari backup',
@@ -428,11 +422,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildSuccessContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.check_circle_outline,
-          size: 56,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        FinoteIconBadge(icon: Icons.check_circle_outline),
         const SizedBox(height: 16),
         Text(
           'Restore berhasil',
@@ -452,16 +442,11 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
     final safety = _safetyBackup;
     if (safety == null) return const SizedBox.shrink();
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: const Icon(Icons.shield_outlined),
-      title: const Text('Safety backup tersimpan'),
-      subtitle: Text(
-        safety.fileName,
-        style: Theme.of(context).textTheme.bodySmall,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
+    return FinoteListTile(
+      icon: Icons.shield_outlined,
+      title: 'Safety backup tersimpan',
+      subtitle: safety.fileName,
+      showChevron: false,
     );
   }
 
@@ -472,11 +457,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildErrorContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.error_outline,
-          size: 56,
-          color: Theme.of(context).colorScheme.error,
-        ),
+        const FinoteIconBadge(icon: Icons.error_outline, destructive: true),
         const SizedBox(height: 16),
         Text(
           'Restore gagal',
