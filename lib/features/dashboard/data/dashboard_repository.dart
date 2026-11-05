@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/database/converters.dart';
 import '../../../core/utils/financial_date_range.dart';
+import '../../reports/data/report_repository.dart';
+import '../../reports/domain/report_chart_data.dart';
 import '../../transactions/data/transaction_repository.dart';
 
 class DashboardRepository {
@@ -82,6 +84,21 @@ final dashboardRepositoryProvider = Provider<DashboardRepository>(
 final dashboardSummaryProvider = StreamProvider<DashboardSummary>(
   (ref) => ref.watch(dashboardRepositoryProvider).watchSummary(DateTime.now()),
 );
+
+/// Daily income/expense for the last 7 calendar days, today included.
+///
+/// Reuses the Reports trend query so the Dashboard total always reconciles
+/// with Reports for the same range (active transactions only, no transfers).
+final dashboardWeeklyTrendProvider = StreamProvider<List<FinancialTrendPoint>>((
+  ref,
+) {
+  final now = DateTime.now();
+  final range = ReportRange(
+    start: DateTime(now.year, now.month, now.day - 6),
+    end: DateTime(now.year, now.month, now.day),
+  );
+  return ref.watch(reportRepositoryProvider).watchFinancialTrend(range);
+});
 
 final dashboardRecentTransactionsProvider =
     StreamProvider<List<TransactionListItem>>(
