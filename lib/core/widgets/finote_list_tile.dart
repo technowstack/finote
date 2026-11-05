@@ -94,6 +94,7 @@ class FinoteListTile extends StatelessWidget {
               if (value != null) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(
+                  fit: FlexFit.tight,
                   child: Text(
                     value!,
                     textAlign: TextAlign.end,
