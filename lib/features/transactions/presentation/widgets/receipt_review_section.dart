@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/finote_colors.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../receipt_scanner/domain/receipt_data.dart';
 import 'idr_amount_input.dart';
@@ -97,10 +98,14 @@ class ReceiptReviewSection extends StatelessWidget {
                         onChanged: (_) => onItemChanged(),
                       ),
                     ),
+                    // Removing an item is destructive: error color, not neutral.
                     IconButton(
                       tooltip: 'Hapus item',
                       onPressed: () => onRemoveItem(item),
-                      icon: const Icon(Icons.remove_circle_outline),
+                      icon: Icon(
+                        Icons.remove_circle_outline,
+                        color: Theme.of(context).finote.error,
+                      ),
                     ),
                   ],
                 ),
