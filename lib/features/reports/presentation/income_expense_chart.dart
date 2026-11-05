@@ -72,7 +72,8 @@ class IncomeExpenseChart extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Expanded(
+              SizedBox(
+                height: 220,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final plotWidth = max(1.0, constraints.maxWidth - 58);

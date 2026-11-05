@@ -57,7 +57,8 @@ class AccountBalanceChart extends StatelessWidget {
               _TotalAssets(amount: totalAssets, archivedCount: archivedCount),
               const SizedBox(height: AppSpacing.md),
               for (final point in points)
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   child: _AccountBar(point: point, lowest: lowest, span: span),
                 ),
             ],

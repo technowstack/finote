@@ -2,6 +2,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/category_style.dart';
+import '../../../core/theme/finote_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
@@ -53,7 +55,19 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
     }
 
     final colors = Theme.of(context).colorScheme;
-    final palette = colors.categoryChartColors;
+    final tokens = Theme.of(context).finote;
+    // Order follows the Laporan design: food, shopping, transport, bills, fun.
+    final palette = [
+      for (final c in const [
+        FinoteCategory.food,
+        FinoteCategory.shopping,
+        FinoteCategory.transport,
+        FinoteCategory.bills,
+        FinoteCategory.fun,
+      ])
+        tokens.categories[c]!.foreground,
+    ];
+    final otherColor = tokens.categories[FinoteCategory.other]!.foreground;
     final selected = _touchedIndex != null && _touchedIndex! < points.length
         ? points[_touchedIndex!]
         : null;
@@ -85,7 +99,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                             color:
                                 index == points.length - 1 &&
                                     point.categoryId == -1
-                                ? colors.categoryChartOtherColor
+                                ? otherColor
                                 : palette[index % palette.length],
                             radius: index == _touchedIndex ? 70 : 62,
                             showTitle: false,
@@ -127,7 +141,7 @@ class _ExpenseCategoryChartState extends State<ExpenseCategoryChart> {
                 point: point,
                 total: total,
                 color: index == points.length - 1 && point.categoryId == -1
-                    ? colors.categoryChartOtherColor
+                    ? otherColor
                     : palette[index % palette.length],
                 selected: index == _touchedIndex,
                 onTap: () => setState(() {

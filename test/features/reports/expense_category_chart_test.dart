@@ -62,9 +62,9 @@ void main() {
     final chart = tester.widget<PieChart>(find.byType(PieChart));
     const tokens = FinoteColors.light;
     expect(chart.data.sections.map((section) => section.color), [
-      tokens.primary,
       tokens.categories[FinoteCategory.food]!.foreground,
       tokens.categories[FinoteCategory.shopping]!.foreground,
+      tokens.categories[FinoteCategory.transport]!.foreground,
       tokens.categories[FinoteCategory.bills]!.foreground,
     ]);
     expect(chart.data.sections.map((section) => section.value), [
@@ -142,7 +142,7 @@ void main() {
             .sections
             .first
             .color,
-        AppTheme.dark.colorScheme.primary,
+        FinoteColors.dark.categories[FinoteCategory.food]!.foreground,
       );
       expect(
         tester.widget<PieChart>(find.byType(PieChart)).data.sections,

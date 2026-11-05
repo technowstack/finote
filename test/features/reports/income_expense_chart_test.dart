@@ -44,7 +44,6 @@ void main() {
         body: Center(
           child: SizedBox(
             width: size.width,
-            height: size.height,
             child: IncomeExpenseChart(
               points: points,
               granularity: ChartGranularity.day,

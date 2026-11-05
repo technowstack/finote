@@ -97,7 +97,8 @@ class FinancialTrendChart extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Expanded(
+              SizedBox(
+                height: 220,
                 child: LineChart(
                   LineChartData(
                     minX: 0,
