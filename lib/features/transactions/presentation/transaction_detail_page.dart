@@ -5,9 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/utils/date_formatter.dart';
-import '../../../core/utils/currency_formatter.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/shared_widgets.dart';
+import '../../../core/utils/date_formatter.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
 import '../data/transaction_repository.dart';
@@ -105,6 +105,10 @@ class TransactionDetailPage extends ConsumerWidget {
             child: const Text('Batal'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Hapus'),
           ),
@@ -177,22 +181,17 @@ class _TransactionDetailScaffold extends StatelessWidget {
         children: [
           Text(
             typeLabel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: AppTypography.labelLg.copyWith(
               color: colors.amountColor(isExpense: isExpense),
-              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
+          CurrencyText(
+            amount: transaction.amount,
+            type: transaction.type,
+            maskable: true,
             alignment: Alignment.centerLeft,
-            child: Text(
-              '${isExpense ? '-' : '+'}${formatIdr(transaction.amount)}',
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                color: colors.amountColor(isExpense: isExpense),
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            style: AppTypography.amountHero,
           ),
           const SizedBox(height: AppSpacing.xl),
           Card(

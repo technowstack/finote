@@ -223,8 +223,8 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 prefixStyle: textTheme.headlineMedium?.copyWith(
                   color: colors.onSurfaceVariant,
                 ),
-                border: InputBorder.none,
-                filled: false,
+                // Border and fill come from the theme's input states
+                // (default, focus, error), as in components.md Input/Nominal.
               ),
               validator: (value) => parseIdrAmount(value ?? '') > 0
                   ? null
@@ -331,6 +331,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 ];
                 return DropdownButtonFormField<int>(
                   initialValue: selectedId,
+                  isExpanded: true,
                   decoration: const InputDecoration(
                     hintText: 'Pilih akun',
                     prefixIcon: Icon(Icons.account_balance_wallet_outlined),

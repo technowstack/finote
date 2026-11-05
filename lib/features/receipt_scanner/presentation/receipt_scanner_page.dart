@@ -3,6 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_radius.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -59,7 +62,12 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan struk')),
+      appBar: AppBar(
+        title: Text(
+          'Scan struk',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: SafeArea(
         child: _loading
             ? _buildLoading()
@@ -104,7 +112,7 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               color: colors.errorContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: AppRadius.mdAll,
             ),
             child: Column(
               children: [

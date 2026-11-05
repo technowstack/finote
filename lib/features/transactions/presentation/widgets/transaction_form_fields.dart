@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/database/app_database.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/finote_colors.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/finance_tiles.dart';
+import '../../../../core/widgets/finote_controls.dart';
+
+import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../domain/transaction_type.dart';
 
@@ -18,39 +23,20 @@ class TransactionTypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return SegmentedButton<TransactionType>(
-      segments: [
-        ButtonSegment(
-          value: TransactionType.expense,
-          icon: Icon(
-            Icons.arrow_upward,
-            size: 18,
-            color: value == TransactionType.expense
-                ? colors.expenseColor
-                : null,
-          ),
-          label: const Text('Pengeluaran'),
-        ),
-        ButtonSegment(
-          value: TransactionType.income,
-          icon: Icon(
-            Icons.arrow_downward,
-            size: 18,
-            color: value == TransactionType.income ? colors.incomeColor : null,
-          ),
-          label: const Text('Pemasukan'),
-        ),
+    return FinoteSegmented<TransactionType>(
+      segments: const [
+        FinoteSegment(TransactionType.expense, 'Pengeluaran'),
+        FinoteSegment(TransactionType.income, 'Pemasukan'),
       ],
-      selected: {value},
-      onSelectionChanged: (selection) => onChanged(selection.single),
-      style: SegmentedButton.styleFrom(
-        visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
-      ),
+      selected: value,
+      onChanged: onChanged,
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Category picker
+// ---------------------------------------------------------------------------
 
 class TransactionCategoryGrid extends StatelessWidget {
   const TransactionCategoryGrid({
@@ -74,16 +60,53 @@ class TransactionCategoryGrid extends StatelessWidget {
         child: Text('Belum ada kategori.'),
       );
     }
-
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
         for (final category in categories)
-          ChoiceChip(
-            label: Text(category.name),
+          Semantics(
+            button: true,
             selected: category.id == selectedId,
-            onSelected: (_) => onSelected(category.id),
+            child: InkWell(
+              borderRadius: AppRadius.mdAll,
+              onTap: () => onSelected(category.id),
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: category.id == selectedId
+                      ? colors.primaryContainer
+                      : Colors.transparent,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CategoryIconTile(
+                      style: theme.finote.categoryStyle(category.name),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Flexible(
+                      child: Text(
+                        category.name,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelMd.copyWith(
+                          color: category.id == selectedId
+                              ? colors.onPrimaryContainer
+                              : colors.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
       ],
     );
@@ -108,8 +131,8 @@ class TransactionDateChip extends StatelessWidget {
 
     return Align(
       alignment: Alignment.centerLeft,
-      child: ActionChip(
-        avatar: const Icon(Icons.calendar_today_outlined, size: 16),
+      child: OutlinedButton.icon(
+        icon: const Icon(Icons.calendar_today_outlined, size: 16),
         label: Text(isToday ? 'Hari ini' : formatDate(date)),
         onPressed: onTap,
       ),
