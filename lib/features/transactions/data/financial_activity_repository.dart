@@ -70,7 +70,9 @@ class FinancialActivityRepository {
                  t.amount AS amount,
                  CASE WHEN t.title = '' THEN COALESCE(c.name, 'Transaksi') ELSE t.title END AS title,
                  COALESCE(a.name, 'Akun tidak tersedia') AS subtitle,
-                 CASE WHEN t.title = '' THEN NULL ELSE c.name END AS category_name
+                 CASE WHEN t.title = '' THEN NULL ELSE c.name END AS category_name,
+                 t.note AS note,
+                 COALESCE(a.is_default, 0) AS account_is_default
           FROM transactions t
           LEFT JOIN categories c ON c.id = t.category_id
           LEFT JOIN accounts a ON a.id = t.account_id
@@ -116,7 +118,9 @@ class FinancialActivityRepository {
                  'Transfer ke ' || COALESCE(destination.name, 'Akun tidak tersedia') AS title,
                  COALESCE(source.name, 'Akun tidak tersedia') || ' → ' ||
                    COALESCE(destination.name, 'Akun tidak tersedia') AS subtitle,
-                 NULL AS category_name
+                 NULL AS category_name,
+                 tr.note AS note,
+                 0 AS account_is_default
           FROM transfers tr
           LEFT JOIN accounts source ON source.id = tr.from_account_id
           LEFT JOIN accounts destination ON destination.id = tr.to_account_id
@@ -158,6 +162,9 @@ class FinancialActivityRepository {
                 title: row.read<String>('title'),
                 subtitle: row.read<String>('subtitle'),
                 categoryName: row.readNullable<String>('category_name'),
+                note: row.readNullable<String>('note'),
+                createdAt: row.read<DateTime>('created_at'),
+                isDefaultAccount: row.read<int>('account_is_default') == 1,
               ),
           ],
         );

@@ -7,6 +7,8 @@ import 'package:finote/features/transactions/data/transaction_repository.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:finote/features/transactions/presentation/transactions_page.dart';
 import 'package:finote/core/utils/date_formatter.dart';
+import 'package:finote/core/widgets/finance_tiles.dart';
+import 'package:finote/core/widgets/finote_controls.dart';
 import 'package:finote/features/transfers/data/transfer_repository.dart';
 import 'package:finote/features/transfers/presentation/transfers_page.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +16,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
+  // Amounts stay masked until the display preference is read.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('history shows and filters one neutral transfer row', (
     tester,
@@ -96,25 +101,18 @@ void main() {
     expect(find.text('Gaji'), findsWidgets);
     expect(find.text('Makan'), findsOneWidget);
     expect(find.text('Transfer ke BCA Tabungan'), findsOneWidget);
-    expect(find.text('BCA Utama → BCA Tabungan'), findsOneWidget);
+    // Entered today, so the route is followed by the entry time.
+    expect(find.textContaining('BCA Utama → BCA Tabungan'), findsOneWidget);
     expect(find.text('Rp2.000.000'), findsOneWidget);
-    expect(find.text(formatDate(date)), findsOneWidget);
-    final mealCard = find.ancestor(
-      of: find.widgetWithText(ListTile, 'Makan'),
-      matching: find.byType(Card),
+    expect(
+      find.text(formatActivityDateLabel(date, DateTime.now())),
+      findsOneWidget,
     );
-    final salaryCard = find.ancestor(
-      of: find.widgetWithText(ListTile, 'Gaji').last,
-      matching: find.byType(Card),
-    );
-    final mealRect = tester.getRect(mealCard);
-    final salaryRect = tester.getRect(salaryCard);
-    final gap = mealRect.top < salaryRect.top
-        ? salaryRect.top - mealRect.bottom
-        : mealRect.top - salaryRect.bottom;
-    expect(gap, greaterThanOrEqualTo(8));
+    // One date group: a single header over three rows.
+    expect(find.byType(DateHeader), findsOneWidget);
+    expect(find.byType(Dismissible), findsNWidgets(3));
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Transfer'));
+    await tester.tap(find.widgetWithText(FinoteChip, 'Transfer'));
     await tester.pumpAndSettle();
     expect(find.text('Transfer ke BCA Tabungan'), findsOneWidget);
     expect(find.text('Gaji'), findsNothing);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/transactions/domain/transaction_type.dart';
+import '../preferences/balance_visibility_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -74,26 +76,41 @@ class _ItemRow extends StatelessWidget {
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
           ),
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    titleText,
-                    if (subtitle != null)
-                      Text(subtitle!, style: theme.textTheme.bodySmall),
-                    if (largeText) trailingColumn,
-                  ],
+          child: LayoutBuilder(
+            builder: (context, constraints) => Row(
+              children: [
+                leading,
+                const SizedBox(width: AppSpacing.md),
+                // Expanded + Flexible would split the space 50/50 and
+                // truncate titles; cap the amount column instead so the
+                // title takes whatever it leaves.
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      titleText,
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      if (largeText) trailingColumn,
+                    ],
+                  ),
                 ),
-              ),
-              if (!largeText) ...[
-                const SizedBox(width: AppSpacing.sm),
-                Flexible(child: trailingColumn),
+                if (!largeText) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: constraints.maxWidth * 0.45,
+                    ),
+                    child: trailingColumn,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -110,7 +127,9 @@ class TransactionTile extends StatelessWidget {
     required this.categoryName,
     required this.amount,
     required this.type,
+    this.subtitle,
     this.caption,
+    this.maskable = false,
     this.onTap,
   });
 
@@ -120,8 +139,15 @@ class TransactionTile extends StatelessWidget {
   final int amount;
   final TransactionType type;
 
-  /// Small muted text under the amount (e.g. time).
+  /// Line under the title. When null it falls back to the category name for
+  /// titled rows (the original Beranda behavior).
+  final String? subtitle;
+
+  /// Small muted text under the amount (e.g. the category).
   final String? caption;
+
+  /// Mask the amount while the user hides balances.
+  final bool maskable;
   final VoidCallback? onTap;
 
   @override
@@ -133,10 +159,16 @@ class TransactionTile extends StatelessWidget {
         style: theme.finote.categoryStyle(categoryName),
       ),
       title: title.isEmpty ? categoryName : title,
-      subtitle: title.isEmpty ? null : categoryName,
+      subtitle: subtitle ?? (title.isEmpty ? null : categoryName),
       trailing: [
-        CurrencyText(amount: amount, type: type),
-        if (caption != null) Text(caption!, style: theme.textTheme.bodySmall),
+        CurrencyText(amount: amount, type: type, maskable: maskable),
+        if (caption != null)
+          Text(
+            caption!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall,
+          ),
       ],
     );
   }
@@ -150,6 +182,7 @@ class TransferTile extends StatelessWidget {
     required this.title,
     required this.route,
     required this.amount,
+    this.maskable = false,
     this.onTap,
   });
 
@@ -158,6 +191,9 @@ class TransferTile extends StatelessWidget {
   /// e.g. "BCA → Dompet tunai · 09.15".
   final String route;
   final int amount;
+
+  /// Mask the amount while the user hides balances.
+  final bool maskable;
   final VoidCallback? onTap;
 
   @override
@@ -171,6 +207,7 @@ class TransferTile extends StatelessWidget {
       trailing: [
         CurrencyText(
           amount: amount,
+          maskable: maskable,
           style: AppTypography.amountItem.copyWith(
             color: theme.colorScheme.onSurface,
           ),
@@ -303,16 +340,31 @@ class AssetTile extends StatelessWidget {
 /// components.md `Header Tanggal`: date label with an optional signed daily
 /// total (green when positive, red when negative).
 class DateHeader extends StatelessWidget {
-  const DateHeader({super.key, required this.label, this.total});
+  const DateHeader({
+    super.key,
+    required this.label,
+    this.total,
+    this.maskable = false,
+  });
 
   final String label;
   final int? total;
 
+  /// Mask the total while the user hides balances.
+  final bool maskable;
+
   @override
   Widget build(BuildContext context) {
+    if (!maskable) return _content(context, hidden: false);
+    return Consumer(
+      builder: (context, ref, _) =>
+          _content(context, hidden: watchBalanceHidden(ref)),
+    );
+  }
+
+  Widget _content(BuildContext context, {required bool hidden}) {
     final colors = Theme.of(context).colorScheme;
     final total = this.total;
-    final style = AppTypography.amountXs;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xs,
@@ -333,11 +385,13 @@ class DateHeader extends StatelessWidget {
           ),
           if (total != null)
             Text(
-              total == 0
+              hidden
+                  ? maskedAmount
+                  : total == 0
                   ? formatIdr(0)
                   : '${total < 0 ? '-' : '+'}${formatIdr(total.abs())}',
-              style: style.copyWith(
-                color: total == 0
+              style: AppTypography.amountXs.copyWith(
+                color: hidden || total == 0
                     ? colors.onSurfaceVariant
                     : colors.amountColor(isExpense: total < 0),
               ),

@@ -95,9 +95,9 @@ void main() {
       await tester.tap(find.text('Transaksi'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Tambah transaksi'), findsOneWidget);
-      expect(find.text('Filter'), findsOneWidget);
+      expect(find.byTooltip('Filter transaksi'), findsOneWidget);
 
-      await tester.tap(find.text('Filter'));
+      await tester.tap(find.byTooltip('Filter transaksi'));
       await tester.pumpAndSettle();
       expect(find.text('Filter transaksi'), findsOneWidget);
       expect(find.byTooltip('Tambah transaksi'), findsNothing);
