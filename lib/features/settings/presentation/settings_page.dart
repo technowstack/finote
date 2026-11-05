@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/category_style.dart';
+import '../../../core/theme/finote_colors.dart';
+import '../../../core/widgets/app_snackbars.dart';
+import '../../../core/widgets/finote_list_tile.dart';
+import '../../app_lock/data/biometric_lock.dart';
 import '../../../core/theme/theme_mode_provider.dart';
 import '../../market/data/portfolio_market_quotes_provider.dart';
 import '../data/reset_data_service.dart';
@@ -15,66 +20,75 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final palette = Theme.of(context).finote.categories;
+    final lock = ref.watch(appLockControllerProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengaturan')),
+      appBar: AppBar(
+        title: Text(
+          'Pengaturan',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.screenH,
-          vertical: AppSpacing.sm,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.screenH,
+          0,
+          AppSpacing.screenH,
+          AppSpacing.xxl,
         ),
         children: [
-          _SettingsGroup(
+          FinoteListSection(
             title: 'Data',
             children: [
-              _SettingsTile(
+              FinoteListTile(
                 icon: Icons.account_balance_wallet_outlined,
                 title: 'Akun & Dompet',
-                subtitle: 'Kelola akun dan saldo awal',
                 onTap: () => context.push('/accounts'),
               ),
-              _SettingsTile(
-                icon: Icons.category_outlined,
+              FinoteListTile(
+                icon: Icons.sell_outlined,
                 title: 'Kategori',
-                subtitle: 'Kelola kategori pemasukan dan pengeluaran',
                 onTap: () => context.push('/categories'),
               ),
-              _SettingsTile(
-                icon: Icons.backup_outlined,
-                title: 'Backup dan restore',
-                subtitle: 'Cadangkan atau pulihkan data',
+              FinoteListTile(
+                icon: Icons.cloud_upload_outlined,
+                title: 'Backup & Restore',
                 onTap: () => context.push('/backup'),
               ),
-              _SettingsTile(
-                icon: Icons.move_to_inbox_outlined,
-                title: 'Import aplikasi lama',
-                subtitle: 'Migrasi data dari versi sebelumnya',
+              FinoteListTile(
+                icon: Icons.download_outlined,
+                title: 'Import data lama',
                 onTap: () => context.push('/legacy-import'),
               ),
-              const _ResetDataTile(),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _SettingsGroup(title: 'Tampilan', children: [_ThemeTile()]),
-          const SizedBox(height: AppSpacing.lg),
-          _SettingsGroup(
+          const SizedBox(height: AppSpacing.md),
+          // Destructive action sits on its own surface, away from routine
+          // navigation, and always points the user to Backup first.
+          const FinoteListSection(children: [_ResetDataTile()]),
+          FinoteListSection(title: 'Tampilan', children: [_ThemeTile()]),
+          FinoteListSection(
             title: 'Keamanan',
             children: [
-              _SettingsTile(
+              FinoteListTile(
                 icon: Icons.lock_outline,
-                title: 'Kunci aplikasi',
-                subtitle: 'PIN dan autentikasi biometrik',
+                title: 'PIN & Biometrik',
+                value: lock.initialized
+                    ? (lock.protectionEnabled ? 'Aktif' : 'Nonaktif')
+                    : null,
+                tone: palette[FinoteCategory.bills],
                 onTap: () => context.push('/security'),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _SettingsGroup(
+          FinoteListSection(
             title: 'Tentang',
             children: [
-              _SettingsTile(
+              FinoteListTile(
                 icon: Icons.info_outline,
-                title: 'Finote',
-                subtitle: 'Versi 1.3.0 ',
+                title: 'Tentang Finote',
+                value: 'v1.3.0',
+                tone: palette[FinoteCategory.fun],
                 onTap: () async {
                   final Uri url = Uri.parse(
                     'https://github.com/technowstack/finote/releases',
@@ -108,17 +122,18 @@ class _ResetDataTileState extends ConsumerState<_ResetDataTile> {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.delete_forever_outlined),
-      title: const Text('Reset data'),
-      subtitle: const Text('Hapus seluruh data keuangan dan portofolio'),
+    return FinoteListTile(
+      icon: Icons.delete_outline,
+      title: 'Reset data',
+      subtitle: 'Hapus seluruh data keuangan dan portofolio. Backup dulu.',
+      destructive: true,
       trailing: _resetting
           ? const SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.chevron_right, size: 20),
+          : null,
       onTap: _resetting ? null : _confirmReset,
     );
   }
@@ -159,6 +174,10 @@ class _ResetDataTileState extends ConsumerState<_ResetDataTile> {
             child: const Text('Batal'),
           ),
           FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Reset data'),
           ),
@@ -172,14 +191,10 @@ class _ResetDataTileState extends ConsumerState<_ResetDataTile> {
       ref.invalidate(portfolioMarketQuotesProvider);
       await ref.read(resetDataServiceProvider).reset();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Data berhasil direset.')));
+      showAppSnackBar(context, 'Data berhasil direset.');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal mereset data. Silakan coba lagi.')),
-      );
+      showAppErrorSnackBar(context, 'Gagal mereset data. Silakan coba lagi.');
     } finally {
       if (mounted) setState(() => _resetting = false);
     }
@@ -196,11 +211,11 @@ class _ThemeTile extends ConsumerWidget {
     final currentMode =
         ref.watch(themeModeProvider).valueOrNull ?? ThemeMode.system;
 
-    return ListTile(
-      leading: const Icon(Icons.palette_outlined),
-      title: const Text('Tema'),
-      subtitle: Text(_themeLabel(currentMode)),
-      trailing: const Icon(Icons.chevron_right, size: 20),
+    return FinoteListTile(
+      icon: Icons.dark_mode_outlined,
+      title: 'Tema',
+      value: _themeLabel(currentMode),
+      tone: Theme.of(context).finote.categories[FinoteCategory.shopping],
       onTap: () => _showThemeDialog(context, ref, currentMode),
     );
   }
@@ -278,66 +293,4 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
     ThemeMode.light => 'Terang',
     ThemeMode.dark => 'Gelap',
   };
-}
-
-// ---------------------------------------------------------------------------
-// Reusable settings widgets
-// ---------------------------------------------------------------------------
-
-class _SettingsGroup extends StatelessWidget {
-  const _SettingsGroup({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(
-            left: AppSpacing.xs,
-            bottom: AppSpacing.sm,
-          ),
-          child: Text(title, style: Theme.of(context).textTheme.titleSmall),
-        ),
-        Card(
-          child: Column(
-            children: [
-              for (var i = 0; i < children.length; i++) ...[
-                children[i],
-                if (i < children.length - 1) const Divider(indent: 56),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SettingsTile extends StatelessWidget {
-  const _SettingsTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right, size: 20),
-      onTap: onTap,
-    );
-  }
 }
