@@ -521,7 +521,7 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                                       .withValues(alpha: 0.12)
                                 : Theme.of(context).colorScheme.expenseColor
                                       .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: AppRadius.lgAll,
                           ),
                           child: Text(
                             category.type == TransactionType.income

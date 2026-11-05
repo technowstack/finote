@@ -3,6 +3,10 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/app_radius.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
@@ -383,7 +387,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: cs.errorContainer,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.smAll,
           ),
           child: Row(
             children: [
@@ -392,7 +396,9 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
               Expanded(
                 child: Text(
                   'Semua data saat ini akan diganti dengan data dari backup ini.',
-                  style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                  style: AppTypography.bodySm.copyWith(
+                    color: cs.onErrorContainer,
+                  ),
                 ),
               ),
             ],
@@ -674,7 +680,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
                 const SizedBox(height: 12),
                 Text(
                   'Safety backup tersimpan di:\n${safety.fileName}',
-                  style: const TextStyle(fontSize: 12),
+                  style: AppTypography.captionRegular,
                 ),
               ],
             ),

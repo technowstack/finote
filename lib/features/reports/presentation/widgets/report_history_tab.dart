@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../../../core/theme/app_radius.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -66,68 +69,74 @@ class _MonthlyRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.md,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_formatMonth(month.month), style: textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Income and expense wrap onto a second line instead of
-                      // overflowing on narrow screens or large text.
-                      Expanded(
-                        child: Wrap(
-                          spacing: AppSpacing.lg,
-                          runSpacing: AppSpacing.xs,
-                          children: [
-                            CurrencyText(
-                              amount: month.income,
-                              type: TransactionType.income,
-                              maskable: true,
-                              alignment: Alignment.centerLeft,
-                              style: AppTypography.amountSm,
-                            ),
-                            CurrencyText(
-                              amount: month.expense,
-                              type: TransactionType.expense,
-                              maskable: true,
-                              alignment: Alignment.centerLeft,
-                              style: AppTypography.amountSm,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 140),
-                        child: CurrencyText(
-                          amount: month.netBalance,
-                          maskable: true,
-                          style: AppTypography.amountMd.copyWith(
-                            color: isPositive
-                                ? colors.positiveBalance
-                                : colors.negativeBalance,
+      borderRadius: AppRadius.mdAll,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _formatMonth(month.month),
+                      style: textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Income and expense wrap onto a second line instead of
+                        // overflowing on narrow screens or large text.
+                        Expanded(
+                          child: Wrap(
+                            spacing: AppSpacing.lg,
+                            runSpacing: AppSpacing.xs,
+                            children: [
+                              CurrencyText(
+                                amount: month.income,
+                                type: TransactionType.income,
+                                maskable: true,
+                                alignment: Alignment.centerLeft,
+                                style: AppTypography.amountSm,
+                              ),
+                              CurrencyText(
+                                amount: month.expense,
+                                type: TransactionType.expense,
+                                maskable: true,
+                                alignment: Alignment.centerLeft,
+                                style: AppTypography.amountSm,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: AppSpacing.sm),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 140),
+                          child: CurrencyText(
+                            amount: month.netBalance,
+                            maskable: true,
+                            style: AppTypography.amountMd.copyWith(
+                              color: isPositive
+                                  ? colors.positiveBalance
+                                  : colors.negativeBalance,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-          ],
+              const SizedBox(width: AppSpacing.sm),
+              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );

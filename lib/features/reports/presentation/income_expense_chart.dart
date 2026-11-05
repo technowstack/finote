@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_radius.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -254,7 +256,9 @@ BarChartRodData _rod(int amount, Color color, double width) {
     toY: amount.toDouble(),
     color: color,
     width: width,
-    borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+    borderRadius: const BorderRadius.vertical(
+      top: Radius.circular(AppRadius.sm),
+    ),
   );
 }
 

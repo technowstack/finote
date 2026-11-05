@@ -48,9 +48,9 @@ class _AppLockState extends ConsumerState<AppLock> with WidgetsBindingObserver {
     });
     final lock = ref.watch(appLockControllerProvider);
     if (!lock.initialized) {
-      return const ColoredBox(
-        color: Colors.black,
-        child: Center(child: CircularProgressIndicator()),
+      return ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
     if (lock.error != null && !lock.protectionEnabled) {
