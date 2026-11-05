@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +20,11 @@ import '../../receipt_scanner/domain/receipt_category_suggestion.dart';
 import '../data/transaction_repository.dart';
 import '../domain/transaction_source.dart';
 import '../domain/transaction_type.dart';
+export 'widgets/transaction_draft.dart';
+import 'widgets/idr_amount_input.dart';
+import 'widgets/transaction_draft.dart';
+import 'widgets/transaction_form_fields.dart';
+import 'widgets/receipt_review_section.dart';
 
 class TransactionFormPage extends ConsumerWidget {
   const TransactionFormPage({super.key, this.transactionId, this.draft});
@@ -60,10 +64,6 @@ class TransactionFormPage extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Form
-// ---------------------------------------------------------------------------
-
 class _TransactionForm extends ConsumerStatefulWidget {
   const _TransactionForm({this.transaction, this.draft});
 
@@ -87,7 +87,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
   bool _categoryManuallySelected = false;
   bool _showCategoryError = false;
   bool _saving = false;
-  late final List<_DraftReceiptItem> _receiptItems;
+  late final List<DraftReceiptItem> _receiptItems;
   ReceiptSaveMode _saveMode = ReceiptSaveMode.single;
 
   @override
@@ -101,10 +101,10 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _accountId = transaction?.accountId;
     _amountController = TextEditingController(
       text: transaction != null
-          ? _formatAmountInput(transaction.amount)
+          ? formatIdrAmountInput(transaction.amount)
           : draft?.amount == null
           ? ''
-          : _formatAmountInput(draft!.amount!),
+          : formatIdrAmountInput(draft!.amount!),
     );
     _titleController = TextEditingController(
       text: transaction?.title ?? draft?.title ?? '',
@@ -112,7 +112,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     _noteController = TextEditingController(text: transaction?.note ?? '');
     _receiptItems = [
       for (final item in draft?.receiptReview?.items ?? const <ReceiptItem>[])
-        _DraftReceiptItem(item),
+        DraftReceiptItem(item),
     ];
     if (draft?.receiptReview != null) {
       _loadReceiptSuggestions(draft!.receiptReview!);
@@ -189,7 +189,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             if (isReceiptDraft)
               const Text('Pengeluaran dari struk')
             else
-              _TypeToggle(
+              TransactionTypeToggle(
                 value: _type,
                 onChanged: (type) {
                   setState(() {
@@ -207,7 +207,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               autofocus: !isEditing,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.done,
-              inputFormatters: const [_IdrInputFormatter()],
+              inputFormatters: const [IdrInputFormatter()],
               style: textTheme.displayMedium?.copyWith(
                 color: colors.amountColor(
                   isExpense: _type == TransactionType.expense,
@@ -226,7 +226,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 border: InputBorder.none,
                 filled: false,
               ),
-              validator: (value) => _parseAmount(value ?? '') > 0
+              validator: (value) => parseIdrAmount(value ?? '') > 0
                   ? null
                   : 'Masukkan nominal yang valid.',
               onFieldSubmitted: (_) =>
@@ -236,7 +236,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: AppSpacing.md),
 
             if (review != null) ...[
-              _ReceiptReviewSection(
+              ReceiptReviewSection(
                 review: review,
                 items: _receiptItems,
                 saveMode: _saveMode,
@@ -280,7 +280,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
                 message: 'Kategori belum dapat dimuat.',
                 onRetry: () => ref.invalidate(categoriesByTypeProvider(_type)),
               ),
-              data: (items) => _CategoryGrid(
+              data: (items) => TransactionCategoryGrid(
                 categories: items,
                 selectedId: _categoryId,
                 isExpense: _type == TransactionType.expense,
@@ -353,7 +353,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: AppSpacing.lg),
 
             // ----- Date chip -----
-            _DateChip(date: _date, onTap: _selectDate),
+            TransactionDateChip(date: _date, onTap: _selectDate),
             if (isReceiptDraft && widget.draft!.date == null)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
@@ -367,7 +367,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             const SizedBox(height: AppSpacing.md),
 
             // ----- Optional title & note -----
-            _OptionalFieldsSection(
+            OptionalFieldsSection(
               titleController: _titleController,
               noteController: _noteController,
               initiallyExpanded:
@@ -396,16 +396,16 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
     final item = await showModalBottomSheet<ReceiptItem>(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _AddReceiptItemSheet(),
+      builder: (context) => const AddReceiptItemSheet(),
     );
     if (item != null && mounted) {
-      setState(() => _receiptItems.add(_DraftReceiptItem(item)));
+      setState(() => _receiptItems.add(DraftReceiptItem(item)));
     }
   }
 
   Future<void> _loadReceiptSuggestions(ReceiptReviewData review) async {
     final service = ref.read(receiptCategorySuggestionServiceProvider);
-    final items = List<_DraftReceiptItem>.of(_receiptItems);
+    final items = List<DraftReceiptItem>.of(_receiptItems);
     final receiptSuggestion = await service.suggestReceiptCategory(
       merchant: review.merchant,
       rawText: review.rawOcrText,
@@ -489,7 +489,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
               date: _date,
               total: isItemized
                   ? review.total ?? 0
-                  : _parseAmount(_amountController.text),
+                  : parseIdrAmount(_amountController.text),
               receiptNumber: review.receiptNumber,
               items: [
                 for (final item in _receiptItems)
@@ -536,7 +536,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             type: _type,
             accountId: accountId,
             categoryId: categoryId!,
-            amount: _parseAmount(_amountController.text),
+            amount: parseIdrAmount(_amountController.text),
             title: _titleController.text,
             note: note.isEmpty ? null : note,
             transactionDate: _date,
@@ -550,7 +550,7 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
             type: _type,
             categoryId: categoryId!,
             accountId: Value(accountId),
-            amount: _parseAmount(_amountController.text),
+            amount: parseIdrAmount(_amountController.text),
             title: _titleController.text.trim(),
             note: Value(note.isEmpty ? null : note),
             transactionDate: _date,
@@ -646,550 +646,6 @@ class _TransactionFormState extends ConsumerState<_TransactionForm> {
 }
 
 enum _DuplicateAction { view, cancel, save }
-
-class TransactionFormDraft {
-  const TransactionFormDraft({
-    required this.type,
-    required this.source,
-    this.amount,
-    this.title = '',
-    this.date,
-    this.receiptReview,
-  });
-
-  final TransactionType type;
-  final TransactionSource source;
-  final int? amount;
-  final String title;
-  final DateTime? date;
-  final ReceiptReviewData? receiptReview;
-}
-
-enum ReceiptSaveMode { single, itemized }
-
-class _DraftReceiptItem {
-  _DraftReceiptItem(this.item)
-    : nameController = TextEditingController(text: item.name),
-      amountController = TextEditingController(
-        text: item.lineTotal == null ? '' : _formatAmountInput(item.lineTotal!),
-      );
-
-  final ReceiptItem item;
-  final TextEditingController nameController;
-  final TextEditingController amountController;
-  int? categoryId;
-  CategorySuggestion? categorySuggestion;
-  bool categoryManuallySelected = false;
-
-  String get name => nameController.text;
-  int get amount => _parseAmount(amountController.text);
-
-  void dispose() {
-    nameController.dispose();
-    amountController.dispose();
-  }
-}
-
-class _ReceiptReviewSection extends StatelessWidget {
-  const _ReceiptReviewSection({
-    required this.review,
-    required this.items,
-    required this.saveMode,
-    required this.onSaveModeChanged,
-    required this.onRemoveItem,
-    required this.onAddItem,
-    required this.onItemChanged,
-    required this.onItemCategoryChanged,
-    required this.categories,
-    required this.defaultCategoryId,
-  });
-
-  final ReceiptReviewData review;
-  final List<_DraftReceiptItem> items;
-  final ReceiptSaveMode saveMode;
-  final ValueChanged<ReceiptSaveMode> onSaveModeChanged;
-  final ValueChanged<_DraftReceiptItem> onRemoveItem;
-  final VoidCallback onAddItem;
-  final VoidCallback onItemChanged;
-  final void Function(_DraftReceiptItem item, int? categoryId)
-  onItemCategoryChanged;
-  final List<CategoryRecord> categories;
-  final int? defaultCategoryId;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final itemTotal = items.fold(0, (sum, item) => sum + item.amount);
-    final difference = review.total == null ? null : itemTotal - review.total!;
-    final warnings = [
-      ...review.warnings,
-      if (items.any((item) => item.amount <= 0))
-        'Periksa nominal setiap item sebelum memilih mode per item.',
-    ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Detail struk', style: textTheme.titleSmall),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          'Merchant: ${review.merchant?.isNotEmpty == true ? review.merchant : 'Belum terbaca'}',
-        ),
-        if (review.receiptNumber != null)
-          Text('Nomor struk: ${review.receiptNumber}'),
-        const SizedBox(height: AppSpacing.md),
-        Text('Item', style: textTheme.titleSmall),
-        if (items.isEmpty)
-          const Text(
-            'Belum ada item yang berhasil dibaca. Kamu dapat menambahkan item secara manual.',
-          ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: onAddItem,
-            icon: const Icon(Icons.add),
-            label: const Text('Tambah item'),
-          ),
-        ),
-        for (final item in items)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: item.nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama item',
-                        ),
-                        onChanged: (_) => onItemChanged(),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    SizedBox(
-                      width: 125,
-                      child: TextFormField(
-                        controller: item.amountController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: const [_IdrInputFormatter()],
-                        decoration: const InputDecoration(labelText: 'Nominal'),
-                        onChanged: (_) => onItemChanged(),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Hapus item',
-                      onPressed: () => onRemoveItem(item),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                DropdownButtonFormField<int?>(
-                  initialValue: item.categoryId,
-                  decoration: const InputDecoration(labelText: 'Kategori'),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('Default struk'),
-                    ),
-                    for (final category in categories)
-                      DropdownMenuItem(
-                        value: category.id,
-                        child: Text(category.name),
-                      ),
-                  ],
-                  onChanged: (id) => onItemCategoryChanged(item, id),
-                ),
-              ],
-            ),
-          ),
-        Text('Jumlah item: ${formatIdr(itemTotal)}'),
-        if (review.subtotal != null)
-          Text('Subtotal terdeteksi: ${formatIdr(review.subtotal!)}'),
-        if (review.total != null) ...[
-          Text('Total struk: ${formatIdr(review.total!)}'),
-          Text(
-            difference == 0
-                ? 'Status: Cocok'
-                : '${review.reconciliationMessage}\nSelisih: ${formatIdr(difference!.abs())}',
-          ),
-        ],
-        if (review.tax != null)
-          Text('Pajak terdeteksi: ${formatIdr(review.tax!)}'),
-        if (review.discount != null)
-          Text('Diskon terdeteksi: ${formatIdr(review.discount!)}'),
-        if (warnings.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Text(
-              warnings.join('\n'),
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        if (saveMode == ReceiptSaveMode.itemized &&
-            items.any(
-              (item) =>
-                  item.name.trim().isEmpty ||
-                  item.amount <= 0 ||
-                  (item.categoryId ?? defaultCategoryId) == null,
-            ))
-          Text(
-            'Periksa nama, nominal, dan kategori setiap item sebelum menyimpan.',
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        const SizedBox(height: AppSpacing.md),
-        Text('Cara menyimpan', style: textTheme.titleSmall),
-        SegmentedButton<ReceiptSaveMode>(
-          segments: const [
-            ButtonSegment(
-              value: ReceiptSaveMode.single,
-              label: Text('Satu transaksi'),
-            ),
-            ButtonSegment(
-              value: ReceiptSaveMode.itemized,
-              label: Text('Pisahkan per item'),
-            ),
-          ],
-          selected: {saveMode},
-          onSelectionChanged: (selection) =>
-              onSaveModeChanged(selection.single),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          title: const Text('Teks hasil OCR'),
-          children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SelectableText(review.rawOcrText),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _AddReceiptItemSheet extends StatefulWidget {
-  const _AddReceiptItemSheet();
-
-  @override
-  State<_AddReceiptItemSheet> createState() => _AddReceiptItemSheetState();
-}
-
-class _AddReceiptItemSheetState extends State<_AddReceiptItemSheet> {
-  final _name = TextEditingController();
-  final _quantity = TextEditingController();
-  final _unitPrice = TextEditingController();
-  final _total = TextEditingController();
-  bool _totalOverridden = false;
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _quantity.dispose();
-    _unitPrice.dispose();
-    _total.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg + bottom,
-      ),
-      child: ListView(
-        shrinkWrap: true,
-        children: [
-          Text('Tambah item', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _name,
-            decoration: const InputDecoration(labelText: 'Nama item'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _quantity,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Jumlah / Quantity (opsional)',
-            ),
-            onChanged: (_) => _calculateTotal(),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _unitPrice,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              labelText: 'Harga satuan (opsional)',
-            ),
-            onChanged: (_) => _calculateTotal(),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            controller: _total,
-            keyboardType: TextInputType.number,
-            inputFormatters: const [_IdrInputFormatter()],
-            decoration: const InputDecoration(labelText: 'Total item *'),
-            onChanged: (_) => _totalOverridden = true,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(onPressed: _submit, child: const Text('Tambahkan')),
-        ],
-      ),
-    );
-  }
-
-  void _calculateTotal() {
-    if (_totalOverridden) return;
-    final quantity = int.tryParse(_quantity.text.trim());
-    final unitPrice = _parseAmount(_unitPrice.text);
-    if (quantity != null && quantity > 0 && unitPrice > 0) {
-      final text = _formatAmountInput(quantity * unitPrice);
-      _total.value = TextEditingValue(
-        text: text,
-        selection: TextSelection.collapsed(offset: text.length),
-      );
-    }
-  }
-
-  void _submit() {
-    final name = _name.text.trim();
-    final total = _parseAmount(_total.text);
-    if (name.isEmpty || total <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nama dan total item wajib diisi.')),
-      );
-      return;
-    }
-    final unitPrice = _parseAmount(_unitPrice.text);
-    Navigator.pop(
-      context,
-      ReceiptItem(
-        name: name,
-        quantity: int.tryParse(_quantity.text.trim()),
-        unitPrice: unitPrice > 0 ? unitPrice : null,
-        lineTotal: total,
-        source: ReceiptItemSource.manual,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Type toggle — compact pill
-// ---------------------------------------------------------------------------
-
-class _TypeToggle extends StatelessWidget {
-  const _TypeToggle({required this.value, required this.onChanged});
-
-  final TransactionType value;
-  final ValueChanged<TransactionType> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return SegmentedButton<TransactionType>(
-      segments: [
-        ButtonSegment(
-          value: TransactionType.expense,
-          icon: Icon(
-            Icons.arrow_upward,
-            size: 18,
-            color: value == TransactionType.expense
-                ? colors.expenseColor
-                : null,
-          ),
-          label: const Text('Pengeluaran'),
-        ),
-        ButtonSegment(
-          value: TransactionType.income,
-          icon: Icon(
-            Icons.arrow_downward,
-            size: 18,
-            color: value == TransactionType.income ? colors.incomeColor : null,
-          ),
-          label: const Text('Pemasukan'),
-        ),
-      ],
-      selected: {value},
-      onSelectionChanged: (selection) => onChanged(selection.single),
-      style: SegmentedButton.styleFrom(
-        visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Category chip grid
-// ---------------------------------------------------------------------------
-
-class _CategoryGrid extends StatelessWidget {
-  const _CategoryGrid({
-    required this.categories,
-    required this.selectedId,
-    required this.isExpense,
-    required this.onSelected,
-  });
-
-  final List<CategoryRecord> categories;
-  final int? selectedId;
-  final bool isExpense;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (categories.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        child: Text('Belum ada kategori.'),
-      );
-    }
-
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: [
-        for (final category in categories)
-          ChoiceChip(
-            label: Text(category.name),
-            selected: category.id == selectedId,
-            onSelected: (_) => onSelected(category.id),
-          ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Date chip
-// ---------------------------------------------------------------------------
-
-class _DateChip extends StatelessWidget {
-  const _DateChip({required this.date, required this.onTap});
-
-  final DateTime date;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final isToday =
-        date.year == now.year && date.month == now.month && date.day == now.day;
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ActionChip(
-        avatar: const Icon(Icons.calendar_today_outlined, size: 16),
-        label: Text(isToday ? 'Hari ini' : formatDate(date)),
-        onPressed: onTap,
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Optional fields
-// ---------------------------------------------------------------------------
-
-class _OptionalFieldsSection extends StatelessWidget {
-  const _OptionalFieldsSection({
-    required this.titleController,
-    required this.noteController,
-    required this.initiallyExpanded,
-  });
-
-  final TextEditingController titleController;
-  final TextEditingController noteController;
-  final bool initiallyExpanded;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExpansionTile(
-      tilePadding: EdgeInsets.zero,
-      initiallyExpanded: initiallyExpanded,
-      shape: const Border(),
-      collapsedShape: const Border(),
-      title: Text(
-        'Judul dan catatan',
-        style: Theme.of(context).textTheme.titleSmall,
-      ),
-      subtitle: const Text('Opsional'),
-      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      children: [
-        const SizedBox(height: AppSpacing.md),
-        TextFormField(
-          controller: titleController,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Judul'),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        TextFormField(
-          controller: noteController,
-          textCapitalization: TextCapitalization.sentences,
-          minLines: 2,
-          maxLines: 4,
-          decoration: const InputDecoration(labelText: 'Catatan'),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Input formatter & helpers
-// ---------------------------------------------------------------------------
-
-class _IdrInputFormatter extends TextInputFormatter {
-  const _IdrInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    if (digits.isEmpty) return const TextEditingValue();
-    final amount = int.tryParse(digits);
-    if (amount == null) return oldValue;
-    final text = _formatAmountInput(amount);
-    final cursor = newValue.selection.baseOffset.clamp(0, newValue.text.length);
-    final digitsBeforeCursor = newValue.text
-        .substring(0, cursor)
-        .replaceAll(RegExp(r'\D'), '')
-        .length;
-    var formattedCursor = 0;
-    var seenDigits = 0;
-    while (formattedCursor < text.length && seenDigits < digitsBeforeCursor) {
-      if (RegExp(r'\d').hasMatch(text[formattedCursor])) seenDigits++;
-      formattedCursor++;
-    }
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: formattedCursor),
-    );
-  }
-}
-
-int _parseAmount(String value) =>
-    int.tryParse(value.replaceAll(RegExp(r'\D'), '')) ?? 0;
-
-String _formatAmountInput(int amount) =>
-    formatIdr(amount).replaceFirst('Rp', '');
-
-// ---------------------------------------------------------------------------
-// Loading / error scaffolds
-// ---------------------------------------------------------------------------
 
 class _LoadingPage extends StatelessWidget {
   const _LoadingPage();
