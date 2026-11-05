@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_radius.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -72,7 +74,8 @@ class IncomeExpenseChart extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Expanded(
+              SizedBox(
+                height: 220,
                 child: LayoutBuilder(
                   builder: (context, constraints) {
                     final plotWidth = max(1.0, constraints.maxWidth - 58);
@@ -253,7 +256,9 @@ BarChartRodData _rod(int amount, Color color, double width) {
     toY: amount.toDouble(),
     color: color,
     width: width,
-    borderRadius: const BorderRadius.vertical(top: Radius.circular(3)),
+    borderRadius: const BorderRadius.vertical(
+      top: Radius.circular(AppRadius.sm),
+    ),
   );
 }
 

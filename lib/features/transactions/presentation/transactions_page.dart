@@ -5,12 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/main_scaffold.dart';
-import '../../../core/theme/app_colors.dart';
-import '../../../core/theme/app_spacing.dart';
 import '../../../core/database/app_database.dart';
-import '../../../core/utils/currency_formatter.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/finote_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../core/utils/financial_date_range.dart';
+import '../../../core/widgets/app_snackbars.dart';
+import '../../../core/widgets/finance_tiles.dart';
+import '../../../core/widgets/finote_controls.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../accounts/data/account_repository.dart';
 import '../../categories/data/category_repository.dart';
@@ -65,207 +70,203 @@ class _TransactionsPageState extends ConsumerState<TransactionsPage> {
       categoryId: categoryId,
     );
     final activities = ref.watch(financialActivityProvider(filter));
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final filterCount = _filterCount(accountId, categoryId);
+    final totals = activities.whenOrNull(data: _totalsOf);
 
     return Scaffold(
       appBar: AppBar(
-        title: _searchOpen ? null : const Text('Transaksi'),
-        flexibleSpace: _searchOpen
-            ? SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                  ),
-                  child: SearchBar(
-                    controller: _searchController,
-                    hintText: 'Cari transaksi, transfer, atau akun',
-                    autoFocus: true,
-                    leading: const Icon(Icons.search, size: 20),
-                    trailing: [
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 20),
-                        onPressed: _closeSearch,
-                        tooltip: 'Tutup pencarian',
-                      ),
-                    ],
-                    onChanged: _scheduleSearch,
-                    textInputAction: TextInputAction.search,
-                    onSubmitted: _applySearch,
-                    onTapOutside: (_) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                  ),
+        title: _searchOpen
+            ? SizedBox(
+                width: double.infinity,
+                child: SearchBar(
+                  controller: _searchController,
+                  hintText: 'Cari transaksi, transfer, atau akun',
+                  autoFocus: true,
+                  leading: const Icon(Icons.search),
+                  trailing: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: _closeSearch,
+                      tooltip: 'Tutup pencarian',
+                    ),
+                  ],
+                  onChanged: _scheduleSearch,
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: _applySearch,
+                  onTapOutside: (_) =>
+                      FocusManager.instance.primaryFocus?.unfocus(),
                 ),
               )
-            : null,
+            : Text('Transaksi', style: theme.textTheme.headlineLarge),
         actions: [
           if (!_searchOpen)
             IconButton(
-              icon: const Icon(Icons.search),
               tooltip: 'Cari transaksi',
               onPressed: () => setState(() => _searchOpen = true),
+              style: IconButton.styleFrom(
+                backgroundColor: colors.surface,
+                fixedSize: const Size(40, 40),
+              ),
+              icon: const Icon(Icons.search),
             ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ----- Single filter row -----
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenH,
-              AppSpacing.xs,
-              AppSpacing.screenH,
-              AppSpacing.xs,
-            ),
-            child: Row(
-              spacing: AppSpacing.sm,
-              children: [
-                // Type filters
-                _filterChip(
-                  'Semua',
-                  selected: _type == null,
-                  onSelected: () => setState(() => _type = null),
-                ),
-                _filterChip(
-                  'Pemasukan',
-                  selected: _type == FinancialActivityType.income,
-                  onSelected: () =>
-                      setState(() => _type = FinancialActivityType.income),
-                ),
-                _filterChip(
-                  'Pengeluaran',
-                  selected: _type == FinancialActivityType.expense,
-                  onSelected: () =>
-                      setState(() => _type = FinancialActivityType.expense),
-                ),
-                _filterChip(
-                  'Transfer',
-                  selected: _type == FinancialActivityType.transfer,
-                  onSelected: () =>
-                      setState(() => _type = FinancialActivityType.transfer),
-                ),
-                FilledButton.tonalIcon(
-                  onPressed: () => _openAdvancedFilters(accounts, categories),
-                  icon: const Icon(Icons.filter_alt_outlined, size: 18),
-                  label: Text(
-                    'Filter${_filterCount(accountId, categoryId) > 0 ? ' • ${_filterCount(accountId, categoryId)}' : ''}',
-                  ),
-                ),
-              ],
+          Badge(
+            isLabelVisible: filterCount > 0,
+            label: Text('$filterCount'),
+            child: IconButton(
+              tooltip: 'Filter transaksi',
+              onPressed: () => _openAdvancedFilters(accounts, categories),
+              style: IconButton.styleFrom(
+                backgroundColor: colors.primaryContainer,
+                foregroundColor: colors.onPrimaryContainer,
+                fixedSize: const Size(40, 40),
+              ),
+              icon: const Icon(Icons.filter_list_rounded),
             ),
           ),
-
+          const SizedBox(width: AppSpacing.sm),
+        ],
+      ),
+      body: CustomScrollView(
+        slivers: [
+          if (totals != null)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  AppSpacing.sm,
+                  AppSpacing.screenH,
+                  AppSpacing.xs,
+                ),
+                child: _CashflowSummaryCard(
+                  title:
+                      'Arus kas · ${_periodLabel(_dateFilter, _customRange)}',
+                  income: totals.income,
+                  expense: totals.expense,
+                ),
+              ),
+            ),
+          // Type filters stay pinned so they are reachable at any scroll.
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _FilterBarDelegate(
+              color: theme.scaffoldBackgroundColor,
+              child: _typeChips(),
+            ),
+          ),
           if (_dateFilter != _DateFilter.all ||
               accountId != null ||
               categoryId != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenH,
-                0,
-                AppSpacing.screenH,
-                AppSpacing.sm,
-              ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.xs,
-                  children: [
-                    if (_dateFilter != _DateFilter.all)
-                      InputChip(
-                        label: Text(_periodLabel(_dateFilter, _customRange)),
-                        onDeleted: () => setState(() {
-                          _dateFilter = _DateFilter.all;
-                          _customRange = null;
-                        }),
-                      ),
-                    if (accountId != null)
-                      InputChip(
-                        label: Text(
-                          accounts
-                              .firstWhere((item) => item.id == accountId)
-                              .name,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenH,
+                  0,
+                  AppSpacing.screenH,
+                  AppSpacing.sm,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      if (_dateFilter != _DateFilter.all)
+                        InputChip(
+                          label: Text(_periodLabel(_dateFilter, _customRange)),
+                          onDeleted: () => setState(() {
+                            _dateFilter = _DateFilter.all;
+                            _customRange = null;
+                          }),
                         ),
-                        onDeleted: () => setState(() => _accountId = null),
-                      ),
-                    if (categoryId != null)
-                      InputChip(
-                        label: Text(
-                          categories
-                              .firstWhere((item) => item.id == categoryId)
-                              .name,
+                      if (accountId != null)
+                        InputChip(
+                          label: Text(
+                            accounts
+                                .firstWhere((item) => item.id == accountId)
+                                .name,
+                          ),
+                          onDeleted: () => setState(() => _accountId = null),
                         ),
-                        onDeleted: () => setState(() => _categoryId = null),
-                      ),
-                  ],
+                      if (categoryId != null)
+                        InputChip(
+                          label: Text(
+                            categories
+                                .firstWhere((item) => item.id == categoryId)
+                                .name,
+                          ),
+                          onDeleted: () => setState(() => _categoryId = null),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
-
-          // ----- Period summary strip -----
-          activities.whenOrNull(
-                data: (items) {
-                  if (items.isEmpty) return null;
-                  var income = 0;
-                  var expense = 0;
-                  var hasTransactions = false;
-                  for (final item in items) {
-                    if (item.type == FinancialActivityType.income) {
-                      hasTransactions = true;
-                      income += item.amount;
-                    } else if (item.type == FinancialActivityType.expense) {
-                      hasTransactions = true;
-                      expense += item.amount;
-                    }
-                  }
-                  if (!hasTransactions) return null;
-                  return _PeriodSummaryStrip(income: income, expense: expense);
-                },
-              ) ??
-              const SizedBox.shrink(),
-
-          // ----- Transaction list -----
-          Expanded(
-            child: activities.when(
-              loading: () => const AppLoadingState(),
-              error: (error, stackTrace) => AppErrorState(
-                message: 'Aktivitas belum dapat dimuat.',
-                onRetry: () =>
-                    ref.invalidate(financialActivityProvider(filter)),
+          ...activities.when(
+            loading: () => const [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: AppLoadingState(),
               ),
-              data: (items) => items.isEmpty
-                  ? _FilteredEmptyState(
-                      filtered: _hasAnyFilter(
-                        _type,
-                        _dateFilter,
-                        accountId,
-                        categoryId,
-                        _search,
+            ],
+            error: (error, stackTrace) => [
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: AppErrorState(
+                  message: 'Aktivitas belum dapat dimuat.',
+                  onRetry: () =>
+                      ref.invalidate(financialActivityProvider(filter)),
+                ),
+              ),
+            ],
+            data: (items) => items.isEmpty
+                ? [
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _FilteredEmptyState(
+                        filtered: _hasAnyFilter(
+                          _type,
+                          _dateFilter,
+                          accountId,
+                          categoryId,
+                          _search,
+                        ),
+                        onReset: _resetFilters,
                       ),
-                      onReset: _resetFilters,
-                    )
-                  : _GroupedActivityList(items: items),
-            ),
+                    ),
+                  ]
+                : [_GroupedActivitySliver(items: items)],
           ),
         ],
       ),
     );
   }
 
-  Widget _filterChip(
-    String label, {
-    required bool selected,
-    required VoidCallback onSelected,
-  }) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) {
-        FocusManager.instance.primaryFocus?.unfocus();
-        onSelected();
-      },
+  Widget _typeChips() {
+    final options = <(String, FinancialActivityType?)>[
+      ('Semua', null),
+      ('Pemasukan', FinancialActivityType.income),
+      ('Pengeluaran', FinancialActivityType.expense),
+      ('Transfer', FinancialActivityType.transfer),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenH),
+      child: Row(
+        spacing: AppSpacing.sm,
+        children: [
+          for (final (label, type) in options)
+            FinoteChip(
+              label: label,
+              selected: _type == type,
+              onSelected: () {
+                FocusManager.instance.primaryFocus?.unfocus();
+                setState(() => _type = type);
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -352,22 +353,18 @@ class _FilteredEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!filtered) {
+      // The shell FAB is the add action on this tab.
       return const AppEmptyState(
         icon: Icons.receipt_long_outlined,
         message: 'Belum ada transaksi.',
+        subtitle: 'Catat pemasukan atau pengeluaran pertama Anda.',
       );
     }
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.filter_alt_off_outlined, size: 44),
-          const SizedBox(height: AppSpacing.md),
-          const Text('Tidak ada transaksi yang cocok dengan filter.'),
-          const SizedBox(height: AppSpacing.sm),
-          FilledButton(onPressed: onReset, child: const Text('Reset Filter')),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.filter_alt_off_outlined,
+      message: 'Tidak ada transaksi yang cocok dengan filter.',
+      actionLabel: 'Reset Filter',
+      onAction: onReset,
     );
   }
 }
@@ -496,13 +493,13 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                     child: Row(
                       children: [
                         Icon(
-                          category.type == TransactionType.income
-                              ? Icons.south_west_rounded
-                              : Icons.north_east_rounded,
+                          Theme.of(context).finote
+                              .categoryStyle(category.name)
+                              .icon,
                           size: 18,
-                          color: category.type == TransactionType.income
-                              ? Theme.of(context).colorScheme.incomeColor
-                              : Theme.of(context).colorScheme.expenseColor,
+                          color: Theme.of(context).finote
+                              .categoryStyle(category.name)
+                              .foreground,
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -524,7 +521,7 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                                       .withValues(alpha: 0.12)
                                 : Theme.of(context).colorScheme.expenseColor
                                       .withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: AppRadius.lgAll,
                           ),
                           child: Text(
                             category.type == TransactionType.income
@@ -600,11 +597,98 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Period summary strip
+// Cashflow summary (income/expense of what the list currently shows)
 // ---------------------------------------------------------------------------
 
-class _PeriodSummaryStrip extends StatelessWidget {
-  const _PeriodSummaryStrip({required this.income, required this.expense});
+({int income, int expense})? _totalsOf(List<FinancialActivity> items) {
+  var income = 0;
+  var expense = 0;
+  var hasTransactions = false;
+  for (final item in items) {
+    if (item.type == FinancialActivityType.income) {
+      hasTransactions = true;
+      income += item.amount;
+    } else if (item.type == FinancialActivityType.expense) {
+      hasTransactions = true;
+      expense += item.amount;
+    }
+  }
+  return hasTransactions ? (income: income, expense: expense) : null;
+}
+
+class _CashflowSummaryCard extends StatelessWidget {
+  const _CashflowSummaryCard({
+    required this.title,
+    required this.income,
+    required this.expense,
+  });
+
+  final String title;
+  final int income;
+  final int expense;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final net = income - expense;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: theme.textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.xs),
+            CurrencyText(
+              amount: net.abs(),
+              type: net == 0
+                  ? null
+                  : net > 0
+                  ? TransactionType.income
+                  : TransactionType.expense,
+              maskable: true,
+              alignment: Alignment.centerLeft,
+              style: AppTypography.amountXl.copyWith(color: colors.onSurface),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ExcludeSemantics(
+              child: _SplitBar(income: income, expense: expense),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _LegendAmount(
+                    dot: colors.primary,
+                    label: 'Pemasukan',
+                    amount: income,
+                    color: colors.incomeColor,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _LegendAmount(
+                    dot: colors.primaryContainer,
+                    label: 'Pengeluaran',
+                    amount: expense,
+                    color: colors.expenseColor,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Proportion of income vs expense; carries no amounts, so it is safe to
+/// show while balances are hidden.
+class _SplitBar extends StatelessWidget {
+  const _SplitBar({required this.income, required this.expense});
 
   final int income;
   final int expense;
@@ -612,157 +696,265 @@ class _PeriodSummaryStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final total = income + expense;
+    if (total <= 0) return const SizedBox.shrink();
+    int flex(int part) => (part / total * 1000).round().clamp(1, 1000);
+    Widget bar(Color color) => DecoratedBox(
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.smAll),
+      child: const SizedBox(height: 8),
+    );
+    return Row(
+      children: [
+        if (income > 0)
+          Expanded(flex: flex(income), child: bar(colors.primary)),
+        if (income > 0 && expense > 0) const SizedBox(width: AppSpacing.xs),
+        if (expense > 0)
+          Expanded(flex: flex(expense), child: bar(colors.primaryContainer)),
+      ],
+    );
+  }
+}
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenH,
-        vertical: AppSpacing.sm,
-      ),
-      color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
-      child: Row(
-        children: [
-          Icon(Icons.south_west, size: 14, color: colors.incomeColor),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            formatIdr(income),
-            style: textTheme.labelMedium?.copyWith(color: colors.incomeColor),
-          ),
-          const SizedBox(width: AppSpacing.lg),
-          Icon(Icons.north_east, size: 14, color: colors.expenseColor),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            formatIdr(expense),
-            style: textTheme.labelMedium?.copyWith(color: colors.expenseColor),
-          ),
-        ],
-      ),
+class _LegendAmount extends StatelessWidget {
+  const _LegendAmount({
+    required this.dot,
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  final Color dot;
+  final String label;
+  final int amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+              child: const SizedBox(width: 8, height: 8),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Flexible(
+              child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        CurrencyText(
+          amount: amount,
+          maskable: true,
+          alignment: Alignment.centerLeft,
+          style: AppTypography.amountMd.copyWith(color: color),
+        ),
+      ],
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Grouped transaction list — flat rows, no individual cards
+// Pinned type filter bar
 // ---------------------------------------------------------------------------
 
-class _GroupedActivityList extends StatelessWidget {
-  const _GroupedActivityList({required this.items});
+class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
+  const _FilterBarDelegate({required this.child, required this.color});
+
+  final Widget child;
+  final Color color;
+
+  static const _height = 56.0;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => ColoredBox(
+    color: color,
+    child: SizedBox(height: _height, child: child),
+  );
+
+  @override
+  bool shouldRebuild(covariant _FilterBarDelegate oldDelegate) => true;
+}
+
+// ---------------------------------------------------------------------------
+// Date-grouped list. Flattened (header + rows) so rows still build lazily
+// for large histories; each group reads as one rounded surface.
+// ---------------------------------------------------------------------------
+
+class _Entry {
+  const _Entry.header(this.date, this.total)
+    : item = null,
+      first = false,
+      last = false;
+  const _Entry.row(
+    FinancialActivity this.item, {
+    this.first = false,
+    this.last = false,
+  }) : date = null,
+       total = null;
+
+  final DateTime? date;
+  final int? total;
+  final FinancialActivity? item;
+  final bool first;
+  final bool last;
+}
+
+/// Groups consecutive same-date activities (the list is already ordered by
+/// date). The daily total counts income/expense only; transfers are neither,
+/// so a transfers-only day shows no total.
+List<_Entry> _entriesOf(List<FinancialActivity> items) {
+  final entries = <_Entry>[];
+  var start = 0;
+  while (start < items.length) {
+    var end = start;
+    var total = 0;
+    var hasTransactions = false;
+    while (end < items.length &&
+        _isSameDate(items[end].date, items[start].date)) {
+      final type = items[end].type;
+      if (type != FinancialActivityType.transfer) {
+        hasTransactions = true;
+        total += type == FinancialActivityType.income
+            ? items[end].amount
+            : -items[end].amount;
+      }
+      end++;
+    }
+    entries.add(
+      _Entry.header(items[start].date, hasTransactions ? total : null),
+    );
+    for (var i = start; i < end; i++) {
+      entries.add(_Entry.row(items[i], first: i == start, last: i == end - 1));
+    }
+    start = end;
+  }
+  return entries;
+}
+
+class _GroupedActivitySliver extends StatelessWidget {
+  const _GroupedActivitySliver({required this.items});
 
   final List<FinancialActivity> items;
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
+    final entries = _entriesOf(items);
+    final now = DateTime.now();
+    return SliverPadding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.screenH,
-        AppSpacing.xs,
+        0,
         AppSpacing.screenH,
-        96,
+        kFabClearance,
       ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final showDate =
-            index == 0 || !_isSameDate(item.date, items[index - 1].date);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (showDate)
-              Padding(
-                padding: EdgeInsets.only(
-                  top: index == 0 ? AppSpacing.xs : AppSpacing.lg,
-                  bottom: AppSpacing.sm,
-                ),
-                child: Text(
-                  formatDate(item.date),
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+      sliver: SliverList.builder(
+        itemCount: entries.length,
+        itemBuilder: (context, index) {
+          final entry = entries[index];
+          final item = entry.item;
+          if (item == null) {
+            return Padding(
+              padding: EdgeInsets.only(top: index == 0 ? 0 : AppSpacing.md),
+              child: DateHeader(
+                label: formatActivityDateLabel(entry.date!, now),
+                total: entry.total,
+                maskable: true,
               ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _ActivityRow(item: item),
-            ),
-          ],
-        );
-      },
+            );
+          }
+          return _ActivityRow(item: item, first: entry.first, last: entry.last);
+        },
+      ),
     );
   }
 }
 
 class _ActivityRow extends ConsumerWidget {
-  const _ActivityRow({required this.item});
+  const _ActivityRow({
+    required this.item,
+    required this.first,
+    required this.last,
+  });
 
   final FinancialActivity item;
+  final bool first;
+  final bool last;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isTransfer = item.type == FinancialActivityType.transfer;
-    final transactionType = switch (item.type) {
-      FinancialActivityType.income => TransactionType.income,
-      FinancialActivityType.expense => TransactionType.expense,
-      FinancialActivityType.transfer => null,
-    };
     final colors = Theme.of(context).colorScheme;
+    final clock = _entryClock(item);
 
-    return Dismissible(
-      key: ValueKey(item.identity),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.xl),
-        decoration: BoxDecoration(
-          color: colors.errorContainer,
-          borderRadius: BorderRadius.circular(12),
+    final Widget tile;
+    if (isTransfer) {
+      tile = TransferTile(
+        title: item.title,
+        route: [item.subtitle, ?clock].join(' · '),
+        amount: item.amount,
+        maskable: true,
+        onTap: () => context.push('/transfers?edit=${item.entityId}'),
+      );
+    } else {
+      // categoryName is null when the transaction has no title of its own
+      // (the title then already is the category name).
+      final untitled = item.categoryName == null;
+      final category = item.categoryName ?? item.title;
+      tile = TransactionTile(
+        title: untitled ? '' : item.title,
+        categoryName: category,
+        subtitle: _transactionSubtitle(item, clock) ?? '',
+        caption: untitled ? null : category,
+        amount: item.amount,
+        type: item.type == FinancialActivityType.expense
+            ? TransactionType.expense
+            : TransactionType.income,
+        maskable: true,
+        onTap: () => context.push('/transactions/${item.entityId}/edit'),
+      );
+    }
+
+    const radius = Radius.circular(AppRadius.lg);
+    return Material(
+      color: colors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: first ? radius : Radius.zero,
+          bottom: last ? radius : Radius.zero,
         ),
-        child: Icon(Icons.delete_outline, color: colors.onErrorContainer),
       ),
-      confirmDismiss: (_) => _confirmDelete(context),
-      onDismissed: (_) => _performDelete(context, ref),
-      child: Card(
-        child: ListTile(
-          onTap: () => isTransfer
-              ? context.push('/transfers?edit=${item.entityId}')
-              : context.push('/transactions/${item.entityId}/edit'),
-          leading: CircleAvatar(
-            backgroundColor: isTransfer
-                ? colors.tertiaryContainer
-                : colors
-                      .amountColor(
-                        isExpense: item.type == FinancialActivityType.expense,
-                      )
-                      .withValues(alpha: 0.15),
-            child: Icon(
-              switch (item.type) {
-                FinancialActivityType.income => Icons.south_west,
-                FinancialActivityType.expense => Icons.north_east,
-                FinancialActivityType.transfer => Icons.swap_horiz,
-              },
-              color: isTransfer
-                  ? colors.onTertiaryContainer
-                  : colors.amountColor(
-                      isExpense: item.type == FinancialActivityType.expense,
-                    ),
-            ),
+      child: Dismissible(
+        key: ValueKey(item.identity),
+        direction: DismissDirection.endToStart,
+        background: Container(
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: AppSpacing.xl),
+          color: colors.errorContainer,
+          child: Icon(Icons.delete_outline, color: colors.onErrorContainer),
+        ),
+        confirmDismiss: (_) => _confirmDelete(context),
+        onDismissed: (_) => _performDelete(context, ref),
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: first ? AppSpacing.xs : 0,
+            bottom: last ? AppSpacing.xs : 0,
           ),
-          title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isTransfer && item.categoryName != null)
-                Text(item.categoryName!),
-              Text(item.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-            ],
-          ),
-          isThreeLine: !isTransfer && item.categoryName != null,
-          trailing: CurrencyText(
-            amount: item.amount,
-            type: transactionType,
-            style: isTransfer
-                ? Theme.of(context).textTheme.titleMedium
-                      ?.copyWith(color: colors.tertiary)
-                : null,
-          ),
+          child: tile,
         ),
       ),
     );
@@ -798,12 +990,31 @@ class _ActivityRow extends ConsumerWidget {
       if (!deleted) throw StateError('Activity is no longer active');
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Aktivitas gagal dihapus. Coba lagi.')),
-        );
+        showAppErrorSnackBar(context, 'Aktivitas gagal dihapus. Coba lagi.');
       }
     }
   }
+}
+
+/// Entry time, shown only when the record was entered on its own calendar
+/// date. The stored time is when the row was created, not a transaction
+/// time, so for backdated or imported rows it would be misleading.
+String? _entryClock(FinancialActivity item) {
+  final created = item.createdAt?.toLocal();
+  if (created == null || !_isSameDate(created, item.date)) return null;
+  return formatClock(created);
+}
+
+/// "note · time · account", with the account only when it is not the default
+/// one (an unavailable account is still shown so it never hides silently).
+String? _transactionSubtitle(FinancialActivity item, String? clock) {
+  final note = item.note?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+  final parts = [
+    if (note.isNotEmpty) note,
+    ?clock,
+    if (!item.isDefaultAccount) item.subtitle,
+  ];
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 // ---------------------------------------------------------------------------

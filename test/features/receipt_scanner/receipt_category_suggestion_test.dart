@@ -46,6 +46,20 @@ void main() {
     },
   );
 
+  test('household keywords suggest Belanja on a fresh install', () async {
+    for (final name in ['Sabun Lifebuoy', 'Deterjen Rinso', 'Tissue Paseo']) {
+      final suggestion = await service.suggestItemCategory(
+        ReceiptItem(name: name),
+      );
+      expect(suggestion, isNotNull, reason: name);
+      expect(
+        (await categories.findActiveById(suggestion!.categoryId))!.name,
+        'Belanja',
+        reason: name,
+      );
+    }
+  });
+
   test('history outranks keyword rules', () async {
     final transport =
         (await categories.watchByType(TransactionType.expense).first)
@@ -106,8 +120,12 @@ void main() {
         ),
         isNull,
       );
-      final home = (await categories.watchByType(TransactionType.expense).first)
-          .singleWhere((category) => category.name == 'Rumah');
+      // 'Rumah' is no longer a default (73bb1a1); learning must work for a
+      // user-created category too.
+      final home = await categories.create(
+        name: 'Rumah',
+        type: TransactionType.expense,
+      );
       await service.learnItemCategory(
         itemName: 'Sabun Lifebuoy',
         categoryId: home.id,

@@ -20,12 +20,8 @@ void main() {
         ),
       );
       final icon = tester.widget<Icon>(find.byIcon(Icons.edit_note_outlined));
-      expect(
-        icon.color,
-        theme.brightness == Brightness.light
-            ? theme.colorScheme.onSurfaceVariant
-            : theme.colorScheme.outline,
-      );
+      // components.md `Status`: icon on a primaryContainer circle.
+      expect(icon.color, theme.colorScheme.onPrimaryContainer);
     });
   }
 }

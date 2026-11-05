@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,6 +13,7 @@ import '../data/report_repository.dart';
 import '../domain/report_chart_data.dart';
 import 'account_balance_chart.dart';
 import 'expense_category_chart.dart';
+import '../../../core/widgets/finote_controls.dart';
 import 'financial_trend_chart.dart';
 import 'income_expense_chart.dart';
 import 'report_chart_section.dart';
@@ -85,10 +84,6 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
     final trend = ref.watch(financialTrendProvider(filter));
     final expenseCategories = ref.watch(expenseCategoryChartProvider(filter));
     final accountBalances = ref.watch(accountBalanceChartProvider);
-    final categoryCount = expenseCategories.valueOrNull?.length ?? 0;
-    final accountCount =
-        accountBalances.valueOrNull?.where((point) => point.isActive).length ??
-        0;
     final granularity = chartGranularityFor(_range);
     return Scaffold(
       appBar: AppBar(title: const Text('Analisis Grafik')),
@@ -111,10 +106,10 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                 _periodChip('Minggu ini', ReportPeriod.week),
                 _periodChip('Bulan ini', ReportPeriod.month),
                 _periodChip('Tahun ini', ReportPeriod.year),
-                ChoiceChip(
-                  label: const Text('Rentang'),
+                FinoteChip(
+                  label: 'Rentang',
                   selected: _period == ReportPeriod.custom,
-                  onSelected: (_) => _selectCustomRange(),
+                  onSelected: _selectCustomRange,
                 ),
               ],
             ),
@@ -211,7 +206,6 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   data: trend,
                   isEmpty: (points) => !hasIncomeExpenseData(points),
                   onRetry: () => ref.invalidate(financialTrendProvider(filter)),
-                  height: 340,
                   emptyMessage: filter.hasTransactionFilter
                       ? 'Tidak ada data untuk filter ini.'
                       : 'Belum ada transaksi pada periode ini.',
@@ -235,7 +229,6 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   isEmpty: (points) => points.isEmpty,
                   onRetry: () =>
                       ref.invalidate(expenseCategoryChartProvider(filter)),
-                  height: _categoryChartHeight(categoryCount),
                   emptyMessage: filter.hasTransactionFilter
                       ? 'Tidak ada data untuk filter ini.'
                       : 'Belum ada pengeluaran pada periode ini.',
@@ -255,7 +248,6 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   data: trend,
                   isEmpty: (points) => !hasFinancialTrendData(points),
                   onRetry: () => ref.invalidate(financialTrendProvider(filter)),
-                  height: 360,
                   emptyMessage: filter.hasTransactionFilter
                       ? 'Tidak ada data untuk filter ini.'
                       : 'Belum ada data tren pada periode ini.',
@@ -278,7 +270,6 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
                   data: accountBalances,
                   isEmpty: (points) => !points.any((point) => point.isActive),
                   onRetry: () => ref.invalidate(accountBalanceChartProvider),
-                  height: _accountChartHeight(accountCount),
                   emptyMessage: 'Belum ada akun untuk ditampilkan.',
                   builder: (context, points) => AccountBalanceChart(
                     points: visibleAccountBalances(points),
@@ -300,10 +291,10 @@ class _AnalyticsChartPageState extends ConsumerState<AnalyticsChartPage> {
   }
 
   Widget _periodChip(String label, ReportPeriod period) {
-    return ChoiceChip(
-      label: Text(label),
+    return FinoteChip(
+      label: label,
       selected: _period == period,
-      onSelected: (_) => setState(() {
+      onSelected: () => setState(() {
         _period = period;
         _customRange = null;
         _range = resolveReportRange(period);
@@ -475,16 +466,6 @@ String _accountLabel(AccountRecord account) =>
 
 String _categoryLabel(CategoryRecord category) =>
     '${category.name} - ${category.type == TransactionType.income ? 'Pemasukan' : 'Pengeluaran'}';
-
-double _categoryChartHeight(int categoryCount) {
-  final visibleCount = categoryCount > maxVisibleExpenseCategories
-      ? maxVisibleExpenseCategories + 1
-      : categoryCount;
-  return max(330, visibleCount * 56 + 250).toDouble();
-}
-
-double _accountChartHeight(int accountCount) =>
-    max(270, accountCount * 80 + 130).toDouble();
 
 String _rangeLabel(ReportRange range, ReportPeriod period) {
   if (period == ReportPeriod.all) return 'Semua transaksi';

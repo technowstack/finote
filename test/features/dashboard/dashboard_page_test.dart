@@ -2,6 +2,7 @@ import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/core/finance/net_worth.dart';
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/core/theme/finote_colors.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
 import 'package:finote/features/dashboard/presentation/dashboard_page.dart';
 import 'package:finote/features/transactions/data/transaction_repository.dart';
@@ -9,8 +10,11 @@ import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('dashboard shows zero summary and transaction empty state', (
     tester,
   ) async {
@@ -26,20 +30,108 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Kekayaan Bersih'), findsOneWidget);
-    final hero = tester.widget<Container>(
+    final hero = tester.widget<DecoratedBox>(
       find
           .ancestor(
             of: find.text('Kekayaan Bersih'),
-            matching: find.byType(Container),
+            matching: find.byType(DecoratedBox),
           )
           .first,
     );
-    expect((hero.decoration! as BoxDecoration).color, const Color(0xFF1D2A50));
+    final decoration = hero.decoration as BoxDecoration;
+    expect(decoration.gradient, FinoteColors.light.heroGradient);
+    expect(decoration.boxShadow, FinoteColors.light.heroShadow);
     expect(find.text('Kas & Dompet'), findsAtLeastNWidgets(1));
+    expect(find.text('Pengeluaran 7 hari'), findsOneWidget);
+    expect(find.text('Belum ada pengeluaran 7 hari terakhir.'), findsOneWidget);
     expect(find.text('Pemasukan bulan ini'), findsOneWidget);
     expect(find.text('Pengeluaran bulan ini'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Belum ada transaksi.'), 120);
     expect(find.text('Belum ada transaksi.'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('hide balance masks hero amounts and persists', (tester) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    Widget app() => ProviderScope(
+      overrides: [
+        databaseProvider.overrideWithValue(database),
+        netWorthProvider.overrideWithValue(
+          const AsyncData(
+            NetWorthSnapshot(
+              cashValue: 12000000,
+              portfolioKnownValue: 3000000,
+              totalKnownValue: 15000000,
+              completeness: NetWorthCompleteness.complete,
+              unvaluedAssetCount: 0,
+              integrityIssueCount: 0,
+            ),
+          ),
+        ),
+      ],
+      child: MaterialApp(theme: AppTheme.light, home: const DashboardPage()),
+    );
+
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('Rp15.000.000'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Sembunyikan saldo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rp15.000.000'), findsNothing);
+    expect(find.text('Rp12.000.000'), findsNothing);
+    expect(find.text('Saldo disembunyikan'), findsOneWidget);
+
+    // A fresh app session keeps the choice.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    expect(find.text('Rp15.000.000'), findsNothing);
+    expect(find.byTooltip('Tampilkan saldo'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 1));
+  });
+
+  testWidgets('7-day card totals only the last 7 days of expenses', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final food = await CategoryRepository(database)
+        .create(name: 'Makanan & Minuman', type: TransactionType.expense);
+    final transactions = TransactionRepository(database);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    for (final (daysAgo, amount) in [(0, 50000), (6, 25000), (7, 999000)]) {
+      await transactions.create(
+        type: TransactionType.expense,
+        categoryId: food.id,
+        amount: amount,
+        transactionDate: DateTime(today.year, today.month, today.day - daysAgo),
+      );
+    }
+    final deleted = await transactions.create(
+      type: TransactionType.expense,
+      categoryId: food.id,
+      amount: 400000,
+      transactionDate: today,
+    );
+    await transactions.softDelete(deleted.id);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(database)],
+        child: MaterialApp(theme: AppTheme.light, home: const DashboardPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Day 7-ago and the soft-deleted row are excluded.
+    expect(find.text('Rp75.000'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));
@@ -197,21 +289,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Rp9.000.000.000.000.000'), findsWidgets);
-    final hero = tester.widget<Container>(
+    final hero = tester.widget<DecoratedBox>(
       find
           .ancestor(
-            of: find.text('Rp9.000.000.000.000.000').first,
-            matching: find.byType(Container),
+            of: find.text('Kekayaan Bersih'),
+            matching: find.byType(DecoratedBox),
           )
           .first,
     );
     expect(
-      (hero.decoration! as BoxDecoration).gradient,
-      const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF302544), Color(0xFF60445A), Color(0xFF75536F)],
-      ),
+      (hero.decoration as BoxDecoration).gradient,
+      FinoteColors.dark.heroGradient,
     );
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());

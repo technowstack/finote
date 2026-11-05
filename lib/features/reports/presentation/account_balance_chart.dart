@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_radius.dart';
+
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/utils/currency_formatter.dart';
@@ -57,7 +59,8 @@ class AccountBalanceChart extends StatelessWidget {
               _TotalAssets(amount: totalAssets, archivedCount: archivedCount),
               const SizedBox(height: AppSpacing.md),
               for (final point in points)
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   child: _AccountBar(point: point, lowest: lowest, span: span),
                 ),
             ],
@@ -185,7 +188,7 @@ class _AccountBar extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: AppRadius.smAll,
                   child: SizedBox(
                     height: 10,
                     child: LayoutBuilder(

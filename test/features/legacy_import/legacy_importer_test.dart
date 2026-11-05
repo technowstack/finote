@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../../helpers/fake_app_lock.dart';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
@@ -508,7 +510,11 @@ void main() {
       final defaultBefore = await database
           .select(database.accounts)
           .getSingle();
-      final service = BackupService(database, databasePath: databasePath);
+      final service = BackupService(
+        database,
+        fakeAppLockController(),
+        databasePath: databasePath,
+      );
       final backup = await service.buildBackup(
         appVersion: '1.1.0',
         temporaryDirectory: tempDir,

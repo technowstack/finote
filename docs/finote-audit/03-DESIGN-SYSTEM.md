@@ -1,88 +1,149 @@
-# Audit Design System
+# Design System (redesign v1.3)
 
-## Source of truth
+Dokumen ini menggantikan versi sebelumnya, yang menjelaskan palet hijau mint
+dan sudah usang. Sumber kebenaran adalah kode tema dan `docs/design/`.
 
-Primary design files: `lib/core/theme/app_theme.dart`, `app_colors.dart`, `app_spacing.dart`, `theme_mode_provider.dart`, `shared_widgets.dart`. Screens still contain many direct `EdgeInsets`, `SizedBox`, `Radius`, and button overrides.
+## Sumber kebenaran
 
-## Palette
-
-### Light `ColorScheme` (`app_theme.dart:10-50`)
-
-| Token | Value |
+| Lapisan | File |
 |---|---|
-| primary | `#2A7F67` |
-| primaryContainer | `#D0F0E4` |
-| secondary | `#4F6358` |
-| secondaryContainer | `#D2E8DA` |
-| tertiary | `#3D6373` |
-| tertiaryContainer | `#C1E8FB` |
-| error | `#C0392B` |
-| errorContainer | `#FCE4E4` |
-| surface | `#F7F5F2` |
-| onSurface | `#1C1B1A` |
-| onSurfaceVariant | `#5C5C5A` |
-| outline | `#8E8E8C` |
-| outlineVariant | `#C8C6C3` |
+| Token (nilai) | `docs/design/tokens.json` (DTCG; nilai gelap ada di `$extensions["finote.mode"].dark`) |
+| Spesifikasi komponen | `docs/design/components.md` |
+| Screenshot acuan | `docs/design/screens/` (terang dan gelap) |
+| Kode warna | `lib/core/theme/finote_colors.dart` (`FinoteColors`, `ThemeExtension`) |
+| Kode radius | `lib/core/theme/app_radius.dart` |
+| Kode tipografi | `lib/core/theme/app_typography.dart` |
+| Skema Material | `lib/core/theme/app_theme.dart` (dibangun dari `FinoteColors`) |
+| Kategori | `lib/core/theme/category_style.dart` |
+| Jarak | `lib/core/theme/app_spacing.dart` |
 
-### Dark (`app_theme.dart:54-94`)
+Aturan: warna, radius, dan teks di luar `lib/core/theme/` harus lewat token.
+Pengecualian yang disengaja: `Colors.transparent` (latar kosong) dan ukuran
+font di dokumen PDF ekspor.
 
-| Token | Value |
-|---|---|
-| primary | `#8DD4B8` |
-| primaryContainer | `#1A5E47` |
-| secondary | `#B6CCBF` |
-| secondaryContainer | `#374B41` |
-| tertiary | `#A5CCDF` |
-| tertiaryContainer | `#244B5B` |
-| error | `#EF8E7E` |
-| errorContainer | `#8C1D18` |
-| surface | `#161615` |
-| onSurface | `#E3E2DF` |
-| onSurfaceVariant | `#ADADAB` |
-| outline | `#7A7A78` |
-| outlineVariant | `#484846` |
+## Warna dan satu merek
 
-Semantic extensions in `app_colors.dart:9-36`: income/positive green, expense/negative red, warning amber, success alias income. These are centralized and preferable to raw screen colors.
+Satu warna brand untuk dua mode. Mode gelap adalah versi lebih terang dari
+warna yang sama, bukan palet lain.
 
-## Typography
+| Token | Terang | Gelap |
+|---|---|---|
+| `bg` (kanvas) | `#EEF1F8` | `#0B1020` |
+| `surface` (kartu, nav) | `#FFFFFF` | `#151C33` |
+| `surfaceAlt` (area di dalam kartu) | `#F3F5FB` | `#1F2847` |
+| `primary` (satu warna brand) | `#3B5BDB` | `#8EA2FF` |
+| `primaryContainer` | `#E3E9FF` | `#28366F` |
+| `onPrimaryContainer` | `#233D9F` | `#D5DDFF` |
+| `text` | `#182238` | `#EEF1FA` |
+| `textMuted` | `#5B6780` | `#A7B1CC` |
+| `income` (hanya nominal) | `#0A7560` | `#6FD3B0` |
+| `expense` (hanya nominal) | `#A24941` | `#F0A39C` |
+| `error` | `#B42318` | `#FDA29B` |
+| `warning` | `#8A5300` | `#F5B26B` |
+| `outline` (garis input) | `#7B86A0` | `#7C88AC` |
+| `heroFrom` → `heroTo` | `#2A42BD` → `#1B2750` | `#33449E` → `#1B2557` |
 
-`AppTheme._textTheme()` explicitly uses `Roboto` (`app_theme.dart:100-188`). Sizes: display 34/28, headline 24/20, title 18/15/13, body 15/14/12, label 14/12/11. Weights range 400–800; display/headline use heavy weights. Line heights are not explicitly set, so Flutter defaults apply. No custom font assets are declared in `pubspec.yaml`.
+Aturan warna:
+- Merah dan hijau hanya untuk nominal. Ikon tidak pernah merah atau hijau.
+- Transfer memakai `transfer.fg/bg` (netral), karena transfer bukan pemasukan
+  maupun pengeluaran.
+- Ikon kategori memakai pasangan `fg/bg` dari kategori itu sendiri. Kategori
+  buatan pengguna memakai `custom1..6`, dipilih dengan hash nama yang
+  deterministik (rumus di `tokens.json`).
+- Teks selalu di atas latar yang lolos 4.5:1. Ikon kategori (`fg` di atas
+  `bg`) hanya dipakai sebagai ikon, karena rasio 3:1 cukup untuk elemen non-teks.
 
-## Spacing
+Pemeriksaan kontras dilakukan lewat `test/core/theme/app_theme_test.dart`.
 
-`AppSpacing` (`app_spacing.dart:5-28`): `xs=4`, `sm=8`, `md=12`, `lg=16`, `xl=24`, `xxl=32`, `screenH=16`, `screenV=8`. Many screens use these, but dialogs and some pages also hardcode 16/20/24/32.
+## Permukaan dan elevasi
 
-## Shape/elevation/surfaces
+- Permukaan dibedakan dengan tone: `bg` → `surface` → `surfaceAlt`.
+- Tidak ada border pada kartu. Border hanya pada input (`outline`, fokus
+  `focus`) dan tombol Outline.
+- Bayangan hanya pada hero (`shadow.hero`) dan FAB (`shadow.fab`). Keduanya
+  punya nilai terang dan gelap.
 
-- Card radius 12, elevation 0 (`app_theme.dart:195-201`).
-- Dialog radius 16; bottom sheet top radius 16 (`240-324`).
-- Input outline radius 12, content padding 16 horizontal/14 vertical (`208-214`).
-- Chips use `StadiumBorder`; segmented buttons radius 10.
-- FAB is circular with elevation 2.
-- Snackbar floating, radius 10.
-- Surface hierarchy is Material 3 container variants; no custom shadow system beyond theme defaults.
+## Radius (4 ukuran)
 
-## Components
+| Token | Nilai | Dipakai untuk |
+|---|---|---|
+| `radius.sm` | 8 | bar, chip kecil, badge, kode aset |
+| `radius.md` | 14 | ubin ikon, tombol, input, snackbar, tombol ikon |
+| `radius.lg` | 20 | kartu |
+| `radius.xl` | 28 | hero, dialog, bottom sheet, bottom nav, FAB, search |
 
-Reusable shared components: `AppErrorState`, `AppEmptyState`, `AppLoadingState`, `CurrencyText`, `SectionHeader` (`shared_widgets.dart:16-164`). Material components used directly include `Card`, `ListTile`, `ChoiceChip`, `InputChip`, `SegmentedButton`, `SearchBar`, `AlertDialog`, `BottomSheet`, `NavigationBar`, `TabBar`, and `FilledButton`.
+Konstanta: `AppRadius.sm/md/lg/xl` dan `smAll`, `mdAll`, `lgAll`, `xlAll`.
 
-## Navigation UI
+## Jarak
 
-`MainScaffold` uses a five-destination `NavigationBar`: Beranda, Transaksi, Portofolio, Laporan, Pengaturan (`main_scaffold.dart:32-65`). The shell also provides a context-sensitive FAB for dashboard/transaction branches and a bottom sheet with manual transaction and scan receipt (`71-117`).
+`4, 8, 12, 16, 24, 32` (`AppSpacing.xs` sampai `xxl`). Padding layar horizontal 16.
 
-## Accessibility/contrast audit
+## Tipografi
 
-- **TERVERIFIKASI:** Material 3 semantics and standard controls are used; `CurrencyText` uses `FittedBox`; many long values use constraints/fitting.
-- **INFERENCE:** color semantics rely on green/red, so amount labels/icons should remain textually signed; this is partly true via `CurrencyText` prefixes.
-- **HIGH risk:** contrast has not been programmatically measured against WCAG for all custom pairs, especially dark muted text and semantic colors.
-- **MEDIUM risk:** `titleSmall` is 13 px and `labelSmall` 11 px; enlarged text behavior needs device testing.
-- **MEDIUM risk:** horizontal chip rows are intentionally scrollable but keyboard focus/overflow behavior is not verified.
-- **NOT VERIFIED:** screen reader labels, TalkBack traversal, and 200% text scaling.
+Roboto. Tinggi baris eksplisit untuk setiap gaya. Ukuran teks minimal 12.
 
-## Scattered values/inconsistencies
+- Gaya angka uang memakai `FontFeature.tabularFigures()`, supaya digit
+  sejajar di daftar dan total.
+- Skala: `amount.hero` 34, `amount.xl` 28, `amount.lg` 22, `amount.md` 17,
+  `amount.item` 15, dan seterusnya, sesuai `tokens.json`.
+- Judul layar memakai `headlineLarge` (24, tebal). Judul bagian `titleSection`
+  (17, semibold). Label kecil `captionOverline` (12, kapital) untuk grup
+  pengaturan.
 
-Examples: Settings/Backup/Security use direct `EdgeInsets.all(16/20/24/32)`; forms define local `InputDecoration`; some list rows use raw `SizedBox(height: 8)`. The system is coherent enough for redesign, but not all spacing and interaction patterns are tokenized.
+Gaya diakses lewat `AppTypography` (`amountHero`, `titleCard`, `bodySm`, dan
+seterusnya). `AppTypography.textTheme(c)` memetakan gaya ke slot `TextTheme`
+bawaan Material.
 
-## Screenshot correspondence
+## Tombol dan area sentuh
 
-`assets/playstore/1. dashboard.jpg` through `9. Backup & restore.jpg` are available. They are useful visual evidence for intended listing states, but exact runtime state/device/font scale is **NOT VERIFIED**.
+Varian tombol (components.md `Tombol`):
+- **Primer:** `FilledButton`, warna `primary`. Satu per layar.
+- **Outline:** `OutlinedButton`, border `outline`.
+- **Teks:** `TextButton`, untuk aksi sekunder dan batal.
+- **Destruktif:** `FilledButton` dengan warna `error` (hapus, reset, pulihkan).
+
+Area sentuh minimal 48 untuk semua kontrol. Visual boleh lebih kecil (chip 34,
+ikon 40) karena `ThemeData.materialTapTargetSize` diatur ke `padded`, dan
+widget kustom memakai `ConstrainedBox(minHeight: 48)`.
+
+Setiap `IconButton` dan `PopupMenuButton` punya `tooltip`. Tooltip inilah label
+untuk TalkBack. Pemeriksaan ini dijalankan di audit redesign.
+
+## Komponen bersama
+
+Semua di `lib/core/widgets/`. Jangan membuat versi baru.
+
+| Widget | Berkas | Fungsi |
+|---|---|---|
+| `FinoteHero`, `FinoteHeroAmount`, `FinoteHeroTile`, `BalanceVisibilityButton` | `finote_hero.dart` | Kartu gradasi (Kekayaan Bersih, Saldo periode, Total portofolio) |
+| `TemporaryBadge` | `temporary_badge.dart` | Penanda nilai sementara/parsial |
+| `Expense7DayCard` | `expense_7day_card.dart` | Mini chart 7 hari |
+| `CategoryIconTile`, `TransactionTile`, `TransferTile`, `AssetTile`, `DateHeader`, `CategoryBar` | `finance_tiles.dart` | Item daftar dan bar kategori |
+| `FinoteChip`, `FinoteSegmented`, `FinoteIconBadge` | `finote_controls.dart` | Filter, pemilih tab, ikon status |
+| `FinoteListTile`, `FinoteListSection` | `finote_list_tile.dart` | Baris pengaturan |
+| `CurrencyText` | `shared_widgets.dart` | Nominal IDR, tabular, bisa disamarkan |
+| `AppEmptyState`, `AppErrorState`, `AppLoadingState` | `shared_widgets.dart` | Status layar |
+| `showAppSnackBar`, `showAppErrorSnackBar` | `app_snackbars.dart` | Snackbar info dan error |
+
+## Saldo tersembunyi
+
+Tombol mata di hero menyembunyikan semua nominal dengan "Rp ••••••". Pilihan
+disimpan di SharedPreferences (`finote_hide_balance`) dan dibaca di `main()`
+sebelum `runApp`, sehingga frame pertama sudah benar. Nilai yang tersamar
+tetap ada di data; hanya tampilannya yang diganti.
+
+## Tema dan mode
+
+- `ThemeMode.system`, `light`, dan `dark` didukung. Pilihannya disimpan.
+- Dialog Tema memakai baris bertone brand dengan indikator terpilih.
+- Setiap komponen memiliki gaya terang dan gelap. Test layout dijalankan untuk
+  keduanya.
+
+## Verifikasi
+
+- Layout diuji di lebar 320 dengan teks 1.3×, terang dan gelap, untuk layar
+  utama dan komponen.
+- Konsistensi token dijaga oleh `test/core/theme/tokens_parity_test.dart`.
+  Test ini gagal jika `tokens.json` dan kode tema berbeda.
+- Yang belum diverifikasi di perangkat: TalkBack secara langsung, tampilan
+  dengan font sistem paling besar, dan layar Scan struk dengan kamera sungguhan.

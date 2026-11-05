@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/theme/app_radius.dart';
+import '../core/theme/finote_colors.dart';
+
 final shellModalOpenProvider = StateProvider<bool>((ref) => false);
+
+/// Bottom padding a scrollable under the shell FAB needs so its last item
+/// is never covered (FAB 56 + margin 16 + shadow).
+const kFabClearance = 96.0;
 
 /// Shell scaffold that houses the bottom navigation bar and the add FAB.
 ///
@@ -18,52 +25,65 @@ class MainScaffold extends ConsumerWidget {
         navigationShell.currentIndex == 0 || navigationShell.currentIndex == 1;
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final modalOpen = ref.watch(shellModalOpenProvider);
+    final f = Theme.of(context).finote;
     return Scaffold(
       body: navigationShell,
       floatingActionButton: showAddButton && !keyboardOpen && !modalOpen
-          ? FloatingActionButton(
-              heroTag: null,
-              onPressed: () => _showAddMenu(context, ref),
-              tooltip: 'Tambah transaksi',
-              child: const Icon(Icons.add),
+          ? DecoratedBox(
+              // Only the hero and the FAB carry a shadow (tokens: shadow.fab).
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: f.fabShadow,
+              ),
+              child: FloatingActionButton(
+                heroTag: null,
+                onPressed: () => _showAddMenu(context, ref),
+                tooltip: 'Tambah transaksi',
+                child: const Icon(Icons.add),
+              ),
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(
-            index,
-            initialLocation: index == navigationShell.currentIndex,
-          );
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Transaksi',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.pie_chart_outline),
-            selectedIcon: Icon(Icons.pie_chart),
-            label: 'Portofolio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics),
-            label: 'Laporan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Pengaturan',
-          ),
-        ],
+      bottomNavigationBar: ClipRRect(
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xl),
+        ),
+        child: NavigationBar(
+          selectedIndex: navigationShell.currentIndex,
+          onDestinationSelected: (index) {
+            navigationShell.goBranch(
+              index,
+              initialLocation: index == navigationShell.currentIndex,
+            );
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Beranda',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.notes_rounded),
+              selectedIcon: Icon(Icons.notes_rounded),
+              label: 'Transaksi',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.pie_chart_outline_rounded),
+              selectedIcon: Icon(Icons.pie_chart_rounded),
+              label: 'Portofolio',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_rounded),
+              selectedIcon: Icon(Icons.bar_chart_rounded),
+              label: 'Laporan',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings_rounded),
+              label: 'Pengaturan',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -98,16 +118,47 @@ class MainScaffold extends ConsumerWidget {
                   onTap: () => Navigator.pop(context, '/transactions/new'),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.add_circle_outline),
+                  leading: const Icon(Icons.swap_horiz_rounded),
                   title: const Text('Tambah Transfer Antar Akun'),
-                  subtitle: const Text('Cara utama yang cepat dan andal'),
+                  subtitle: const Text(
+                    'Pindahkan saldo antar akun, bukan pemasukan/pengeluaran',
+                  ),
                   onTap: () => Navigator.pop(context, '/transfers'),
                 ),
                 ListTile(
                   leading: const Icon(Icons.document_scanner_outlined),
                   title: const Text('Scan struk'),
                   subtitle: const Text('Ambil atau pilih foto struk'),
-                  onTap: () => Navigator.pop(context, '/receipt-scan'),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Segera hadir',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                  onTap: () {
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(
+                      context,
+                    ); // tutup sheet/dialog tanpa membawa route
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur scan struk segera hadir'),
+                      ),
+                    );
+                  },
+                  // onTap: () => Navigator.pop(context, '/receipt-scan'),
                 ),
               ],
             ),

@@ -21,6 +21,7 @@ import 'package:finote/features/market/domain/market_quote.dart';
 import 'package:finote/features/transactions/domain/transaction_source.dart';
 import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:finote/features/assets/presentation/widgets/asset_list_item.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -334,7 +335,11 @@ ORDER BY transaction_date DESC, created_at DESC, id DESC
     stopwatch.stop();
 
     expect(find.text('Portofolio'), findsOneWidget);
+    // The hero and composition cards sit above the list; scroll to the first
+    // row. Rows must still build lazily: 100 assets never mount at once.
+    await tester.scrollUntilVisible(find.text('S0'), 200);
     expect(find.text('S0'), findsOneWidget);
+    expect(find.byType(AssetListItem).evaluate().length, lessThan(20));
     expect(marketCalls, 0);
     // Includes Flutter test harness startup and is not a profile-mode metric.
     // ignore: avoid_print

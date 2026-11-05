@@ -3,7 +3,16 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
+
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/app_radius.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/finote_controls.dart';
+import '../../../core/widgets/finote_list_tile.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../../core/services/app_logger.dart';
@@ -21,38 +30,45 @@ class BackupPage extends ConsumerStatefulWidget {
   ConsumerState<BackupPage> createState() => _BackupPageState();
 }
 
-class _BackupPageState extends ConsumerState<BackupPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _BackupPageState extends ConsumerState<BackupPage> {
+  // Both tabs stay mounted (IndexedStack): the restore flow keeps its step and
+  // safety-backup state while the user looks at the Backup tab.
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup dan restore'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.save_alt), text: 'Backup'),
-            Tab(icon: Icon(Icons.restore), text: 'Restore'),
-          ],
+        title: Text(
+          'Backup dan restore',
+          style: Theme.of(context).textTheme.headlineLarge,
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [_BackupTab(), _RestoreTab()],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.xs,
+              AppSpacing.screenH,
+              0,
+            ),
+            child: FinoteSegmented<int>(
+              segments: const [
+                FinoteSegment(0, 'Backup'),
+                FinoteSegment(1, 'Restore'),
+              ],
+              selected: _tab,
+              onChanged: (value) => setState(() => _tab = value),
+            ),
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: _tab,
+              children: const [_BackupTab(), _RestoreTab()],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -83,11 +99,7 @@ class _BackupTabState extends ConsumerState<_BackupTab> {
             padding: const EdgeInsets.all(24),
             child: Column(
               children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                const FinoteIconBadge(icon: Icons.inventory_2_outlined),
                 const SizedBox(height: 16),
                 Text(
                   'Simpan salinan data Anda',
@@ -120,13 +132,11 @@ class _BackupTabState extends ConsumerState<_BackupTab> {
           ),
         ),
         const SizedBox(height: 16),
-        const ListTile(
-          contentPadding: EdgeInsets.symmetric(horizontal: 4),
-          leading: Icon(Icons.folder_outlined),
-          title: Text('Pilih lokasi penyimpanan'),
-          subtitle: Text(
-            'Android akan membuka pemilih file sistem. Aplikasi tidak meminta akses ke seluruh penyimpanan.',
-          ),
+        const FinoteListTile(
+          icon: Icons.folder_outlined,
+          title: 'Pilih lokasi penyimpanan',
+          subtitle: 'Android akan membuka pemilih file sistem. Aplikasi tidak meminta akses ke seluruh penyimpanan.',
+          showChevron: false,
         ),
       ],
     );
@@ -256,11 +266,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildIdleContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.restore,
-          size: 56,
-          color: Theme.of(context).colorScheme.secondary,
-        ),
+        FinoteIconBadge(icon: Icons.restore),
         const SizedBox(height: 16),
         Text(
           'Pulihkan dari backup',
@@ -381,7 +387,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: cs.errorContainer,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: AppRadius.smAll,
           ),
           child: Row(
             children: [
@@ -390,7 +396,9 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
               Expanded(
                 child: Text(
                   'Semua data saat ini akan diganti dengan data dari backup ini.',
-                  style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+                  style: AppTypography.bodySm.copyWith(
+                    color: cs.onErrorContainer,
+                  ),
                 ),
               ),
             ],
@@ -425,11 +433,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildSuccessContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.check_circle_outline,
-          size: 56,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        FinoteIconBadge(icon: Icons.check_circle_outline),
         const SizedBox(height: 16),
         Text(
           'Restore berhasil',
@@ -449,16 +453,11 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
     final safety = _safetyBackup;
     if (safety == null) return const SizedBox.shrink();
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      leading: const Icon(Icons.shield_outlined),
-      title: const Text('Safety backup tersimpan'),
-      subtitle: Text(
-        safety.fileName,
-        style: Theme.of(context).textTheme.bodySmall,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
+    return FinoteListTile(
+      icon: Icons.shield_outlined,
+      title: 'Safety backup tersimpan',
+      subtitle: safety.fileName,
+      showChevron: false,
     );
   }
 
@@ -469,11 +468,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
   Widget _buildErrorContent(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.error_outline,
-          size: 56,
-          color: Theme.of(context).colorScheme.error,
-        ),
+        const FinoteIconBadge(icon: Icons.error_outline, destructive: true),
         const SizedBox(height: 16),
         Text(
           'Restore gagal',
@@ -685,7 +680,7 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
                 const SizedBox(height: 12),
                 Text(
                   'Safety backup tersimpan di:\n${safety.fileName}',
-                  style: const TextStyle(fontSize: 12),
+                  style: AppTypography.captionRegular,
                 ),
               ],
             ),
@@ -694,7 +689,12 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
                 onPressed: () => Navigator.of(ctx).pop(false),
                 child: const Text('Batal'),
               ),
+              // Restore overwrites all current data: destructive color.
               FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(ctx).colorScheme.error,
+                  foregroundColor: Theme.of(ctx).colorScheme.onError,
+                ),
                 onPressed: () => Navigator.of(ctx).pop(true),
                 child: const Text('Ya, pulihkan'),
               ),

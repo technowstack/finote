@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../data/biometric_lock.dart';
 import '../data/pin_repository.dart';
+import '../data/secure_screen.dart';
 
 class AppLock extends ConsumerStatefulWidget {
   const AppLock({required this.child, super.key});
@@ -19,6 +22,12 @@ class _AppLockState extends ConsumerState<AppLock> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Recent Apps previews must not leak balances while protection is on.
+    ref.listenManual(
+      appLockControllerProvider.select((lock) => lock.protectionEnabled),
+      (_, enabled) => ref.read(secureScreenProvider).setEnabled(enabled),
+      fireImmediately: true,
+    );
   }
 
   @override
@@ -39,9 +48,9 @@ class _AppLockState extends ConsumerState<AppLock> with WidgetsBindingObserver {
     });
     final lock = ref.watch(appLockControllerProvider);
     if (!lock.initialized) {
-      return const ColoredBox(
-        color: Colors.black,
-        child: Center(child: CircularProgressIndicator()),
+      return ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
     if (lock.error != null && !lock.protectionEnabled) {
@@ -68,6 +77,27 @@ class _AppLockState extends ConsumerState<AppLock> with WidgetsBindingObserver {
   }
 }
 
+class _LockBadge extends StatelessWidget {
+  const _LockBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.primaryContainer,
+        shape: BoxShape.circle,
+      ),
+      child: SizedBox.square(
+        dimension: 96,
+        child: Icon(icon, size: 44, color: colors.onPrimaryContainer),
+      ),
+    );
+  }
+}
+
 class _BiometricUnlockPage extends StatelessWidget {
   const _BiometricUnlockPage({
     required this.authenticating,
@@ -84,21 +114,19 @@ class _BiometricUnlockPage extends StatelessWidget {
     body: SafeArea(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(AppSpacing.xxl),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.fingerprint,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
+                const _LockBadge(icon: Icons.fingerprint),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'Kunci Aplikasi',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: AppTypography.titleDialog.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 const Text(
@@ -158,20 +186,18 @@ class _PinUnlockPageState extends ConsumerState<_PinUnlockPage> {
     body: SafeArea(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(AppSpacing.xxl),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 360),
             child: Column(
               children: [
-                Icon(
-                  Icons.lock_outline,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
+                const _LockBadge(icon: Icons.lock_outline),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   'Buka Finote',
-                  style: Theme.of(context).textTheme.titleLarge,
+                  style: AppTypography.titleDialog.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 TextField(

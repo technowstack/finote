@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import '../../helpers/fake_app_lock.dart';
+
 import 'package:drift/native.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
@@ -290,6 +292,7 @@ void main() {
 
       final backup = await BackupService(
         database,
+        fakeAppLockController(),
         databasePath: path,
       ).buildBackup(appVersion: '1.3.0', temporaryDirectory: temp);
       await database.close();
@@ -298,6 +301,7 @@ void main() {
       await target.customSelect('SELECT 1').getSingle();
       await BackupService(
         target,
+        fakeAppLockController(),
         databasePath: targetPath,
       ).restoreFromArchive(backup.bytes, temporaryDirectory: temp);
       target = AppDatabase(NativeDatabase(File(targetPath)));

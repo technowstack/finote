@@ -139,7 +139,6 @@ Widget _app(
         body: SingleChildScrollView(
           child: SizedBox(
             width: 400,
-            height: height,
             child: AccountBalanceChart(
               points: points,
               totalAssets: totalAssets,

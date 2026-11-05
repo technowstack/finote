@@ -14,6 +14,8 @@ class ReportChartSection<T> extends StatelessWidget {
     required this.onRetry,
     this.subtitle,
     this.height = 240,
+
+    /// Minimum height of the loading/empty/error placeholder only.
     this.emptyMessage = 'Belum ada data untuk ditampilkan.',
   });
 
@@ -42,19 +44,27 @@ class ReportChartSection<T> extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Card(
             clipBehavior: Clip.antiAlias,
-            child: SizedBox(
-              width: double.infinity,
-              height: height,
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: data.when(
-                loading: () => const AppLoadingState(),
-                error: (_, _) => AppErrorState(
-                  message: 'Gagal memuat grafik.',
-                  onRetry: onRetry,
+                loading: () =>
+                    SizedBox(height: height, child: const AppLoadingState()),
+                error: (_, _) => SizedBox(
+                  height: height,
+                  child: AppErrorState(
+                    message: 'Gagal memuat grafik.',
+                    onRetry: onRetry,
+                  ),
                 ),
+                // Charts size themselves from their content, so the card
+                // grows with large text instead of clipping or overflowing.
                 data: (value) => isEmpty(value)
-                    ? AppEmptyState(
-                        icon: Icons.insert_chart_outlined,
-                        message: emptyMessage,
+                    ? SizedBox(
+                        height: height,
+                        child: AppEmptyState(
+                          icon: Icons.insert_chart_outlined,
+                          message: emptyMessage,
+                        ),
                       )
                     : builder(context, value),
               ),

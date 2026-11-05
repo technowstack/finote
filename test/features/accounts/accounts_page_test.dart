@@ -9,8 +9,11 @@ import 'package:finote/features/transactions/domain/transaction_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
   testWidgets('accounts page creates an account without transaction controls', (
     tester,
   ) async {
@@ -26,7 +29,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Tunai'), findsAtLeastNWidgets(1));
-    expect(find.text('Saldo Saat Ini Rp0'), findsOneWidget);
+    expect(find.text('Rp0'), findsWidgets);
     await tester.tap(find.byTooltip('Tindakan akun'));
     await tester.pumpAndSettle();
     expect(find.text('Nonaktifkan'), findsNothing);
@@ -107,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('BCA'), findsOneWidget);
-    expect(find.textContaining('Tidak aktif'), findsOneWidget);
+    expect(find.textContaining('Diarsipkan'), findsWidgets);
     expect((await accounts.findById(account.id))?.isActive, isFalse);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 1));

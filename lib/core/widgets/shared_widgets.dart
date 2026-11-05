@@ -1,39 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../theme/app_colors.dart';
-import '../theme/app_spacing.dart';
-import '../utils/currency_formatter.dart';
 import '../../features/transactions/domain/transaction_type.dart';
+import '../preferences/balance_visibility_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../utils/currency_formatter.dart';
+
+/// Shown instead of an amount while the user hides balances.
+const maskedAmount = 'Rp ••••••';
 
 // -----------------------------------------------------------------------------
-// Error state
+// Status: error / empty / loading (components.md `Status`)
 // -----------------------------------------------------------------------------
 
-/// A centered error message with a retry button.
-///
-/// Replaces the per-screen `_ErrorState` / `_ErrorCard` widgets that were
-/// duplicated across dashboard, transactions, reports, and categories.
+class _StatusIcon extends StatelessWidget {
+  const _StatusIcon({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Icon(icon, size: 24, color: foreground),
+      ),
+    );
+  }
+}
+
+/// A centered error message with a retry action. Never pass raw exceptions.
 class AppErrorState extends StatelessWidget {
   const AppErrorState({
     super.key,
     required this.message,
     required this.onRetry,
+    this.description,
   });
 
   final String message;
   final VoidCallback onRetry;
+  final String? description;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
+            _StatusIcon(
+              icon: Icons.warning_amber_rounded,
+              background: colors.errorContainer,
+              foreground: colors.error,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.titleCard.copyWith(color: colors.onSurface),
+            ),
+            if (description != null) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                description!,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton(onPressed: onRetry, child: const Text('Coba lagi')),
           ],
         ),
       ),
@@ -41,47 +90,100 @@ class AppErrorState extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Empty state
-// -----------------------------------------------------------------------------
-
-/// A centered icon + message for screens with no data.
+/// A centered icon + message for screens with no data, with an optional
+/// primary action.
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     super.key,
     required this.icon,
     required this.message,
     this.subtitle,
+    this.actionLabel,
+    this.onAction,
+    this.compact = false,
   });
 
   final IconData icon;
   final String message;
   final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  /// Inline variant for an empty section inside a card (icon on the left,
+  /// text on the right) instead of a full-screen centered state.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    if (compact) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surfaceContainer,
+          borderRadius: AppRadius.mdAll,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StatusIcon(
+                icon: icon,
+                background: colors.primaryContainer,
+                foreground: colors.onPrimaryContainer,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message,
+                      style: AppTypography.titleCard.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(subtitle!, style: theme.textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 44,
-              color: Theme.of(context).brightness == Brightness.light
-                  ? Theme.of(context).colorScheme.onSurfaceVariant
-                  : Theme.of(context).colorScheme.outline,
+            _StatusIcon(
+              icon: icon,
+              background: colors.primaryContainer,
+              foreground: colors.onPrimaryContainer,
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(message, textAlign: TextAlign.center),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: AppTypography.titleCard.copyWith(color: colors.onSurface),
+            ),
             if (subtitle != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
                 subtitle!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: theme.textTheme.bodySmall,
               ),
+            ],
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              FilledButton(onPressed: onAction, child: Text(actionLabel!)),
             ],
           ],
         ),
@@ -90,17 +192,28 @@ class AppEmptyState extends StatelessWidget {
   }
 }
 
-// -----------------------------------------------------------------------------
-// Loading state
-// -----------------------------------------------------------------------------
-
-/// A centered circular progress indicator.
+/// A centered progress indicator with an optional caption. Kept free of
+/// padding/card chrome so it still fits the fixed-height slots screens use.
 class AppLoadingState extends StatelessWidget {
-  const AppLoadingState({super.key});
+  const AppLoadingState({super.key, this.message});
+
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(child: CircularProgressIndicator());
+    if (message == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: AppSpacing.md),
+          Text(message!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
   }
 }
 
@@ -108,40 +221,63 @@ class AppLoadingState extends StatelessWidget {
 // Currency text
 // -----------------------------------------------------------------------------
 
-/// Displays a formatted IDR amount with optional sign and semantic coloring.
+/// A formatted IDR amount in tabular figures.
 ///
-/// When [type] is provided, the text is colored using the income/expense
-/// semantic colors from [AppColors] and prefixed with `+` or `-`.
-///
-/// Wraps itself in a [FittedBox] so long amounts shrink gracefully.
+/// With [type], it is signed (+/−) and colored as income/expense. With
+/// [maskable], it shows [maskedAmount] while the user hides balances. Long
+/// amounts shrink to fit instead of overflowing.
 class CurrencyText extends StatelessWidget {
-  const CurrencyText({super.key, required this.amount, this.type, this.style});
+  const CurrencyText({
+    super.key,
+    required this.amount,
+    this.type,
+    this.style,
+    this.maskable = false,
+    this.alignment = Alignment.centerRight,
+  });
 
   final int amount;
   final TransactionType? type;
   final TextStyle? style;
+  final bool maskable;
+  final AlignmentGeometry alignment;
 
   @override
   Widget build(BuildContext context) {
+    if (!maskable) return _build(context, hidden: false);
+    return Consumer(
+      builder: (context, ref, _) =>
+          _build(context, hidden: watchBalanceHidden(ref)),
+    );
+  }
+
+  Widget _build(BuildContext context, {required bool hidden}) {
     final colors = Theme.of(context).colorScheme;
-    final isExpense = type == TransactionType.expense;
-
-    final effectiveStyle = (style ?? Theme.of(context).textTheme.titleMedium)
-        ?.copyWith(
-          fontWeight: FontWeight.w700,
-          color: type != null ? colors.amountColor(isExpense: isExpense) : null,
-        );
-
+    final effectiveStyle = (style ?? AppTypography.amountItem).copyWith(
+      color: type == null
+          ? null
+          : colors.amountColor(isExpense: type == TransactionType.expense),
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
     final prefix = switch (type) {
       TransactionType.expense => '-',
       TransactionType.income => '+',
       null => '',
     };
-
+    final text = Text(
+      hidden ? maskedAmount : '$prefix${formatIdr(amount)}',
+      style: effectiveStyle,
+    );
     return FittedBox(
       fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: Text('$prefix${formatIdr(amount)}', style: effectiveStyle),
+      alignment: alignment,
+      child: hidden
+          ? Semantics(
+              label: 'Nominal disembunyikan',
+              excludeSemantics: true,
+              child: text,
+            )
+          : text,
     );
   }
 }
@@ -162,8 +298,15 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
-        if (trailing != null) ...[const Spacer(), trailing!],
+        Expanded(
+          child: Text(
+            title,
+            style: AppTypography.titleSection.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+        ),
+        ?trailing,
       ],
     );
   }

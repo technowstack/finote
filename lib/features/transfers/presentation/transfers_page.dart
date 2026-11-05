@@ -2,6 +2,9 @@ import 'package:finote/core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/widgets/finance_tiles.dart';
+
 import 'package:drift/drift.dart' show Value;
 
 import '../../../core/database/app_database.dart';
@@ -159,57 +162,43 @@ class _TransfersPageState extends ConsumerState<TransfersPage> {
                     itemBuilder: (context, index) {
                       final item = items[index];
                       return Card(
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            child: Icon(Icons.swap_horiz),
-                          ),
-                          title: Text(
-                            '${item.from.name} → ${item.to.name}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            '${formatDate(item.transfer.transferDate)}'
-                            '${item.transfer.note?.isNotEmpty == true ? ' · ${item.transfer.note}' : ''}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 120,
-                                ),
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerRight,
-                                  child: Text(formatIdr(item.transfer.amount)),
-                                ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TransferTile(
+                                title: '${item.from.name} → ${item.to.name}',
+                                route: [
+                                  formatDate(item.transfer.transferDate),
+                                  if (item.transfer.note?.isNotEmpty == true)
+                                    item.transfer.note!,
+                                ].join(' · '),
+                                amount: item.transfer.amount,
+                                maskable: true,
                               ),
-                              PopupMenuButton<_TransferAction>(
-                                tooltip: 'Tindakan transfer',
-                                onSelected: (action) {
-                                  switch (action) {
-                                    case _TransferAction.edit:
-                                      _openForm(item);
-                                    case _TransferAction.delete:
-                                      _delete(item);
-                                  }
-                                },
-                                itemBuilder: (context) => const [
-                                  PopupMenuItem(
-                                    value: _TransferAction.edit,
-                                    child: Text('Ubah'),
-                                  ),
-                                  PopupMenuItem(
-                                    value: _TransferAction.delete,
-                                    child: Text('Hapus'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                            ),
+                            PopupMenuButton<_TransferAction>(
+                              tooltip: 'Tindakan transfer',
+                              onSelected: (action) {
+                                switch (action) {
+                                  case _TransferAction.edit:
+                                    _openForm(item);
+                                  case _TransferAction.delete:
+                                    _delete(item);
+                                }
+                              },
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: _TransferAction.edit,
+                                  child: Text('Ubah'),
+                                ),
+                                PopupMenuItem(
+                                  value: _TransferAction.delete,
+                                  child: Text('Hapus'),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     },

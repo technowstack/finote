@@ -11,9 +11,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
+  // Amounts stay masked until the display preference is read.
+  setUp(() => SharedPreferences.setMockInitialValues({}));
 
   testWidgets('fast transaction flow saves integer amount reactively', (
     tester,
@@ -79,7 +82,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Should navigate to transactions page showing the entry
-    expect(find.text(formatDate(DateTime.now())), findsOneWidget);
+    expect(
+      find.text(formatActivityDateLabel(DateTime.now(), DateTime.now())),
+      findsOneWidget,
+    );
     expect(find.text('Semua'), findsOneWidget);
     expect(find.text('Bulan ini'), findsNothing);
     expect(tester.takeException(), isNull);

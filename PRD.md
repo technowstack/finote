@@ -425,17 +425,19 @@ Default Expense:
 - Hiburan
 - Kesehatan
 - Pendidikan
-- Rumah
-- Keluarga
+- Donasi
 - Lainnya
+- Pembelian Aset
 
 Default Income:
 
 - Gaji
+- Deviden
 - Bonus
 - Bisnis
 - Hadiah
 - Investasi
+- Penjualan Aset
 - Lainnya
 
 ---

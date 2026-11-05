@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_radius.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/category_style.dart';
+import '../../../core/theme/finote_colors.dart';
+import '../../../core/widgets/app_snackbars.dart';
+import '../../../core/widgets/finote_controls.dart';
 import '../data/biometric_lock.dart';
 import '../data/pin_repository.dart';
 
@@ -53,7 +60,12 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
   Widget build(BuildContext context) {
     final status = _status;
     return Scaffold(
-      appBar: AppBar(title: const Text('Keamanan')),
+      appBar: AppBar(
+        title: Text(
+          'Keamanan',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: _error != null
           ? Center(
               child: Column(
@@ -68,24 +80,27 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
           : status == null
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppSpacing.screenH),
               children: [
                 const _BiometricCard(),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 Card(
                   margin: EdgeInsets.zero,
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(AppSpacing.xl),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
                           status.enabled ? 'Ubah PIN aplikasi' : 'Aktifkan PIN',
-                          style: Theme.of(context).textTheme.titleLarge,
+                          style: AppTypography.titleSheet.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
                           'PIN mengunci tampilan aplikasi saat dibuka atau kembali dari latar belakang.',
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                         if (status.enabled) ...[
                           const SizedBox(height: 20),
@@ -96,16 +111,16 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                           ),
                         ],
                         const SizedBox(height: 12),
-                        SegmentedButton<int>(
+                        FinoteSegmented<int>(
                           segments: const [
-                            ButtonSegment(value: 4, label: Text('4 digit')),
-                            ButtonSegment(value: 6, label: Text('6 digit')),
+                            FinoteSegment(4, '4 digit'),
+                            FinoteSegment(6, '6 digit'),
                           ],
-                          selected: {_length},
-                          onSelectionChanged: _saving
+                          selected: _length,
+                          onChanged: _saving
                               ? null
                               : (value) => setState(() {
-                                  _length = value.single;
+                                  _length = value;
                                   _pinController.clear();
                                   _confirmationController.clear();
                                 }),
@@ -137,6 +152,9 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                           const SizedBox(height: 8),
                           TextButton(
                             onPressed: _saving ? null : _disable,
+                            style: TextButton.styleFrom(
+                              foregroundColor: Theme.of(context).finote.error,
+                            ),
                             child: const Text('Nonaktifkan PIN'),
                           ),
                         ],
@@ -238,8 +256,7 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
     _confirmationController.clear();
   }
 
-  void _message(String text) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  void _message(String text) => showAppSnackBar(context, text);
 }
 
 class _BiometricCard extends ConsumerWidget {
@@ -249,10 +266,20 @@ class _BiometricCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lock = ref.watch(appLockControllerProvider);
     final controller = ref.read(appLockControllerProvider.notifier);
+    final tone = Theme.of(context).finote.categories[FinoteCategory.bills]!;
     return Card(
       margin: EdgeInsets.zero,
       child: SwitchListTile(
-        secondary: const Icon(Icons.fingerprint),
+        secondary: DecoratedBox(
+          decoration: BoxDecoration(
+            color: tone.background,
+            borderRadius: AppRadius.mdAll,
+          ),
+          child: SizedBox.square(
+            dimension: 44,
+            child: Icon(Icons.fingerprint, color: tone.foreground),
+          ),
+        ),
         title: const Text('Kunci Aplikasi'),
         subtitle: Text(lock.error ?? 'Gunakan biometrik untuk membuka Finote'),
         value: lock.biometricEnabled,

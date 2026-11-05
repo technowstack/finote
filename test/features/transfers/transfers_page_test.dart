@@ -7,9 +7,11 @@ import 'package:finote/features/transfers/presentation/transfers_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
   setUpAll(() => initializeDateFormatting('id_ID'));
 
   testWidgets('shows a persisted transfer on the transfer page', (

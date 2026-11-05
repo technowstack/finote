@@ -1,97 +1,154 @@
 import 'package:finote/core/theme/app_colors.dart';
+import 'package:finote/core/theme/app_radius.dart';
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/core/theme/category_style.dart';
+import 'package:finote/core/theme/finote_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('light theme uses porcelain surfaces and electric blue actions', () {
-    final theme = AppTheme.light;
-    final colors = theme.colorScheme;
-    expect(theme.scaffoldBackgroundColor, const Color(0xFFF8F9FC));
-    expect(colors.surface, Colors.white);
-    expect(colors.surfaceContainerLow, const Color(0xFFF8F9FC));
-    expect(colors.surfaceContainer, const Color(0xFFF1F4FA));
-    expect(colors.primary, const Color(0xFF4263EB));
-    expect(colors.onPrimary, Colors.white);
-    expect(colors.primaryContainer, const Color(0xFFE8EDFF));
-    expect(colors.onPrimaryContainer, const Color(0xFF233D9F));
-    expect(colors.onSurface, const Color(0xFF182238));
-    expect(colors.onSurfaceVariant, const Color(0xFF657188));
-    expect(colors.outline, const Color(0xFFB9C3D7));
-    expect(colors.outlineVariant, const Color(0xFFE3E8F1));
-    expect(colors.incomeColor, const Color(0xFF0D806A));
-    expect(colors.expenseColor, const Color(0xFFAE534B));
-    expect(colors.incomeAccentColor, const Color(0xFF0F8B72));
-    expect(colors.expenseAccentColor, const Color(0xFFC96B63));
-    expect(theme.navigationBarTheme.backgroundColor, Colors.white);
-    expect(theme.navigationBarTheme.indicatorColor, const Color(0xFFE8EDFF));
-    expect(theme.cardTheme.color, Colors.white);
-    expect(theme.dialogTheme.backgroundColor, Colors.white);
-    expect(theme.bottomSheetTheme.backgroundColor, Colors.white);
-    expect(theme.chipTheme.selectedColor, colors.primaryContainer);
-    expect(theme.inputDecorationTheme.fillColor, Colors.white);
-    expect(
-      theme.inputDecorationTheme.focusedBorder?.borderSide.color,
-      colors.primary,
-    );
-    expect(theme.floatingActionButtonTheme.backgroundColor, colors.primary);
-    expect(theme.floatingActionButtonTheme.foregroundColor, Colors.white);
-    expect(
-      theme.navigationBarTheme.iconTheme?.resolve({
-        WidgetState.selected,
-      })?.color,
-      colors.onPrimaryContainer,
-    );
-    expect(
-      theme.navigationBarTheme.iconTheme?.resolve({})?.color,
-      const Color(0xFF758096),
-    );
-    expect(theme.textTheme.bodyLarge?.fontFamily, 'Roboto');
-    expect(
-      _contrast(colors.onSurface, colors.surfaceContainerLow),
-      greaterThan(4.5),
-    );
-    expect(_contrast(colors.onPrimary, colors.primary), greaterThan(4.5));
-    expect(
-      _contrast(colors.onSurfaceVariant, theme.scaffoldBackgroundColor),
-      greaterThan(4.5),
-    );
-    expect(
-      _contrast(colors.incomeColor, theme.scaffoldBackgroundColor),
-      greaterThan(4.5),
-    );
-    expect(
-      _contrast(colors.expenseColor, theme.scaffoldBackgroundColor),
-      greaterThan(4.5),
-    );
-    expect(
-      _contrast(colors.error, theme.scaffoldBackgroundColor),
-      greaterThan(4.5),
-    );
-    expect(
-      _contrast(colors.onPrimaryContainer, colors.primaryContainer),
-      greaterThan(4.5),
-    );
+  test('both modes share one brand hue', () {
+    expect(AppTheme.light.colorScheme.primary, const Color(0xFF3B5BDB));
+    expect(AppTheme.dark.colorScheme.primary, const Color(0xFF8EA2FF));
+    final lightHue = HSVColor.fromColor(AppTheme.light.colorScheme.primary).hue;
+    for (final theme in [AppTheme.light, AppTheme.dark]) {
+      final colors = theme.colorScheme;
+      expect(colors.secondary, colors.primary);
+      expect(colors.tertiary, colors.primary);
+      expect(HSVColor.fromColor(colors.primary).hue, closeTo(lightHue, 3));
+    }
   });
 
-  test('dark theme has midnight surfaces and a legible lime action', () {
-    final theme = AppTheme.dark;
+  for (final theme in [AppTheme.light, AppTheme.dark]) {
+    final mode = theme.brightness.name;
+    final c = theme.finote;
     final colors = theme.colorScheme;
-    expect(colors.surface, const Color(0xFF0D0B16));
-    expect(colors.surfaceContainerLow, const Color(0xFF211D30));
-    expect(colors.primary, const Color(0xFFEAFF86));
-    expect(colors.onPrimary, const Color(0xFF171B11));
-    expect(colors.incomeColor, const Color(0xFFA5DCC1));
-    expect(colors.expenseColor, const Color(0xFFE9A19B));
-    expect(theme.navigationBarTheme.backgroundColor, const Color(0xFF211D30));
+
+    test('$mode theme maps tokens onto Material roles', () {
+      expect(theme.extension<FinoteColors>(), same(c));
+      expect(theme.scaffoldBackgroundColor, c.bg);
+      expect(colors.surface, c.surface);
+      expect(colors.onSurface, c.text);
+      expect(colors.onSurfaceVariant, c.textMuted);
+      expect(colors.error, c.error);
+      expect(colors.scrim, c.scrim);
+      expect(colors.outline, c.outline);
+      expect(colors.outlineVariant, c.divider);
+      expect(colors.incomeColor, c.income);
+      expect(colors.expenseColor, c.expense);
+      expect(colors.warningColor, c.warning);
+      expect(theme.materialTapTargetSize, MaterialTapTargetSize.padded);
+    });
+
+    test('$mode component themes are complete and tone-based', () {
+      final card = theme.cardTheme.shape! as RoundedRectangleBorder;
+      expect(theme.cardTheme.color, c.surface);
+      expect(card.borderRadius, AppRadius.lgAll);
+      expect(card.side, BorderSide.none);
+      expect(theme.navigationBarTheme.backgroundColor, c.surface);
+      expect(
+        theme.navigationBarTheme.iconTheme?.resolve({})?.color,
+        c.textMuted,
+      );
+      expect(
+        theme.navigationBarTheme.iconTheme?.resolve({
+          WidgetState.selected,
+        })?.color,
+        c.onPrimaryContainer,
+      );
+      expect(theme.dialogTheme.backgroundColor, c.surface);
+      expect(theme.dialogTheme.barrierColor, c.scrim);
+      expect(theme.bottomSheetTheme.modalBarrierColor, c.scrim);
+      expect(theme.floatingActionButtonTheme.backgroundColor, c.primary);
+      expect(theme.floatingActionButtonTheme.foregroundColor, c.onPrimary);
+      expect(theme.inputDecorationTheme.fillColor, isA<WidgetStateColor>());
+      expect(
+        theme.inputDecorationTheme.focusedBorder?.borderSide.color,
+        c.focus,
+      );
+      expect(theme.inputDecorationTheme.focusedBorder?.borderSide.width, 2);
+      expect(theme.chipTheme.color?.resolve({WidgetState.selected}), c.primary);
+      expect(theme.chipTheme.color?.resolve({}), c.surfaceAlt);
+      expect(theme.snackBarTheme.backgroundColor, c.inverseSurface);
+      expect(theme.dividerTheme.color, c.divider);
+      expect(theme.searchBarTheme.backgroundColor?.resolve({}), c.surface);
+    });
+
+    test('$mode text pairs meet WCAG AA', () {
+      final pairs = {
+        'text/bg': (c.text, c.bg),
+        'textMuted/bg': (c.textMuted, c.bg),
+        'textMuted/surface': (c.textMuted, c.surface),
+        'textMuted/surfaceAlt': (c.textMuted, c.surfaceAlt),
+        'income/surface': (c.income, c.surface),
+        'expense/surface': (c.expense, c.surface),
+        'error/surface': (c.error, c.surface),
+        'onPrimary/primary': (c.onPrimary, c.primary),
+        'onPrimaryContainer/primaryContainer': (
+          c.onPrimaryContainer,
+          c.primaryContainer,
+        ),
+        'onHero/heroFrom': (c.onHero, c.heroFrom),
+        'onHeroMuted/heroFrom': (c.onHeroMuted, c.heroFrom),
+        'onWarningContainer/warningContainer': (
+          c.onWarningContainer,
+          c.warningContainer,
+        ),
+        'onInverseSurface/inverseSurface': (
+          c.onInverseSurface,
+          c.inverseSurface,
+        ),
+      };
+      pairs.forEach((name, pair) {
+        expect(_contrast(pair.$1, pair.$2), greaterThan(4.5), reason: name);
+      });
+    });
+
+    test('$mode category icons meet non-text contrast (3:1)', () {
+      for (final pair in [...c.categories.values, c.transfer]) {
+        expect(_contrast(pair.foreground, pair.background), greaterThan(3));
+      }
+    });
+  }
+
+  test('all 17 default categories resolve to their own style', () {
+    const c = FinoteColors.light;
+    expect(FinoteCategory.values, hasLength(17));
+    expect(c.categories.keys.toSet(), FinoteCategory.values.toSet());
     expect(
-      _contrast(colors.onSurface, colors.surfaceContainerLow),
-      greaterThan(4.5),
+      FinoteColors.dark.categories.keys.toSet(),
+      c.categories.keys.toSet(),
     );
-    expect(_contrast(colors.onPrimary, colors.primary), greaterThan(4.5));
+    final food = c.categoryStyle('Makanan & Minuman');
+    expect(food.icon, Icons.restaurant_rounded);
+    expect(food.colors, c.categories[FinoteCategory.food]);
+    expect(c.categoryStyle('Lainnya').icon, Icons.more_horiz_rounded);
+    expect(c.transferStyle.icon, Icons.swap_horiz_rounded);
+    expect(c.transferStyle.colors, c.transfer);
   });
 
-  testWidgets('light tonal filter remains a secondary action', (tester) async {
+  test('custom categories use the tokens.json hash, deterministically', () {
+    // Reference indices computed independently from the tokens.json formula.
+    const expected = {
+      'Kopi': 1,
+      'Langganan': 3,
+      'Parkir Kantor': 2,
+      'Cicilan Motor': 0,
+      'A': 5,
+      '': 0,
+    };
+    const c = FinoteColors.dark;
+    expected.forEach((name, index) {
+      expect(customCategoryIndex(name), index, reason: name);
+      final style = c.categoryStyle(name);
+      expect(style.icon, customCategoryIcon);
+      expect(style.colors, c.categories[customCategoryPalette[index]]);
+    });
+  });
+
+  testWidgets('tonal filter remains a secondary-container action', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,

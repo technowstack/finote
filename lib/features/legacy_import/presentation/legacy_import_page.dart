@@ -2,6 +2,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/widgets/finote_controls.dart';
+
 import 'package:intl/intl.dart';
 
 import '../../../core/database/app_database.dart';
@@ -49,14 +54,19 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Import dari aplikasi lama')),
+      appBar: AppBar(
+        title: Text(
+          'Import dari aplikasi lama',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.screenH),
         children: [
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: _buildBody(context),
             ),
           ),
@@ -91,11 +101,7 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
   Widget _buildIdle(BuildContext context) {
     return Column(
       children: [
-        Icon(
-          Icons.storage_outlined,
-          size: 56,
-          color: Theme.of(context).colorScheme.secondary,
-        ),
+        FinoteIconBadge(icon: Icons.storage_outlined),
         const SizedBox(height: 16),
         Text(
           'Import dari aplikasi lama',
@@ -149,13 +155,15 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
         // Header
         Row(
           children: [
-            Icon(Icons.check_circle_outline, color: cs.primary),
-            const SizedBox(width: 8),
+            const FinoteIconBadge(
+              icon: Icons.check_circle_outline,
+              dimension: 40,
+            ),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
                 'Preview data legacy',
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(color: cs.primary),
+                style: AppTypography.titleSection.copyWith(color: cs.onSurface),
               ),
             ),
           ],
@@ -234,7 +242,7 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(Icons.error_outline, size: 56, color: cs.error),
+        FinoteIconBadge(icon: Icons.error_outline, destructive: true),
         const SizedBox(height: 16),
         Text(
           'Database tidak kompatibel',
@@ -352,7 +360,7 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        Icon(Icons.error_outline, size: 56, color: cs.error),
+        FinoteIconBadge(icon: Icons.error_outline, destructive: true),
         const SizedBox(height: 16),
         Text('Import gagal', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),

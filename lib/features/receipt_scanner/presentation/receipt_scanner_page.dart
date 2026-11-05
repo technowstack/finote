@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/shared_widgets.dart';
 import '../../transactions/domain/transaction_source.dart';
 import '../../transactions/domain/transaction_type.dart';
 import '../../transactions/presentation/transaction_form_page.dart';
@@ -17,6 +17,7 @@ import '../data/ml_kit_receipt_ocr_service.dart';
 import '../domain/receipt_image.dart';
 import '../domain/receipt_interpreter.dart';
 import '../domain/receipt_ocr.dart';
+import 'widgets/receipt_scan_view.dart';
 
 class ReceiptScannerPage extends ConsumerStatefulWidget {
   const ReceiptScannerPage({super.key});
@@ -58,209 +59,69 @@ class _ReceiptScannerPageState extends ConsumerState<ReceiptScannerPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Same precedence as before: processing, failed, result, idle, preview.
+    final phase = _loading
+        ? ReceiptScanPhase.processing
+        : _ocrFailed
+        ? ReceiptScanPhase.failed
+        : _ocrResult != null
+        ? ReceiptScanPhase.result
+        : _image == null
+        ? ReceiptScanPhase.idle
+        : ReceiptScanPhase.preview;
+    final image = _image;
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan struk')),
+      appBar: AppBar(
+        title: Text(
+          'Scan struk',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: SafeArea(
-        child: _loading
-            ? _buildLoading()
-            : _ocrFailed
-            ? _buildOcrFailure()
-            : _ocrResult != null
-            ? _buildOcrResult(context)
-            : _image == null
-            ? _buildSourceSelection(context)
-            : _buildPreview(context),
+        child: ReceiptScanView(
+          phase: phase,
+          error: _error,
+          canOpenSettings: _canOpenSettings,
+          recognizing: _recognizing,
+          imageOrigin: image?.origin,
+          imageReadable: _imageReadable,
+          imageBuilder: image == null
+              ? null
+              : (context) => _previewImage(image),
+          rawText: _ocrResult?.rawText ?? '',
+          showDiagnostics: kDebugMode,
+          onCamera: () => _pick(ReceiptImageOrigin.camera),
+          onGallery: () => _pick(ReceiptImageOrigin.gallery),
+          onManual: _openManualTransaction,
+          onOpenSettings: _picker.openSettings,
+          onRecognize: _recognize,
+          onChangePhoto: _changePhoto,
+          onReplace: image == null ? null : () => _replace(image.origin),
+          onCancel: _cancel,
+          onOpenReceiptDraft: _openReceiptDraft,
+          onDiagnostics: _showDiagnostics,
+        ),
       ),
     );
   }
 
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          if (_recognizing) ...[
-            const SizedBox(height: AppSpacing.md),
-            const Text('Membaca struk...'),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSourceSelection(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
-      children: [
-        const AppEmptyState(
-          icon: Icons.document_scanner_outlined,
-          message: 'Pilih foto struk',
-          subtitle: 'Foto diproses secara lokal dan tidak disimpan permanen atau diunggah.',
-        ),
-        if (_error != null) ...[
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: colors.errorContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  _error!,
-                  style: TextStyle(color: colors.onErrorContainer),
-                  textAlign: TextAlign.center,
-                ),
-                if (_canOpenSettings)
-                  TextButton(
-                    onPressed: _picker.openSettings,
-                    child: const Text('Buka pengaturan'),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-        FilledButton.icon(
-          onPressed: () => _pick(ReceiptImageOrigin.camera),
-          icon: const Icon(Icons.camera_alt_outlined),
-          label: const Text('Ambil foto'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton.icon(
-          onPressed: () => _pick(ReceiptImageOrigin.gallery),
-          icon: const Icon(Icons.photo_library_outlined),
-          label: const Text('Pilih dari galeri'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        TextButton(
-          onPressed: _openManualTransaction,
-          child: const Text('Isi transaksi manual'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPreview(BuildContext context) {
-    final image = _image!;
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
-      children: [
-        Text('Pratinjau foto', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.sm),
-        const Text(
-          'Pastikan seluruh struk terlihat, tidak blur, dan pencahayaan cukup.',
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 480),
-            child: _imageReadable
-                ? Image.file(
-                    File(image.path),
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted && _imageReadable) {
-                          setState(() {
-                            _imageReadable = false;
-                            _error = 'Gambar tidak dapat dibaca.';
-                          });
-                        }
-                      });
-                      return const SizedBox.shrink();
-                    },
-                  )
-                : const AppEmptyState(
-                    icon: Icons.broken_image_outlined,
-                    message: 'Gambar tidak dapat dibaca.',
-                  ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        FilledButton(
-          onPressed: _imageReadable ? _recognize : null,
-          child: const Text('Gunakan foto'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton(
-          onPressed: () => _replace(image.origin),
-          child: Text(
-            image.origin == ReceiptImageOrigin.camera
-                ? 'Ambil ulang'
-                : 'Ganti foto',
-          ),
-        ),
-        TextButton(onPressed: _cancel, child: const Text('Batal')),
-      ],
-    );
-  }
-
-  Widget _buildOcrResult(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
-      children: [
-        Text('Hasil OCR', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.sm),
-        const Text(
-          'Teks ini hanya untuk ditinjau. Belum ada transaksi yang dibuat.',
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: colors.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SelectableText(_ocrResult!.rawText),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        if (kDebugMode) ...[
-          OutlinedButton.icon(
-            onPressed: _showDiagnostics,
-            icon: const Icon(Icons.bug_report_outlined),
-            label: const Text('Lihat detail teknis'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-        ],
-        FilledButton(
-          onPressed: _openReceiptDraft,
-          child: const Text('Tinjau draft pengeluaran'),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton(
-          onPressed: _changePhoto,
-          child: const Text('Ganti foto'),
-        ),
-        TextButton(onPressed: _cancel, child: const Text('Selesai')),
-      ],
-    );
-  }
-
-  Widget _buildOcrFailure() {
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.screenH),
-      children: [
-        const AppEmptyState(
-          icon: Icons.document_scanner_outlined,
-          message: 'Struk belum berhasil dibaca.',
-          subtitle: 'Coba gunakan foto yang lebih terang dan tidak blur.',
-        ),
-        FilledButton(onPressed: _recognize, child: const Text('Coba lagi')),
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton(
-          onPressed: _changePhoto,
-          child: const Text('Ganti foto'),
-        ),
-        TextButton(
-          onPressed: _openManualTransaction,
-          child: const Text('Isi manual'),
-        ),
-      ],
+  /// The photo itself. A decode failure flips the page into the
+  /// unreadable-image state; that stays here, next to the file access.
+  Widget _previewImage(ReceiptImage image) {
+    return Image.file(
+      File(image.path),
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _imageReadable) {
+            setState(() {
+              _imageReadable = false;
+              _error = 'Gambar tidak dapat dibaca.';
+            });
+          }
+        });
+        return const SizedBox.shrink();
+      },
     );
   }
 

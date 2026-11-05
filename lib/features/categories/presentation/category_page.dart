@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/finote_colors.dart';
+import '../../../core/widgets/finance_tiles.dart';
+import '../../../core/widgets/app_snackbars.dart';
+import '../../../core/widgets/finote_controls.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../../transactions/domain/transaction_type.dart';
 import '../data/category_repository.dart';
@@ -22,7 +28,12 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
     final initialization = ref.watch(categoryInitializationProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kategori')),
+      appBar: AppBar(
+        title: Text(
+          'Kategori',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: initialization.hasValue ? _createCategory : null,
         tooltip: 'Tambah kategori',
@@ -43,27 +54,33 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
                 AppSpacing.screenH,
                 AppSpacing.lg,
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<TransactionType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: TransactionType.expense,
-                      icon: Icon(Icons.arrow_upward),
-                      label: Text('Pengeluaran'),
-                    ),
-                    ButtonSegment(
-                      value: TransactionType.income,
-                      icon: Icon(Icons.arrow_downward),
-                      label: Text('Pemasukan'),
-                    ),
-                  ],
-                  selected: {_selectedType},
-                  onSelectionChanged: (selection) {
-                    setState(() => _selectedType = selection.single);
-                  },
-                ),
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  FinoteChip(
+                    label: 'Pengeluaran',
+                    selected: _selectedType == TransactionType.expense,
+                    onSelected: () =>
+                        setState(() => _selectedType = TransactionType.expense),
+                  ),
+                  FinoteChip(
+                    label: 'Pemasukan',
+                    selected: _selectedType == TransactionType.income,
+                    onSelected: () =>
+                        setState(() => _selectedType = TransactionType.income),
+                  ),
+                ],
               ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                0,
+                AppSpacing.screenH,
+                AppSpacing.md,
+              ),
+              child: _DeletionNote(),
             ),
             Expanded(child: _CategoryList(type: _selectedType)),
           ],
@@ -91,10 +108,7 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
-  }
+  void _showError(String message) => showAppErrorSnackBar(context, message);
 }
 
 class _CategoryList extends ConsumerWidget {
@@ -132,17 +146,48 @@ class _CategoryList extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    _CategoryTile(category: items[i]),
-                    if (i < items.length - 1)
-                      const Divider(indent: 56, endIndent: 16),
-                  ],
+                  for (final category in items)
+                    _CategoryTile(category: category),
                 ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _DeletionNote extends StatelessWidget {
+  const _DeletionNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.primaryContainer,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: colors.onPrimaryContainer),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Kategori yang dihapus tidak muncul lagi saat mencatat, '
+                'tetapi riwayat transaksi tetap tersimpan.',
+                style: AppTypography.bodySm.copyWith(
+                  color: colors.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -154,34 +199,44 @@ class _CategoryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
-    final isExpense = category.type == TransactionType.expense;
-
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 16,
-        backgroundColor: isExpense
-            ? colors.errorContainer
-            : colors.primaryContainer,
-        foregroundColor: isExpense
-            ? colors.onErrorContainer
-            : colors.onPrimaryContainer,
-        child: Icon(
-          isExpense ? Icons.arrow_upward : Icons.arrow_downward,
-          size: 16,
+    final theme = Theme.of(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 56),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.xs,
         ),
-      ),
-      title: Text(category.name),
-      trailing: PopupMenuButton<_CategoryAction>(
-        tooltip: 'Tindakan kategori',
-        onSelected: (action) => switch (action) {
-          _CategoryAction.edit => _rename(context, ref),
-          _CategoryAction.delete => _delete(context, ref),
-        },
-        itemBuilder: (context) => const [
-          PopupMenuItem(value: _CategoryAction.edit, child: Text('Ubah')),
-          PopupMenuItem(value: _CategoryAction.delete, child: Text('Hapus')),
-        ],
+        child: Row(
+          children: [
+            // Icon and color come from the category itself; red/green is
+            // reserved for amounts, so it never tints this row.
+            CategoryIconTile(style: theme.finote.categoryStyle(category.name)),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                category.name,
+                style: AppTypography.labelLg.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            PopupMenuButton<_CategoryAction>(
+              tooltip: 'Tindakan kategori',
+              onSelected: (action) => switch (action) {
+                _CategoryAction.edit => _rename(context, ref),
+                _CategoryAction.delete => _delete(context, ref),
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(value: _CategoryAction.edit, child: Text('Ubah')),
+                PopupMenuItem(
+                  value: _CategoryAction.delete,
+                  child: Text('Hapus'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

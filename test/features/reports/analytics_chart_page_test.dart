@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:finote/app/router.dart';
 import 'package:finote/core/database/app_database.dart';
 import 'package:finote/core/theme/app_theme.dart';
+import 'package:finote/core/widgets/finote_controls.dart';
 import 'package:finote/features/accounts/data/account_repository.dart';
 import 'package:finote/features/accounts/domain/account_type.dart';
 import 'package:finote/features/categories/data/category_repository.dart';
@@ -99,7 +100,7 @@ void main() {
       expect(find.text('Analisis Grafik'), findsOneWidget);
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tahun ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Tahun ini'))
             .selected,
         isTrue,
       );
@@ -116,7 +117,7 @@ void main() {
       expect(find.text('Analisis Grafik'), findsNothing);
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Tahun ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Tahun ini'))
             .selected,
         isTrue,
       );
@@ -149,7 +150,7 @@ void main() {
       expect(find.text('Analisis Grafik'), findsOneWidget);
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bulan ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Bulan ini'))
             .selected,
         isTrue,
       );
@@ -161,7 +162,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Hari ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Hari ini'))
             .selected,
         isTrue,
       );
@@ -171,7 +172,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bulan ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Bulan ini'))
             .selected,
         isTrue,
       );
@@ -479,7 +480,7 @@ void main() {
       expect(find.text('Kategori: Makanan Filter - Pengeluaran'), findsNothing);
       expect(
         tester
-            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Bulan ini'))
+            .widget<FinoteChip>(find.widgetWithText(FinoteChip, 'Bulan ini'))
             .selected,
         isTrue,
       );
