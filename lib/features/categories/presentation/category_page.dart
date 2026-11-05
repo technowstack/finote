@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/finote_colors.dart';
@@ -53,14 +54,33 @@ class _CategoryPageState extends ConsumerState<CategoryPage> {
                 AppSpacing.screenH,
                 AppSpacing.lg,
               ),
-              child: FinoteSegmented<TransactionType>(
-                segments: const [
-                  FinoteSegment(TransactionType.expense, 'Pengeluaran'),
-                  FinoteSegment(TransactionType.income, 'Pemasukan'),
+              child: Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
+                children: [
+                  FinoteChip(
+                    label: 'Pengeluaran',
+                    selected: _selectedType == TransactionType.expense,
+                    onSelected: () =>
+                        setState(() => _selectedType = TransactionType.expense),
+                  ),
+                  FinoteChip(
+                    label: 'Pemasukan',
+                    selected: _selectedType == TransactionType.income,
+                    onSelected: () =>
+                        setState(() => _selectedType = TransactionType.income),
+                  ),
                 ],
-                selected: _selectedType,
-                onChanged: (value) => setState(() => _selectedType = value),
               ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.screenH,
+                0,
+                AppSpacing.screenH,
+                AppSpacing.md,
+              ),
+              child: _DeletionNote(),
             ),
             Expanded(child: _CategoryList(type: _selectedType)),
           ],
@@ -126,17 +146,48 @@ class _CategoryList extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    _CategoryTile(category: items[i]),
-                    if (i < items.length - 1)
-                      const Divider(indent: 56, endIndent: 16),
-                  ],
+                  for (final category in items)
+                    _CategoryTile(category: category),
                 ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _DeletionNote extends StatelessWidget {
+  const _DeletionNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.primaryContainer,
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, color: colors.onPrimaryContainer),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                'Kategori yang dihapus tidak muncul lagi saat mencatat, '
+                'tetapi riwayat transaksi tetap tersimpan.',
+                style: AppTypography.bodySm.copyWith(
+                  color: colors.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
