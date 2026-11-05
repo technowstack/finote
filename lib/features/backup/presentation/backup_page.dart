@@ -5,6 +5,7 @@ import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/finote_controls.dart';
 import '../../../core/widgets/finote_list_tile.dart';
 
@@ -25,21 +26,10 @@ class BackupPage extends ConsumerStatefulWidget {
   ConsumerState<BackupPage> createState() => _BackupPageState();
 }
 
-class _BackupPageState extends ConsumerState<BackupPage>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
+class _BackupPageState extends ConsumerState<BackupPage> {
+  // Both tabs stay mounted (IndexedStack): the restore flow keeps its step and
+  // safety-backup state while the user looks at the Backup tab.
+  int _tab = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -49,17 +39,32 @@ class _BackupPageState extends ConsumerState<BackupPage>
           'Backup dan restore',
           style: Theme.of(context).textTheme.headlineLarge,
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.save_alt), text: 'Backup'),
-            Tab(icon: Icon(Icons.restore), text: 'Restore'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [_BackupTab(), _RestoreTab()],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenH,
+              AppSpacing.xs,
+              AppSpacing.screenH,
+              0,
+            ),
+            child: FinoteSegmented<int>(
+              segments: const [
+                FinoteSegment(0, 'Backup'),
+                FinoteSegment(1, 'Restore'),
+              ],
+              selected: _tab,
+              onChanged: (value) => setState(() => _tab = value),
+            ),
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: _tab,
+              children: const [_BackupTab(), _RestoreTab()],
+            ),
+          ),
+        ],
       ),
     );
   }

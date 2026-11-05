@@ -3,6 +3,8 @@ import 'package:finote/features/app_lock/data/biometric_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/finote_controls.dart';
 
 import 'package:intl/intl.dart';
@@ -59,12 +61,12 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.screenH),
         children: [
           Card(
             margin: EdgeInsets.zero,
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: _buildBody(context),
             ),
           ),
@@ -153,13 +155,15 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
         // Header
         Row(
           children: [
-            Icon(Icons.check_circle_outline, color: cs.primary),
-            const SizedBox(width: 8),
+            const FinoteIconBadge(
+              icon: Icons.check_circle_outline,
+              dimension: 40,
+            ),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Text(
                 'Preview data legacy',
-                style: Theme.of(context).textTheme.titleMedium
-                    ?.copyWith(color: cs.primary),
+                style: AppTypography.titleSection.copyWith(color: cs.onSurface),
               ),
             ),
           ],

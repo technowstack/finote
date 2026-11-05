@@ -84,4 +84,27 @@ void main() {
       expect(find.byType(FinoteIconBadge), findsWidgets);
     });
   }
+
+  _dbTest('Backup tabs use FinoteSegmented and keep both panes mounted', (
+    tester,
+  ) async {
+    final database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    await _pump(tester, AppTheme.light, database, const BackupPage());
+
+    expect(find.byType(FinoteSegmented<int>), findsOneWidget);
+    expect(find.byType(TabBar), findsNothing);
+    expect(find.text('Simpan salinan data Anda'), findsOneWidget);
+
+    await tester.tap(find.text('Restore'));
+    await tester.pumpAndSettle();
+    expect(find.text('Simpan salinan data Anda'), findsNothing);
+
+    // IndexedStack keeps the Backup pane alive, so switching back is cheap
+    // and any in-progress state survives the switch.
+    await tester.tap(find.text('Backup'));
+    await tester.pumpAndSettle();
+    expect(find.text('Simpan salinan data Anda'), findsOneWidget);
+    expect(find.byType(IndexedStack), findsOneWidget);
+  });
 }
