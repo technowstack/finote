@@ -105,8 +105,8 @@ void main() {
       expect(find.text('Akun & Dompet'), findsOneWidget);
       expect(find.text('Total saldo semua akun'), findsOneWidget);
       expect(find.text('BCA Utama Tabungan Keluarga'), findsOneWidget);
-      // Two rows: the seeded account and the default Tunai account.
-      expect(find.textContaining('Saldo Saat Ini'), findsNWidgets(2));
+      // Two active rows: the seeded account and the default Tunai account.
+      expect(find.text('Total masuk'), findsNWidgets(2));
     });
   }
 

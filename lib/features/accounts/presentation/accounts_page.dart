@@ -154,6 +154,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     }
   }
 
+  Widget _accountCard(AccountSummary item) => _AccountCard(
+    summary: item,
+    onEdit: () => _openForm(item.account),
+    onSetActive: (active) => _setActive(item.account, active),
+    onDelete: () => _deleteAccount(item.account),
+  );
+
   @override
   Widget build(BuildContext context) {
     final accounts = ref.watch(accountSummariesProvider);
@@ -164,7 +171,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           style: Theme.of(context).textTheme.headlineLarge,
         ),
         actions: [
-          IconButton(
+          IconButton.filledTonal(
             onPressed: () => context.push('/transfers'),
             tooltip: 'Transfer antar akun',
             icon: const Icon(Icons.swap_horiz),
@@ -189,30 +196,48 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               message: 'Belum ada akun.',
             );
           }
-          return ListView.separated(
+          final active = items.where((item) => item.account.isActive);
+          final archived = items.where((item) => !item.account.isActive);
+          return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenH,
               AppSpacing.sm,
               AppSpacing.screenH,
               96,
             ),
-            itemCount: items.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return _AccountsTotalCard(
-                  summaries: items,
-                  netWorth: ref.watch(netWorthProvider),
-                );
-              }
-              final item = items[index - 1];
-              return _AccountCard(
-                summary: item,
-                onEdit: () => _openForm(item.account),
-                onSetActive: (active) => _setActive(item.account, active),
-                onDelete: () => _deleteAccount(item.account),
-              );
-            },
+            children: [
+              _AccountsTotalCard(
+                summaries: items,
+                netWorth: ref.watch(netWorthProvider),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'Akun aktif',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              for (final item in active) ...[
+                _accountCard(item),
+                const SizedBox(height: AppSpacing.sm),
+              ],
+              if (archived.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'Diarsipkan',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Akun dengan riwayat hanya bisa diarsipkan, tidak dihapus.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (final item in archived) ...[
+                  _accountCard(item),
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ],
+            ],
           );
         },
       ),
@@ -288,106 +313,277 @@ class _AccountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = summary.account;
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final finote = theme.finote;
+    final (tileColor, iconColor, icon) = _accountTile(account, colors, finote);
+    final balance = CurrencyText(
+      amount: summary.balance,
+      maskable: true,
+      alignment: Alignment.centerLeft,
+      style: AppTypography.amountMd.copyWith(color: colors.onSurface),
+    );
     return Card(
-      child: ListTile(
-        leading: DecoratedBox(
-          decoration: BoxDecoration(
-            color: account.isActive
-                ? Theme.of(context)
-                      .finote
-                      .categories[FinoteCategory.salary]!
-                      .background
-                : colors.surfaceContainerHighest,
-            borderRadius: AppRadius.mdAll,
-          ),
-          child: SizedBox.square(
-            dimension: 44,
-            child: Icon(
-              account.isActive
-                  ? Icons.account_balance_wallet_outlined
-                  : Icons.archive_outlined,
-              color: account.isActive
-                  ? Theme.of(context)
-                        .finote
-                        .categories[FinoteCategory.salary]!
-                        .foreground
-                  : colors.onSurfaceVariant,
-            ),
-          ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.md,
         ),
-        title: Text(
-          account.name,
-          style: AppTypography.labelLg.copyWith(color: colors.onSurface),
-        ),
-        subtitle: Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '${account.type.label}${account.isActive ? '' : ' • Tidak aktif'}',
-            ),
-            Text('Saldo Saat Ini ${formatIdr(summary.balance)}'),
-            Text(
-              'Masuk ${formatIdr(summary.totalIncome)} · '
-              'Keluar ${formatIdr(summary.totalExpense)}',
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton<_AccountAction>(
-          tooltip: 'Tindakan akun',
-          onSelected: (action) async {
-            switch (action) {
-              case _AccountAction.edit:
-                onEdit();
-              case _AccountAction.archive:
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Nonaktifkan akun ini?'),
-                    content: const Text(
-                      'Akun tidak aktif tidak akan ditawarkan untuk transaksi baru.',
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Narrow cards (320dp with large text) put the balance under the
+                // name instead of squeezing it into a trailing slot.
+                final wide = constraints.maxWidth >= 340;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: tileColor,
+                            borderRadius: AppRadius.mdAll,
+                          ),
+                          child: SizedBox.square(
+                            dimension: 44,
+                            child: Icon(icon, color: iconColor),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      account.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.labelLg.copyWith(
+                                        color: colors.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                  if (account.isDefault) ...[
+                                    const SizedBox(width: AppSpacing.xs),
+                                    DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        color: colors.primaryContainer,
+                                        borderRadius: AppRadius.smAll,
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.sm,
+                                          vertical: AppSpacing.xs,
+                                        ),
+                                        child: Text(
+                                          'Default',
+                                          style: AppTypography.captionSemibold
+                                              .copyWith(
+                                                color:
+                                                    colors.onPrimaryContainer,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              Text(
+                                '${_accountTypeText(account.type)}'
+                                '${account.isActive ? '' : ' · Diarsipkan'}',
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (wide) ...[
+                          const SizedBox(width: AppSpacing.sm),
+                          Flexible(child: balance),
+                        ],
+                        PopupMenuButton<_AccountAction>(
+                          tooltip: 'Tindakan akun',
+                          onSelected: (action) async {
+                            switch (action) {
+                              case _AccountAction.edit:
+                                onEdit();
+                              case _AccountAction.archive:
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Nonaktifkan akun ini?'),
+                                    content: const Text(
+                                      'Akun tidak aktif tidak akan ditawarkan untuk transaksi baru.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Batal'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Nonaktifkan'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) onSetActive(false);
+                              case _AccountAction.reactivate:
+                                onSetActive(true);
+                              case _AccountAction.delete:
+                                onDelete();
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: _AccountAction.edit,
+                              child: Text('Ubah'),
+                            ),
+                            if (!account.isDefault)
+                              PopupMenuItem(
+                                value: account.isActive
+                                    ? _AccountAction.archive
+                                    : _AccountAction.reactivate,
+                                child: Text(
+                                  account.isActive ? 'Nonaktifkan' : 'Aktifkan',
+                                ),
+                              ),
+                            if (!account.isDefault)
+                              const PopupMenuItem(
+                                value: _AccountAction.delete,
+                                child: Text('Hapus Permanen'),
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Batal'),
+                    if (!wide)
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 60,
+                          top: AppSpacing.xs,
+                        ),
+                        child: balance,
                       ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Nonaktifkan'),
+                  ],
+                );
+              },
+            ),
+            if (account.isActive) ...[
+              const SizedBox(height: AppSpacing.md),
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: finote.surfaceAlt,
+                  borderRadius: AppRadius.mdAll,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _FlowAmount(
+                          label: 'Total masuk',
+                          amount: summary.totalIncome,
+                          color: finote.income,
+                        ),
+                      ),
+                      Expanded(
+                        child: _FlowAmount(
+                          label: 'Total keluar',
+                          amount: summary.totalExpense,
+                          color: finote.expense,
+                        ),
                       ),
                     ],
                   ),
-                );
-                if (confirmed == true) onSetActive(false);
-              case _AccountAction.reactivate:
-                onSetActive(true);
-              case _AccountAction.delete:
-                onDelete();
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: _AccountAction.edit,
-              child: Text('Ubah'),
-            ),
-            if (!account.isDefault)
-              PopupMenuItem(
-                value: account.isActive
-                    ? _AccountAction.archive
-                    : _AccountAction.reactivate,
-                child: Text(account.isActive ? 'Nonaktifkan' : 'Aktifkan'),
+                ),
               ),
-            if (!account.isDefault)
-              const PopupMenuItem(
-                value: _AccountAction.delete,
-                child: Text('Hapus Permanen'),
-              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
+
+class _FlowAmount extends StatelessWidget {
+  const _FlowAmount({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
+
+  final String label;
+  final int amount;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+      CurrencyText(
+        amount: amount,
+        maskable: true,
+        alignment: Alignment.centerLeft,
+        style: AppTypography.amountSm.copyWith(color: color),
+      ),
+    ],
+  );
+}
+
+/// Display-only labels for the account card. [AccountType.label] stays the
+/// source for exports, charts and the transfer dialog, so it is not changed.
+String _accountTypeText(AccountType type) => switch (type) {
+  AccountType.cash => 'Uang tunai',
+  AccountType.bank => 'Rekening bank',
+  AccountType.eWallet => 'E-Wallet',
+  AccountType.savings => 'Tabungan',
+};
+
+(Color, Color, IconData) _accountTile(
+  AccountRecord account,
+  ColorScheme colors,
+  FinoteColors finote,
+) {
+  if (!account.isActive) {
+    return (
+      colors.surfaceContainerHighest,
+      colors.onSurfaceVariant,
+      Icons.archive_outlined,
+    );
+  }
+  return switch (account.type) {
+    AccountType.cash => (
+      finote.categories[FinoteCategory.salary]!.background,
+      finote.categories[FinoteCategory.salary]!.foreground,
+      Icons.account_balance_wallet_outlined,
+    ),
+    AccountType.bank => (
+      colors.primaryContainer,
+      colors.onPrimaryContainer,
+      Icons.account_balance_outlined,
+    ),
+    AccountType.eWallet => (
+      colors.tertiaryContainer,
+      colors.onTertiaryContainer,
+      Icons.smartphone_outlined,
+    ),
+    AccountType.savings => (
+      colors.secondaryContainer,
+      colors.onSecondaryContainer,
+      Icons.savings_outlined,
+    ),
+  };
 }
 
 enum _AccountAction { edit, archive, reactivate, delete }
