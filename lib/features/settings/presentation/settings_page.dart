@@ -89,7 +89,7 @@ class SettingsPage extends ConsumerWidget {
               FinoteListTile(
                 icon: Icons.info_outline,
                 title: 'Tentang Finote',
-                value: 'v1.3.0',
+                value: 'v1.4.0',
                 tone: palette[FinoteCategory.fun],
                 onTap: () async {
                   final Uri url = Uri.parse(
