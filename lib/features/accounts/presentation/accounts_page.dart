@@ -4,7 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_typography.dart';
+import '../../../core/theme/category_style.dart';
+import '../../../core/theme/finote_colors.dart';
 import '../../../core/utils/currency_formatter.dart';
 import '../../../core/widgets/shared_widgets.dart';
 import '../data/account_repository.dart';
@@ -154,7 +158,10 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     final accounts = ref.watch(accountSummariesProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Akun & Dompet'),
+        title: Text(
+          'Akun & Dompet',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
         actions: [
           IconButton(
             onPressed: () => context.push('/transfers'),
@@ -222,17 +229,35 @@ class _AccountCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Card(
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: account.isActive
-              ? colors.primaryContainer
-              : colors.surfaceContainerHighest,
-          child: Icon(
-            account.isActive
-                ? Icons.account_balance_wallet_outlined
-                : Icons.archive_outlined,
+        leading: DecoratedBox(
+          decoration: BoxDecoration(
+            color: account.isActive
+                ? Theme.of(context)
+                      .finote
+                      .categories[FinoteCategory.salary]!
+                      .background
+                : colors.surfaceContainerHighest,
+            borderRadius: AppRadius.mdAll,
+          ),
+          child: SizedBox.square(
+            dimension: 44,
+            child: Icon(
+              account.isActive
+                  ? Icons.account_balance_wallet_outlined
+                  : Icons.archive_outlined,
+              color: account.isActive
+                  ? Theme.of(context)
+                        .finote
+                        .categories[FinoteCategory.salary]!
+                        .foreground
+                  : colors.onSurfaceVariant,
+            ),
           ),
         ),
-        title: Text(account.name),
+        title: Text(
+          account.name,
+          style: AppTypography.labelLg.copyWith(color: colors.onSurface),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

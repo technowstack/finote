@@ -49,7 +49,12 @@ class _LegacyImportPageState extends ConsumerState<LegacyImportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Import dari aplikasi lama')),
+      appBar: AppBar(
+        title: Text(
+          'Import dari aplikasi lama',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

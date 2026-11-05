@@ -41,7 +41,10 @@ class _BackupPageState extends ConsumerState<BackupPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Backup dan restore'),
+        title: Text(
+          'Backup dan restore',
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -694,7 +697,12 @@ class _RestoreTabState extends ConsumerState<_RestoreTab> {
                 onPressed: () => Navigator.of(ctx).pop(false),
                 child: const Text('Batal'),
               ),
+              // Restore overwrites all current data: destructive color.
               FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(ctx).colorScheme.error,
+                  foregroundColor: Theme.of(ctx).colorScheme.onError,
+                ),
                 onPressed: () => Navigator.of(ctx).pop(true),
                 child: const Text('Ya, pulihkan'),
               ),
