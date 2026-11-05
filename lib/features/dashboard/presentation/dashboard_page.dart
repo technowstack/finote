@@ -78,7 +78,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
         actions: [
           IconButton(
             tooltip: 'Scan struk',
-            onPressed: () => context.push('/receipt-scan'),
+            // onPressed: () => context.push('/receipt-scan'),
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text('Fitur scan struk segera hadir'),
+                  ),
+                );
+            },
             style: IconButton.styleFrom(
               backgroundColor: theme.colorScheme.surface,
               fixedSize: const Size(40, 40),

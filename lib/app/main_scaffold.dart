@@ -129,7 +129,36 @@ class MainScaffold extends ConsumerWidget {
                   leading: const Icon(Icons.document_scanner_outlined),
                   title: const Text('Scan struk'),
                   subtitle: const Text('Ambil atau pilih foto struk'),
-                  onTap: () => Navigator.pop(context, '/receipt-scan'),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Segera hadir',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                  onTap: () {
+                    final messenger = ScaffoldMessenger.of(context);
+                    Navigator.pop(
+                      context,
+                    ); // tutup sheet/dialog tanpa membawa route
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Fitur scan struk segera hadir'),
+                      ),
+                    );
+                  },
+                  // onTap: () => Navigator.pop(context, '/receipt-scan'),
                 ),
               ],
             ),
