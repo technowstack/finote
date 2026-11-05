@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/biometric_lock.dart';
 import '../data/pin_repository.dart';
+import '../data/secure_screen.dart';
 
 class AppLock extends ConsumerStatefulWidget {
   const AppLock({required this.child, super.key});
@@ -19,6 +20,12 @@ class _AppLockState extends ConsumerState<AppLock> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Recent Apps previews must not leak balances while protection is on.
+    ref.listenManual(
+      appLockControllerProvider.select((lock) => lock.protectionEnabled),
+      (_, enabled) => ref.read(secureScreenProvider).setEnabled(enabled),
+      fireImmediately: true,
+    );
   }
 
   @override

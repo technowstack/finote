@@ -46,6 +46,20 @@ void main() {
     },
   );
 
+  test('household keywords suggest Belanja on a fresh install', () async {
+    for (final name in ['Sabun Lifebuoy', 'Deterjen Rinso', 'Tissue Paseo']) {
+      final suggestion = await service.suggestItemCategory(
+        ReceiptItem(name: name),
+      );
+      expect(suggestion, isNotNull, reason: name);
+      expect(
+        (await categories.findActiveById(suggestion!.categoryId))!.name,
+        'Belanja',
+        reason: name,
+      );
+    }
+  });
+
   test('history outranks keyword rules', () async {
     final transport =
         (await categories.watchByType(TransactionType.expense).first)

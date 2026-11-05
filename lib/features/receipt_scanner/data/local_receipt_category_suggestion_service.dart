@@ -216,7 +216,7 @@ class LocalReceiptCategorySuggestionService
         'tol',
       ],
       'Kesehatan': ['obat', 'apotek', 'vitamin', 'paracetamol'],
-      'Rumah': ['sabun', 'deterjen', 'tissue', 'pembersih'],
+      'Belanja': ['sabun', 'deterjen', 'tissue', 'pembersih'],
       'Tagihan': ['pln', 'listrik', 'internet', 'tagihan'],
     };
     for (final rule in rules.entries) {
