@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/database/app_database.dart';
+import '../../../core/finance/net_worth.dart';
 import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
@@ -195,16 +196,77 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               AppSpacing.screenH,
               96,
             ),
-            itemCount: items.length,
+            itemCount: items.length + 1,
             separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (context, index) => _AccountCard(
-              summary: items[index],
-              onEdit: () => _openForm(items[index].account),
-              onSetActive: (active) => _setActive(items[index].account, active),
-              onDelete: () => _deleteAccount(items[index].account),
-            ),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return _AccountsTotalCard(
+                  summaries: items,
+                  netWorth: ref.watch(netWorthProvider),
+                );
+              }
+              final item = items[index - 1];
+              return _AccountCard(
+                summary: item,
+                onEdit: () => _openForm(item.account),
+                onSetActive: (active) => _setActive(item.account, active),
+                onDelete: () => _deleteAccount(item.account),
+              );
+            },
           );
         },
+      ),
+    );
+  }
+}
+
+/// Total balance shown above the list. It reads the same cash figure as the
+/// Beranda "Kas & Dompet" tile (netWorthProvider), so the two always agree.
+/// That figure sums every account, archived ones included, so the label says
+/// so instead of claiming "aktif" only.
+class _AccountsTotalCard extends StatelessWidget {
+  const _AccountsTotalCard({required this.summaries, required this.netWorth});
+
+  final List<AccountSummary> summaries;
+  final AsyncValue<NetWorthSnapshot> netWorth;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final active = summaries.where((item) => item.account.isActive).length;
+    final archived = summaries.length - active;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Total saldo semua akun', style: theme.textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.xs),
+            netWorth.when(
+              loading: () => const LinearProgressIndicator(),
+              error: (_, _) => Text(
+                'Total saldo belum dapat dimuat.',
+                style: theme.textTheme.bodySmall,
+              ),
+              data: (snapshot) => CurrencyText(
+                amount: snapshot.cashValue,
+                maskable: true,
+                alignment: Alignment.centerLeft,
+                style: AppTypography.amountXl.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              archived == 0
+                  ? '$active akun aktif'
+                  : '$active akun aktif · $archived diarsipkan',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
       ),
     );
   }
