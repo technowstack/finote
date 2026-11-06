@@ -1,72 +1,87 @@
+<div align="center">
+
+<img src="assets/playstore/finote-feature-graphic-1024x500.png" alt="Finote — Catat. Pantau. Pahami Keuanganmu." width="100%">
+
 # Finote
 
-Finote adalah aplikasi pencatatan keuangan pribadi yang sederhana, cepat, dan
-dapat digunakan tanpa internet.
+**Catat. Pantau. Pahami Keuanganmu.**
 
-Finote membantu pengguna mencatat pemasukan dan pengeluaran, memahami kondisi
-keuangan, menjaga data tetap tersimpan di perangkat, serta membawa data keluar
-melalui laporan dan backup.
+Aplikasi pencatatan keuangan pribadi yang sederhana, cepat, dan bisa dipakai tanpa internet.
+Data Anda tetap di perangkat Anda.
 
-## Fitur Utama
+<a href="https://play.google.com/store/apps/details?id=com.technowstack.finote">
+  <img src="https://play.google.com/intl/en_us/badges/static/images/badges/id_badge_web_generic.png" alt="Temukan di Google Play" height="80">
+</a>
 
-- Mencatat pemasukan dan pengeluaran, termasuk input cepat dengan nominal
-  bilangan bulat dalam Rupiah.
-- Mengelola kategori transaksi, dengan tab Pengeluaran dan Pemasukan.
-- Mengelola akun dan dompet (Tunai, Bank, E-Wallet, Tabungan), serta transfer
-  antar akun. Transfer tidak dihitung sebagai pemasukan atau pengeluaran.
-- Melihat saldo, total kekayaan bersih, histori, dan ringkasan keuangan.
-- Mencari dan memfilter transaksi.
-- Laporan dengan grafik: pengeluaran per kategori, pemasukan dan pengeluaran,
-  saldo per akun, dan riwayat bulanan.
-- Export laporan ke Excel, Text, dan PDF.
-- Backup dan restore data.
-- Import data dari aplikasi Catatan Keuangan lama.
-- Portofolio aset (saham, kripto, reksa dana, emas, dan lainnya) dengan posisi
-  awal, pembelian, penjualan, dan penyesuaian. Harga pasar hanya diambil saat
-  pengguna menekan Refresh Harga.
-- Sembunyikan saldo dengan satu ketukan.
-- Pilihan tema Sistem, Terang, dan Gelap.
-- Kunci aplikasi dengan PIN atau biometrik perangkat. Saat kunci aktif, layar
-  aplikasi disembunyikan dari pratinjau Recent Apps.
-- Reset data untuk memulai dari kondisi awal.
-- Receipt Scanner lokal sebagai fitur eksperimental.
+![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)
+![Flutter](https://img.shields.io/badge/Flutter-02569B?logo=flutter&logoColor=white)
+![Offline-first](https://img.shields.io/badge/offline--first-✓-3B5BDB)
+![Versi](https://img.shields.io/badge/versi-1.4.0-8EA2FF)
 
-## Desain
+</div>
 
-Tampilan mengikuti redesign v1.3 dengan satu warna brand untuk mode terang dan
-gelap. Sumber desainnya ada di `docs/design/` (token, spesifikasi komponen, dan
-screenshot). Ringkasan sistem desain ada di
-`docs/finote-audit/03-DESIGN-SYSTEM.md`.
+---
 
-## Prinsip Finote
+## 📱 Tampilan
 
-- Data keuangan adalah milik pengguna.
-- Fitur utama tetap dapat digunakan secara offline.
-- Data disimpan secara lokal di perangkat.
-- Backup dan export membantu pengguna menjaga serta membawa datanya.
-- Pengalaman pencatatan manual tetap menjadi fokus utama.
+<div align="center">
+  <img src="assets/playstore/finote-01-beranda.png" width="24%" alt="Beranda">
+  <img src="assets/playstore/finote-02-transaksi.png" width="24%" alt="Transaksi">
+  <img src="assets/playstore/finote-03-laporan.png" width="24%" alt="Laporan">
+  <img src="assets/playstore/finote-06-tema.png" width="24%" alt="Mode terang dan gelap">
+</div>
 
-Finote tidak membutuhkan akun atau layanan cloud untuk fitur inti. AI, budget,
-recurring transaction, dan cloud sync belum termasuk dalam versi saat ini.
-Pengambilan harga pasar hanya terjadi saat pengguna memintanya.
+## ✨ Fitur
 
-## Status Proyek
+### 💸 Pencatatan harian
+- **Pemasukan & pengeluaran** dengan input cepat, nominal Rupiah bilangan bulat.
+- **Kategori** dengan ikon dan warna khusus, terpisah untuk Pengeluaran dan Pemasukan.
+- **Akun & dompet**: Tunai, Bank, E-Wallet, dan Tabungan.
+- **Transfer antar akun**, tidak dihitung sebagai pemasukan atau pengeluaran.
+- **Cari & filter** transaksi.
+- **Scan struk** lokal *(eksperimental)*.
 
-- v1.0.0 (fitur inti, export, backup, import, dan keamanan dasar) sudah selesai
-  secara lokal.
-- v1.1.0 (akun dan transfer) dan v1.2.0 (visualisasi laporan) sudah selesai.
-- v1.3.0 (aset dan investasi) sedang dikerjakan. Fase yang sudah selesai dan
-  yang masih berjalan dicatat di `STATUS.md`.
-- Pengujian di perangkat nyata, verifikasi upgrade data, signing production,
-  dan aset publik masih dalam proses.
+### 📊 Pahami keuangan
+- **Kekayaan bersih**, saldo per akun, dan ringkasan pengeluaran 7 hari di Beranda.
+- **Laporan bergrafik**: pengeluaran per kategori, pemasukan vs pengeluaran, saldo per akun, dan riwayat bulanan.
+- **Portofolio aset**: saham, kripto, reksa dana, emas, dan lainnya, lengkap dengan posisi awal, pembelian, penjualan, dan penyesuaian. Harga pasar hanya diambil saat Anda menekan *Refresh harga*.
 
-Receipt Scanner belum ditetapkan sebagai fitur stable. Fitur ini akan
-dipertahankan hanya jika hasil pengujian menunjukkan pengalaman yang aman dan
-cukup dapat diandalkan.
+### 🔒 Data tetap milik Anda
+- **Export laporan** ke Excel, PDF, dan teks.
+- **Backup & restore** lokal.
+- **Import** dari aplikasi Catatan Keuangan lama.
+- **Kunci aplikasi** dengan PIN atau biometrik. Saat aktif, isi aplikasi disembunyikan dari Recent Apps.
+- **Sembunyikan saldo** dengan satu ketukan.
+- **Reset data** untuk mulai dari awal.
 
-## Pengembangan
+### 🎨 Nyaman dipakai
+- Tema **Sistem, Terang, dan Gelap** dengan satu identitas warna.
+- Tetap rapi saat ukuran huruf sistem diperbesar.
 
-Perintah dasar:
+## 🧭 Prinsip
+
+| | |
+|---|---|
+| 🙋 **Data milik pengguna** | Tidak perlu akun, tidak ada cloud untuk fitur inti. |
+| 📴 **Offline-first** | Semua fitur utama jalan tanpa internet. |
+| 💾 **Tersimpan lokal** | Data disimpan di perangkat; backup dan export untuk membawanya. |
+| ✍️ **Pencatatan manual jadi fokus** | Cepat dicatat, mudah dipahami. |
+
+Internet hanya dipakai saat Anda sendiri meminta harga pasar terbaru. AI, budget, transaksi berulang, dan cloud sync belum termasuk dalam versi ini.
+
+## 🗺️ Riwayat versi
+
+| Versi | Isi |
+|---|---|
+| **v1.0** | Fitur inti, export, backup, import, keamanan dasar |
+| **v1.1** | Akun & transfer antar akun |
+| **v1.2** | Visualisasi laporan |
+| **v1.3** | Aset & investasi |
+| **v1.4** | Tampilan baru: satu warna brand, ikon & warna per kategori, ringkasan 7 hari, sembunyikan saldo |
+
+Detail per fase ada di [`STATUS.md`](STATUS.md). Scan struk masih eksperimental dan akan dipertahankan hanya jika hasil pengujian menunjukkan fitur ini aman dan cukup andal.
+
+## 🛠️ Pengembangan
 
 ```bash
 flutter pub get
@@ -75,19 +90,22 @@ flutter analyze
 flutter test
 ```
 
-Test mencakup perhitungan keuangan, migrasi database, export, backup, layout
-pada lebar 320dp dengan teks 1.3×, dan tema terang serta gelap.
+Test mencakup perhitungan keuangan, migrasi database, export, backup, layout di lebar 320dp dengan teks 1.3×, serta tema terang dan gelap.
 
-## Dokumentasi
+Desain bersumber dari [`docs/design/`](docs/design/) (token, spesifikasi komponen, dan screenshot), dengan ringkasan di [Design System](docs/finote-audit/03-DESIGN-SYSTEM.md).
 
-- [Product Requirements](PRD.md)
-- [Development Status](STATUS.md)
-- [Developer Guide](DEVELOPER_GUIDE.md)
-- [Design System](docs/finote-audit/03-DESIGN-SYSTEM.md)
-- [Backlog](docs/backlog.md)
-- [Release Feature Matrix](docs/release_feature_matrix.md)
-- [Closed Testing Plan](docs/closed_testing_plan.md)
-- [Release Readiness](docs/release_readiness.md)
-- [Privacy Policy Draft](docs/privacy_policy.md)
+## 📚 Dokumentasi
 
-Finote belum dipublikasikan ke Google Play Store.
+| Produk | Pengembangan | Rilis |
+|---|---|---|
+| [Product Requirements](PRD.md) | [Developer Guide](DEVELOPER_GUIDE.md) | [Release Feature Matrix](docs/release_feature_matrix.md) |
+| [Backlog](docs/backlog.md) | [Development Status](STATUS.md) | [Closed Testing Plan](docs/closed_testing_plan.md) |
+| [Privacy Policy](docs/privacy_policy.md) | [Design System](docs/finote-audit/03-DESIGN-SYSTEM.md) | [Release Readiness](docs/release_readiness.md) |
+
+---
+
+<div align="center">
+
+Dibuat oleh **Technowstack** · [Unduh di Google Play](https://play.google.com/store/apps/details?id=com.technowstack.finote)
+
+</div>
