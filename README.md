@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/playstore/finote-feature-graphic-1024x500.png" alt="Finote — Catat. Pantau. Pahami Keuanganmu." width="100%">
+<img src="assets/playstore/finote.png" alt="Finote — Catat. Pantau. Pahami Keuanganmu." width="100%">
 
 # Finote
 
